@@ -1,0 +1,11 @@
+
+# Dataset generator secrets and local state
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.generation.lock
+state/
+state_offline/
+Preview_offline/

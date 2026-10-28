@@ -1,0 +1,43 @@
+# Ambienti e prodotti Python, in tutte le sottocartelle
+.venv/
+env/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/
+# Segreti; conservare gli esempi privi di credenziali
+.env
+.env.*
+!.env.example
+# File locali di sistema/editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.log
+*.tmp
+# Stato operativo del generatore: cache API, budget e annotazioni valutatore
+/dataset/Scripts/state/
+/dataset/Scripts/state_offline/
+/dataset/Scripts/.generation.lock
+/dataset/Preview_offline/
+
+# Altri strumenti Python e file temporanei
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage.*
+coverage.xml
+*.swp
+*.swo
+*~
+# Credenziali locali
+*.pem
+*.key
