@@ -2,7 +2,7 @@
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from threading import RLock
-from time import monotonic
+from time import monotonic, perf_counter
 from uuid import UUID, uuid4
 
 from pathlib import Path
@@ -94,6 +94,23 @@ def create_app() -> FastAPI:
                 raise HTTPException(409, {"message": "Dati insufficienti per l'attività", "issues": problems})
             return {"scenario": request.scenario, "recipient": request.recipient,
                     "policy_version": POLICY_VERSION, "data": make_view(session.profile, request.scenario)}
+
+    @app.post("/sessions/{session_id}/markets")
+    async def run_markets(session_id: UUID):
+        from datetime import datetime, timedelta, timezone
+        from .agent_contracts import MarketTask, MarketView
+        from .market_client import delegate
+        started = perf_counter()
+        permitted = view(session_id, ViewRequest(scenario=Scenario.MORTGAGE, recipient="markets"))
+        view_ms = (perf_counter()-started)*1000
+        task = MarketTask(correlation_id=uuid4(), deadline=datetime.now(timezone.utc) + timedelta(seconds=120),
+                          view=MarketView.model_validate(permitted["data"]))
+        try:
+            result = await delegate(task)
+        except Exception:
+            raise HTTPException(502, "Delega non completata: controllare servizio mercati, Card e Ollama.") from None
+        result.measurements.update({'view_ms':round(view_ms, 3), 'gateway_total_ms':round((perf_counter()-started)*1000, 3)})
+        return result.model_dump(mode="json")
 
     @app.delete("/sessions/{session_id}", status_code=204)
     def close_session(session_id: UUID):

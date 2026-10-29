@@ -41,3 +41,5 @@ coverage.xml
 # Credenziali locali
 *.pem
 *.key
+# Evidenze locali del pilota, esportate solo dopo revisione
+/runs/
