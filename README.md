@@ -1,261 +1,103 @@
-# Gateway locale per l’architettura multi-agente
+# Analisi locale di documenti finanziari
 
-Terzo incremento del prototipo di tesi: caricamento PDF da una pagina locale, estrazione deterministica, sessioni in memoria, controlli e viste minimizzate per S-01 (mutuo) e S-02 (interessi del mutuo). Include un agente mercati locale ADK/A2A, uno strumento MCP simulato e una sintesi Ollama. Non effettua ancora analisi finanziarie personalizzate o chiamate a fonti Internet.
+Prototipo di tesi che legge PDF sintetici, affida attività a due specialisti locali — mercati e fiscalità — e produce un report con dati documentali, fonti e limiti. Le attività indipendenti vengono coordinate da LangGraph.
 
-## Prerequisiti
+**Le fonti attuali sono simulate.** Il report riproduce fedelmente i dati delle simulazioni, ma non fornisce quotazioni reali, consigli finanziari o attestazioni fiscali. Sono supportati i PDF del dataset incluso, non documenti bancari generici.
 
-Python 3.11 o successivo, con pip e venv. Scaricare Python da https://www.python.org/downloads/ se necessario. Su Windows installare anche il launcher `py`. Aprire un terminale nella cartella della repository. Per il solo caricamento PDF non occorre Ollama; per la demo agentica serve Ollama in esecuzione con `llama3.2:3b`.
+## Cosa serve
 
-## Installazione e avvio su macOS
+- Python 3.11 o successivo, disponibile su [python.org](https://www.python.org/downloads/).
+- [Ollama](https://ollama.com/download) installato e aperto.
+- Connessione Internet per installare dipendenze e scaricare i modelli. L'elaborazione della demo avviene localmente.
+
+Aprire i terminali nella cartella principale della repository. Non occorrono chiavi API per usare la demo.
+
+## 1. Installare il progetto
+
+### macOS
 
 ```bash
 python3 --version
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/python -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
-## Installazione e avvio su Windows PowerShell
-
-Eseguire i comandi dalla cartella principale della repository.
+### Windows PowerShell
 
 ```powershell
 py -3 --version
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-.\.venv\Scripts\python.exe -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
-Si usa direttamente Python dell'ambiente virtuale: non occorre attivarlo e non occorre modificare la policy di esecuzione PowerShell. Su entrambi i sistemi fermare il server con Ctrl+C. Negli avvii successivi basta ripetere il comando uvicorn dalla repository. Non usare più worker: le sessioni sono locali al processo. Non esporre il server in rete.
+Non occorre attivare l'ambiente virtuale. Per aggiornare una copia già installata, ripetere solo l'ultimo comando.
 
-## Prima prova dal browser
+## 2. Scaricare i modelli
 
-Aprire **http://127.0.0.1:8000/**. Non occorre copiare JSON o identificativi.
+Con Ollama aperto, eseguire una volta:
 
-1. Selezionare i quattro PDF `C001_*` in `dataset/Documents` con il selettore multiplo.
-2. Lasciare selezionati entrambi gli scenari e premere **Carica e verifica**.
-3. Leggere esito, campi estratti con documento/pagina e viste minimizzate. Il profilo completo è mostrato solo nella pagina locale; non è la vista destinata agli agenti.
-4. Premere **Chiudi e cancella sessione**. Un nuovo caricamento chiude prima la sessione precedente.
-
-Prove consigliate: C006 (capitale mancante), C011 (interessi mancanti), C016 (tasso ambiguo), C021 (periodi diversi ma entrambi gli scenari utilizzabili). Caricare un solo fascicolo per volta; è possibile usare soltanto il PDF mutuo o interessi per lo scenario corrispondente. Conto e busta paga sono riconosciuti come contesto, ma non sostituiscono campi obbligatori.
-
-Il parser supporta **solo il template sintetico attuale**, non PDF bancari generici. Legge i PDF caricati, senza accedere a generatore, annotazioni o ground truth. PDF corrotti, cifrati, senza testo, duplicati o appartenenti a fascicoli diversi sono rifiutati. I documenti rifiutati sono segnalati in rejected_documents e non partecipano all’estrazione aggregata; i file validi restano utilizzabili se sufficienti. Limiti applicativi: quattro file, 5 MiB per file e 20 pagine per documento. Il limite in byte è verificato dopo la ricezione multipart, non è una protezione completa da richieste sovradimensionate.
-
-L'API JSON e http://127.0.0.1:8000/docs restano disponibili per sviluppo. La nuova API è `POST /sessions/pdf`, con campi multipart `files` e `scenarios` (S-01/S-02).
-
-## Struttura della repository
-
-- `gateway/`: API, contratti, policy, parser PDF e pagina locale.
-- `tests/`: verifiche del gateway e dei 25 fascicoli.
-- `examples/`: ingressi JSON sintetici, conservati per test e sviluppo.
-- `dataset/Documents/`: 100 PDF sintetici versionabili.
-- `dataset/Scripts/`: generatore, dipendenze e istruzioni originali.
-- `dataset/Scripts/state*/`: stato locale e annotazioni del valutatore, esclusi da Git.
-
-Il gateway usa l’ambiente `.venv` nella radice della repository. Ambienti virtuali, cache, segreti e stato operativo del generatore sono esclusi dal versionamento tramite `.gitignore`.
-
-Il file `.gitignore` si trova nella radice. I file il cui nome inizia con un punto possono essere nascosti: per visualizzarli usare `ls -la` su macOS oppure `Get-ChildItem -Force` in PowerShell.
-
-## Contratti e regole attuali
-
-Ogni fatto ha valore, unità, data di riferimento, provenienza (codice opaco del documento e pagina) e stato. Sono ammessi solo i campi dello schema. Gli errori 422 non ripetono il corpo ricevuto. Le categorie ammesse sono definite in `gateway/policy.py` e visibili negli esempi; unità e intervalli sono verificati dal codice. Le date S-01 devono coincidere; gli interessi S-02 devono riferirsi all'anno d'imposta indicato. La durata è generalizzata in fasce di cinque anni: (0,5], (5,10], ecc. La versione della policy accompagna ogni vista.
-
-**Limite dell'ingresso JSON (conservato per sviluppo):** `validated` è una dichiarazione del chiamante. I controlli attuali verificano formato e coerenza, non la corrispondenza con un PDF. Non vengono inventati valori mancanti. Non inviare identificativi diretti: non fanno parte del contratto. Il parser PDF estrae soltanto etichette autorizzate e non inserisce anagrafica nel profilo. Non sono ancora presenti rilevazione PII generale o scansione di payload arbitrari. La provenienza conserva documento e pagina, ma non ancora coordinate/span. Il tipo di mutuo non esplicitato nel template è classificato genericamente come `other`; la ristrutturazione è mappata nella categoria fiscale generale `other`.
-
-Le sessioni vengono eliminate con DELETE o all'arresto ordinato; la scadenza di 30 minuti è applicata in modo pigro alla successiva creazione/accesso. Non è un timer di cancellazione immediata. L'eliminazione rimuove i riferimenti applicativi, senza garanzie di azzeramento fisico della RAM o dello swap. Nessun profilo viene scritto dall'applicazione su disco. Il gestore multipart può usare file temporanei locali, chiusi al termine del caricamento. Il testo originale non viene conservato nella sessione. La chiusura della scheda invia una richiesta di cancellazione best effort, senza garanzia in caso di crash o rete interrotta; usare il pulsante esplicito.
-
-## Test
-
-Da un secondo terminale nella repository:
-
-macOS:
-```bash
-.venv/bin/python -m pytest -q
-```
-
-Windows PowerShell:
-```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-```
-
-## Stato e passi successivi
-
-Realizzati: ingresso PDF del dataset, pagina di caricamento, contratti JSON, sessioni, controlli per scenario, viste, dinieghi e chiusura esplicita. Da implementare: parser per formati generici, verifica completa della provenienza, proxy esterno, isolamento, secondo specialista, report, tracce sperimentali e finalizzazione automatica del workflow. Questo incremento non dimostra ancora le proprietà di sicurezza dell'architettura completa.
-
-Le decisioni e le verifiche di ogni step sono registrate in `DIARIO_PROGETTO.md`. Le dipendenze in `pyproject.toml` hanno intervalli compatibili; `requirements-lock.txt` registra le versioni dell'ambiente verificato. Per riprodurlo, dopo la creazione dell'ambiente eseguire `python -m pip install -r requirements-lock.txt` usando il percorso di Python dell'ambiente indicato sopra, quindi `python -m pip install --no-deps -e .`.
-
-Riferimenti di installazione: https://fastapi.tiangolo.com/virtual-environments/ e https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/.
-
-
-## Demo agente mercati — A2A, ADK, MCP e Ollama
-
-Eseguire dalla radice della repository. Aggiornare prima le dipendenze con `.venv/bin/python -m pip install -e '.[dev]'` su macOS oppure `.\.venv\Scripts\python.exe -m pip install -e ".[dev]"` su Windows PowerShell. L'installazione ADK include molte dipendenze Google, ma questa demo non richiede chiavi Google e non usa inferenza cloud.
-
-1. Avviare l'app Ollama e scaricare il modello: `ollama pull llama3.2:3b`.
-2. In un terminale avviare il servizio mercati.
-
-macOS:
-```bash
-.venv/bin/python -m uvicorn services.market_agent:app --host 127.0.0.1 --port 8001 --no-access-log
-```
-
-Windows PowerShell:
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn services.market_agent:app --host 127.0.0.1 --port 8001 --no-access-log
-```
-
-3. In un secondo terminale avviare il gateway con il comando già indicato (porta 8000).
-4. Aprire http://127.0.0.1:8000/, caricare un fascicolo completo (ad esempio C025) e premere **Esegui agente mercati (A2A → MCP → Ollama)**.
-5. Il risultato deve avere `status: completed`, `simulated: true`, `source_id: simulated-rates-v1`, tasso sintetico e sintesi esplicitamente non verificata. Chiudere la sessione con il pulsante. Fermare entrambi i servizi con Ctrl+C.
-
-Il server MCP stdio viene avviato e chiuso dall'agente, senza un terzo terminale. Il modello è fissato a llama3.2:3b; contesto 4096 e massimo 200 token generati. Le richieste hanno una scadenza di 120 secondi. Nessun download automatico o sostituzione di modello. Ollama riceve soltanto l'evidenza simulata; non riceve PDF o importi esatti.
-
-### Percorso e limiti verificabili
-
-`POST /sessions/{id}/markets` richiede la vista al gateway, valida il contratto e controlla nome, endpoint, versione e skill della Agent Card locale prima della delega A2A. Si usa A2A SDK 0.3.x, coerente con la versione citata nella tesi. Il servizio deriva da ADK BaseAgent: il flusso è programmato, non pianificato liberamente dal modello. MCP recupera una fixture fissa; Ollama ne sintetizza il contenuto. La sintesi non costituisce evidenza e non può modificare i campi della fonte strutturata.
-
-L'agente serializza le richieste e cancella sessioni ADK e task A2A al termine della risposta, anche in caso di errore. Non supporta cronologia, continuazioni o recupero dei task dopo la richiesta. Il gateway mantiene la propria sessione fino alla chiusura/TTL. Non è ancora implementata la finalizzazione globale di un workflow LangGraph.
-
-`failed` segnala il fallimento dell'attività; HTTP 502 indica delega, Card o risposta non valida; HTTP 409 indica dati documentali insufficienti. Il supporto ADK ad A2A emette avvisi sperimentali: le versioni testate sono registrate in requirements-lock.txt. Mancano autenticazione, isolamento di rete e proxy: gli endpoint locali e i contratti chiusi non dimostrano da soli la sicurezza completa prevista dalla tesi.
-
-Riferimento ADK: https://google.github.io/adk-docs/a2a/quickstart-exposing/.
-
-## Pilota e test del primo specialista
-
-La procedura completa è nello **Step 05 di DIARIO_PROGETTO.md**. Nuove misure nella risposta: creazione vista, controllo Card, round trip A2A, MCP (avvio/inizializzazione/chiusura inclusi), Ollama, caricamento modello e token. I tempi sono annidati: non sommarli. I conteggi indicano richieste applicative, non tutti i messaggi di protocollo.
-
-Con i tre servizi avviati, da un terzo terminale:
-
-macOS:
-```bash
-.venv/bin/python scripts/run_pilot.py --repetitions 3
-```
-
-Windows PowerShell:
-```powershell
-.\.venv\Scripts\python.exe scripts/run_pilot.py --repetitions 3
-```
-
-Il comando usa C001, C024, C006 e C016, con sessioni indipendenti e verifica della cancellazione gateway. Scrive in append `runs/pilot.jsonl`, escluso da Git: solo metadati, esiti e misure, senza profili, prompt o sintesi. Conservare separatamente l'ID/digest del modello mostrato da `ollama list` e la versione `ollama --version`. Il tag del modello da solo non è un identificativo immutabile. Le misure dettagliate attuali sono disponibili per attività completate; un guasto conserva l'esito e il tempo osservato dal pilota, senza attribuire arbitrariamente il guasto a una sottofase. La pulizia ADK/A2A è verificata dai test automatici, non dal controllo gateway del pilota.
-
-## Timeout controllato
-
-Lo Step 06 del diario documenta risultati del primo pilota e prova dedicata. Fermare l'agente normale e avviare **al suo posto** `services.timeout_agent:app`, con lo stesso comando uvicorn e porta 8001. La fixture MCP attende 10 s, mentre l'attività ha budget 2 s. Poi eseguire:
-
-```bash
-.venv/bin/python scripts/run_pilot.py --cases C001 --expect timeout --repetitions 3 --output runs/timeout.jsonl
-```
-
-Su Windows PowerShell usare `.\.venv\Scripts\python.exe` al posto di `.venv/bin/python`. Attesi HTTP 200, failed, error_code timeout, passed=true e cancellazione gateway verificata. Tornare poi a services.market_agent:app ed eseguire un caso nominale per controllare il ripristino. Questa fixture verifica timeout durante MCP, non durante Ollama. Non usare il servizio lento per la demo normale.
-
-Il runner supporta anche `--expect agent-off` (502 atteso) e `--expect ollama-off` (200 failed atteso): nei test negativi passed confronta così con l'esito negativo previsto.
-
-Per verificare disponibilità dopo timeout **senza riavvio**, usare invece `services.recovery_agent:app`: prima richiesta lenta, successive normali. Procedura nello Step 08 del diario. I risultati riportano `measurements.agent_boot_id`; deve coincidere nelle due richieste. Non premere il pulsante agente nel browser durante la sequenza, perché consumerebbe la prima richiesta della fixture.
-
-
-## Allineamento alla tesi
-
-La verifica per requisito è nello Step 10 del diario. Il prototipo attuale è un percorso parziale locale, non ancora l'architettura completa. Caricamenti con un PDF illeggibile proseguono sui restanti documenti validi; documenti validi di fascicoli diversi o duplicati restano rifiutati per evitare aggregazioni ambigue. I limiti di dimensione continuano a bloccare la richiesta per intero. Il parser è specifico del dataset e la provenienza non contiene ancora span del testo. LangGraph S-01 è ora disponibile; restano proxy/isolamento, agente fiscale, report, finalizzazione globale e valutazione 2×2.
-
-## Orchestrazione LangGraph per S-01
-
-Aggiornare le dipendenze prima di riavviare i servizi:
-
-macOS:
-```bash
-.venv/bin/python -m pip install -e '.[dev]'
-```
-Windows PowerShell:
-```powershell
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-```
-
-Avviare Ollama, agente mercati e gateway con i comandi già documentati. Non serve un ulteriore processo per LangGraph: il grafo viene eseguito nel gateway. Nella pagina, dopo il caricamento PDF, scegliere **Esegui workflow S-01 e chiudi sessione**. Il risultato contiene status, eventuale result dell'agente, fasi, tempi e session_closed. La sessione viene consumata dal workflow: per ripetere caricare nuovamente i PDF. S-02 non viene eseguito da questo pulsante.
-
-Il percorso è request_view → delegate_a2a → verify_result, con uscita anticipata per input insufficiente/errore e finalizzazione in finally. La policy resta nel gateway. Non è ancora una pianificazione LLM, né un report finanziario. Lo stato del grafo contiene soltanto incarico minimizzato e risultato; nessun checkpointer o database, esportazione LangSmith disabilitata per l'invocazione. La finalizzazione copre la sessione gateway dopo l'avvio del workflow, non un arresto dell'host o la terminazione dell'inferenza remota già avviata.
-
-Pilota macOS (su Windows sostituire il percorso Python):
-```bash
-.venv/bin/python scripts/run_pilot.py --workflow --repetitions 3 --output runs/langgraph_pilot.jsonl
-```
-
-Attesi sei completed e sei blocked; tutti HTTP 200 perché l'API del workflow restituisce l'esito strutturato anche per i blocchi. automatic_session_closed deve essere true; cleanup_verified richiede che DELETE trovi già la sessione assente (404). L'endpoint diretto /markets resta invariato per confronto e conserva HTTP 409 sui blocchi. Non confrontare i tempi dei due percorsi come overhead puro senza controllare caricamento modello e condizioni.
-
-Guasti e fixture si possono ripetere aggiungendo --workflow ai comandi precedenti; un agente spento produce HTTP 200 failed nel workflow, con error_code delegation_failed. Un timeout dell'agente restituisce error_code timeout. L'API POST /sessions/{id}/workflow è disponibile anche in /docs.
-
-Riferimento: https://reference.langchain.com/python/langgraph/graph/state/StateGraph.
-
-## Due specialisti: mercati e fiscalità
-
-La policy 0.2.0 distingue esplicitamente `renovation` (ristrutturazione) da `other`. Le precedenti raccolte con policy 0.1.0 restano evidenze storiche, non vanno riscritte. La categoria generica del tipo mutuo rimane un limite separato.
-
-Il nuovo endpoint `POST /sessions/{id}/analysis` esegue solo gli scenari selezionati all'upload. I due subgrafi LangGraph lavorano in parallelo e il coordinatore chiude la sessione una sola volta. L'API restituisce HTTP 200 e stato completed, partial, blocked o failed. `partial` indica che almeno un'attività ha completato e almeno un'altra no. Non è ancora un report personalizzato. I precedenti /workflow (solo S-01) e /markets rimangono disponibili per regressione.
-
-### Avvio
-
-Con Ollama aperto verificare i due modelli:
 ```bash
 ollama pull llama3.2:3b
 ollama pull qwen3:1.7b
 ```
 
-Aggiornare le dipendenze come sopra. Riavviare gateway e agente mercati per caricare il nuovo codice. In tre terminali dalla radice:
+## 3. Avviare la demo
 
+Lasciare Ollama aperto. Avviare ciascun comando in un terminale distinto e mantenerlo in esecuzione.
+
+### macOS
+
+Terminale 1 — specialista mercati:
 ```bash
 .venv/bin/python -m uvicorn services.market_agent:app --host 127.0.0.1 --port 8001 --no-access-log
 ```
+
+Terminale 2 — specialista fiscale:
 ```bash
 .venv/bin/python -m uvicorn services.tax_agent:app --host 127.0.0.1 --port 8002 --no-access-log
 ```
+
+Terminale 3 — pagina di caricamento:
 ```bash
-.venv/bin/python -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --no-access-log
+.venv/bin/python -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
 
-Su Windows PowerShell sostituire `.venv/bin/python` con `.\.venv\Scripts\python.exe` in ciascun comando. MCP viene avviato dai rispettivi agenti. Nella pagina scegliere gli scenari, caricare i PDF e premere **Esegui scenari selezionati e chiudi sessione**.
+### Windows PowerShell
 
-L'agente fiscale usa ADK/A2A, MCP stdio e qwen3:1.7b locale con thinking disabilitato, contesto 4096 e massimo 200 token generati. La fixture simulated-tax-v1 restituisce soltanto condizioni inventate, anno e finalità, senza riferimenti legislativi reali, aliquote o diritti alla detrazione. Nessuna informazione documentale esatta entra nella vista fiscale. Il gateway controlla anche anno/finalità dell'evidenza rispetto all'incarico. Le sintesi dei modelli restano non verificate.
-
-### Pilota
-
-In un quarto terminale:
-```bash
-.venv/bin/python scripts/run_multi_pilot.py --repetitions 3
+Terminale 1 — specialista mercati:
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn services.market_agent:app --host 127.0.0.1 --port 8001 --no-access-log
 ```
 
-Attesi 15 record: sei completed (C001/C024), nove partial (C006/C011/C016), tutti passed=true e pulizia=true. Controllare le attività nei record: C006/C016 bloccano solo mercati; C011 blocca solo fiscale. Ulteriori prove:
-```bash
-.venv/bin/python scripts/run_multi_pilot.py --cases C001 --scenarios S-01 --output runs/only_markets.jsonl
-.venv/bin/python scripts/run_multi_pilot.py --cases C001 --scenarios S-02 --output runs/only_tax.jsonl
+Terminale 2 — specialista fiscale:
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn services.tax_agent:app --host 127.0.0.1 --port 8002 --no-access-log
 ```
 
-Per guasto parziale, fermare solo l'agente fiscale e ripetere C001 con entrambi gli scenari: atteso partial, S-01 completed, S-02 delegation_failed e pulizia vera. Il runner confronta con il nominale e riporterà passed=false in questa prova negativa; leggere le attività, non interpretarlo come difetto della gestione del guasto. Riavviare poi l'agente fiscale. L'output JSONL contiene solo esiti, fasi e misure, senza sintesi o profili; è escluso da Git. Il nuovo runner è per verifica funzionale: la registrazione completa di revisioni e digest modello necessaria alla campagna finale resta da completare.
+Terminale 3 — pagina di caricamento:
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
+```
 
-## Report locale strutturato RF-08
+Per fermare la demo premere **Ctrl+C** nei tre terminali. Agli avvii successivi basta aprire Ollama e ripetere questi tre comandi. Se una porta risulta occupata, controllare che il relativo servizio non sia già aperto in un altro terminale.
 
-Il coordinatore /analysis compone ora il report dopo la verifica degli specialisti e prima della cancellazione della sessione. Non richiede un altro modello. Sezioni: dati documentali (fatti, unità, periodo, provenienza e stato), fonti simulate, sintesi dei modelli esplicitamente non verificate, esiti tecnici e limiti. Dati mancanti o ambigui restano segnalati; un ramo fallito non produce una fonte inventata. Non sono ancora calcolate convenienza, risparmio o spettanza di detrazioni.
+## 4. Caricare i PDF e leggere il report
 
-Riavviare il gateway dopo l'aggiornamento. Con entrambi gli agenti e Ollama attivi, caricare C001 e avviare gli scenari selezionati. Il report appare in sezioni separate; la sessione server è già chiusa. Il pulsante **Esporta report JSON** salva esplicitamente una copia locale con dati finanziari esatti. Non vengono effettuati salvataggi automatici del report sul server; un nuovo caricamento cancella dalla pagina il report precedente.
+1. Aprire [la pagina locale](http://127.0.0.1:8000/).
+2. Selezionare fino a quattro PDF dello stesso fascicolo in `dataset/Documents`, per esempio tutti i file `C001_*`.
+3. Scegliere gli scenari desiderati e premere **Carica e verifica**.
+4. Premere **Esegui scenari selezionati e chiudi sessione**.
+5. Leggere le sezioni del report. **Esporta report JSON** salva una copia solo se richiesto.
 
-Provare C006 per il report parziale: S-01 bloccato con capitale mancante, fonte e sintesi disponibili solo per S-02. Fermando il fiscale e usando C001, deve restare la sola fonte mercati con il limite fiscale esplicito. Il pilota JSONL salva solo report_present e report_ms, non il report, i suoi valori o le sintesi.
+Un esito completo indica che tutte le attività richieste sono terminate. Un esito parziale conserva le attività riuscite e spiega quelle bloccate o fallite. La sessione viene chiusa automaticamente al termine; per ripetere l'analisi caricare nuovamente i PDF.
 
-Questa è la prima composizione strutturata del report, non pieno soddisfacimento di RF-08/RF-07: mancano confronto economico, verifica dei conflitti e fonti reali. La provenienza documentale è ancora documento/pagina; validazione non certifica autenticità. Il file only_tax.jsonl non era presente nella raccolta verificata: la prova reale di sola selezione fiscale resta da raccogliere.
+Per provare un caso incompleto usare `C006_*`: manca il capitale del mutuo, quindi l'attività mercati viene bloccata e quella fiscale può proseguire. Conto e busta paga sono riconosciuti, ma non aggiungono ancora dati ai due scenari.
 
-## Fedeltà della sintesi fiscale
+Il report esportato contiene importi esatti. La demo non conserva uno storico dei profili e non salva automaticamente i report sul server. Il prototipo non ha ancora tutti i controlli di sicurezza previsti dalla tesi: usare il dataset sintetico e mantenere i servizi accessibili solo localmente.
 
-Report 0.2.0: la sintesi fiscale non usa prosa libera del modello. `faithful_summaries` contiene condizioni copiate dalla fixture autorizzata con riferimenti puntuali `source_ref`, contesto anno/finalità e digest SHA-256 del contenuto. `real_world_verified` rimane false: fedeltà alla fixture non significa validità fiscale reale.
+## Documentazione del progetto
 
-La fixture è verificata in tre punti: dopo MCP, nel client gateway e prima del report. L'ID della fonte da solo non autorizza il contenuto: condizioni alterate, anno/finalità incoerenti, riferimenti diversi o istruzioni aggiunte vengono rifiutati. Il digest identifica il contenuto, non è una firma di un'autorità esterna. Il catalogo fidato è gateway/tax_evidence.py, versionato insieme al codice.
-
-L'output libero di qwen3:1.7b è ancora generato per continuità della pipeline sperimentale, ma escluso dal report e dal riepilogo tecnico della risposta /analysis. `model_evaluation` conserva soltanto modello, hash dell'output e motivo di esclusione: non rappresenta una valutazione semantica automatica. La sintesi mercati resta non verificata nella propria sezione; non estendere la garanzia fiscale a tutte le sintesi.
-
-Riavviare agente fiscale e gateway. Ricaricare C001 e C006 ed esportare nuovi report: devono avere report_version 0.2.0, sintesi fiscale deterministica con riferimenti, nessuna frase fiscale generata liberamente e nessuna affermazione di spettanza. I report precedenti restano evidenze della limitazione osservata, non vanno sovrascritti come se fossero stati corretti retroattivamente. Il passaggio alle fonti istituzionali reali richiederà proxy, controllo delle uscite e verifica di versione/anno/ambito della fonte.
-
-## Fedeltà delle sintesi mercati e fiscale
-
-Report 0.3.0 estende il controllo anche ai mercati. La fixture fidata gateway/market_evidence.py definisce tasso per tipo, data, unità, origine e natura simulata. Contenuti controllati dopo MCP, nel client gateway e al report. Tasso variabile restituito per un incarico fisso, date/unità alterate, origini diverse o campi arbitrari sono rifiutati.
-
-Il report mostra tasso e data con riferimenti ai campi della fonte e digest del contenuto. Entrambe le sintesi sono in faithful_summaries; unverified_summaries è vuoto nei casi attuali. Nessuna prosa libera di llama3.2 o qwen3 entra nel report o nel riepilogo tecnico /analysis. model_evaluation conserva hash e motivo di esclusione; non dimostra che l'output escluso fosse corretto o scorretto. I modelli continuano a essere invocati nella pipeline. L'endpoint diretto storico /markets resta un'interfaccia tecnica con output non verificato del modello; usare /analysis per il report protetto.
-
-Riavviare gateway ed entrambi gli agenti. Riprovare C001, C024 e C006 ed esportare nuovi file: report_version 0.3.0, fonti ancora simulated=true e real_world_verified=false. C001 deve mostrare tasso sintetico 3.20, C024 3.60; C006 non deve avere sintesi mercati. Nessuna conclusione di convenienza o confronto economico viene dedotta. Data e valori delle fixture non rappresentano condizioni di mercato attuali.
+- [Diario di progetto](DIARIO_PROGETTO.md): decisioni, implementazione, prove e risultati.
+- [Attività da completare](DA_IMPLEMENTARE.md): lavori residui, priorità e criteri di completamento.

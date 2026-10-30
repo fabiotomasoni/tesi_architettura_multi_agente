@@ -424,3 +424,11 @@ Esaminati tre report esportati dall'autore, senza copiarli nella repository. Tut
 Per ciascuna sintesi presente ricalcolato il risultato atteso dal catalogo fidato con il contesto dichiarato: corrispondenza esatta e digest fonte coincidente. Tutte le fonti mantengono real_world_verified=false. Nessun valore simulato presentato come quotazione o normativa reale. Nessuna correzione richiesta dagli esiti.
 
 La verifica conferma estrazione fedele alle fixture sui casi esportati, non affidabilità semantica della prosa esclusa o validità reale delle fonti. Il controllo dei dati documentali contro ogni PDF e la campagna 2×2 restano distinti da questa verifica delle sintesi.
+
+## Step 21 — Documentazione d'uso e lavori residui
+
+README riscritto come guida unica: scopo e limiti della demo, prerequisiti, installazione macOS/Windows, due modelli, avvio dei tre servizi, caricamento e lettura/esportazione del report. Eliminati ripetizioni, istruzioni di vecchie versioni e dettagli sperimentali non necessari all'utente. Nessun percorso personale inserito. Il diario resta storico tecnico, non scaletta da trascrivere integralmente nel capitolo 5.
+
+Creato DA_IMPLEMENTARE.md dal confronto dei requisiti e criteri di verifica della tesi con codice, test e risultati acquisiti. Ogni compito ha ID, riferimento e condizione di completamento; restano solo lavori residui. Una volta verificato uno step si registra qui l'evidenza e si rimuove il compito dalla lista, oppure si restringe al residuo. Non dichiarati interamente soddisfatti requisiti coperti solo in parte.
+
+Priorità proposta: provenienza documentale puntuale e distinzione estratto/derivato/non specificato, poi controlli di conflitto e analisi locale; proxy e isolamento obbligatori prima di fonti remote. Evidenziato il tema sperimentale ancora aperto: i modelli generano prosa esclusa, mentre report e scelta tool sono deterministici; non attribuire loro benefici di qualità non misurati. Fonti reali trattate come estensione separata dalla campagna 2×2 locale della tesi. Nessuna modifica al codice applicativo o ai risultati dei test in questo step.
