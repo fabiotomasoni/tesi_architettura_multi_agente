@@ -72,3 +72,10 @@ def test_tax_period_mismatch(client, payload):
     payload['profile']['annual_interest']['period'] = '2024-12-31'
     sid = create(client, payload)
     assert client.post(f'/sessions/{sid}/views', json={'scenario':'S-02','recipient':'tax'}).status_code == 409
+
+
+def test_nonfinite_tax_year_does_not_crash(client, payload):
+    payload['profile']['tax_year']['value']='NaN'
+    sid=create(client,payload)
+    response=client.post(f'/sessions/{sid}/views',json={'scenario':'S-02','recipient':'tax'})
+    assert response.status_code==409

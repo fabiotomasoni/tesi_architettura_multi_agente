@@ -41,7 +41,7 @@ Aprire **http://127.0.0.1:8000/**. Non occorre copiare JSON o identificativi.
 
 Prove consigliate: C006 (capitale mancante), C011 (interessi mancanti), C016 (tasso ambiguo), C021 (periodi diversi ma entrambi gli scenari utilizzabili). Caricare un solo fascicolo per volta; è possibile usare soltanto il PDF mutuo o interessi per lo scenario corrispondente. Conto e busta paga sono riconosciuti come contesto, ma non sostituiscono campi obbligatori.
 
-Il parser supporta **solo il template sintetico attuale**, non PDF bancari generici. Legge i PDF caricati, senza accedere a generatore, annotazioni o ground truth. PDF corrotti, cifrati, senza testo, duplicati o appartenenti a fascicoli diversi sono rifiutati. In questo incremento un documento rifiutato interrompe l'intero caricamento: i file validi non vengono recuperati separatamente. Limiti applicativi: quattro file, 5 MiB per file e 20 pagine per documento. Il limite in byte è verificato dopo la ricezione multipart, non è una protezione completa da richieste sovradimensionate.
+Il parser supporta **solo il template sintetico attuale**, non PDF bancari generici. Legge i PDF caricati, senza accedere a generatore, annotazioni o ground truth. PDF corrotti, cifrati, senza testo, duplicati o appartenenti a fascicoli diversi sono rifiutati. I documenti rifiutati sono segnalati in rejected_documents e non partecipano all’estrazione aggregata; i file validi restano utilizzabili se sufficienti. Limiti applicativi: quattro file, 5 MiB per file e 20 pagine per documento. Il limite in byte è verificato dopo la ricezione multipart, non è una protezione completa da richieste sovradimensionate.
 
 L'API JSON e http://127.0.0.1:8000/docs restano disponibili per sviluppo. La nuova API è `POST /sessions/pdf`, con campi multipart `files` e `scenarios` (S-01/S-02).
 
@@ -82,7 +82,7 @@ Windows PowerShell:
 
 ## Stato e passi successivi
 
-Realizzati: ingresso PDF del dataset, pagina di caricamento, contratti JSON, sessioni, controlli per scenario, viste, dinieghi e chiusura esplicita. Da implementare: parser per formati generici, verifica completa della provenienza, proxy esterno, isolamento, LangGraph, secondo specialista, report, tracce sperimentali e finalizzazione automatica del workflow. Questo incremento non dimostra ancora le proprietà di sicurezza dell'architettura completa.
+Realizzati: ingresso PDF del dataset, pagina di caricamento, contratti JSON, sessioni, controlli per scenario, viste, dinieghi e chiusura esplicita. Da implementare: parser per formati generici, verifica completa della provenienza, proxy esterno, isolamento, secondo specialista, report, tracce sperimentali e finalizzazione automatica del workflow. Questo incremento non dimostra ancora le proprietà di sicurezza dell'architettura completa.
 
 Le decisioni e le verifiche di ogni step sono registrate in `DIARIO_PROGETTO.md`. Le dipendenze in `pyproject.toml` hanno intervalli compatibili; `requirements-lock.txt` registra le versioni dell'ambiente verificato. Per riprodurlo, dopo la creazione dell'ambiente eseguire `python -m pip install -r requirements-lock.txt` usando il percorso di Python dell'ambiente indicato sopra, quindi `python -m pip install --no-deps -e .`.
 
@@ -153,3 +153,36 @@ Su Windows PowerShell usare `.\.venv\Scripts\python.exe` al posto di `.venv/bin/
 Il runner supporta anche `--expect agent-off` (502 atteso) e `--expect ollama-off` (200 failed atteso): nei test negativi passed confronta così con l'esito negativo previsto.
 
 Per verificare disponibilità dopo timeout **senza riavvio**, usare invece `services.recovery_agent:app`: prima richiesta lenta, successive normali. Procedura nello Step 08 del diario. I risultati riportano `measurements.agent_boot_id`; deve coincidere nelle due richieste. Non premere il pulsante agente nel browser durante la sequenza, perché consumerebbe la prima richiesta della fixture.
+
+
+## Allineamento alla tesi
+
+La verifica per requisito è nello Step 10 del diario. Il prototipo attuale è un percorso parziale locale, non ancora l'architettura completa. Caricamenti con un PDF illeggibile proseguono sui restanti documenti validi; documenti validi di fascicoli diversi o duplicati restano rifiutati per evitare aggregazioni ambigue. I limiti di dimensione continuano a bloccare la richiesta per intero. Il parser è specifico del dataset e la provenienza non contiene ancora span del testo. LangGraph S-01 è ora disponibile; restano proxy/isolamento, agente fiscale, report, finalizzazione globale e valutazione 2×2.
+
+## Orchestrazione LangGraph per S-01
+
+Aggiornare le dipendenze prima di riavviare i servizi:
+
+macOS:
+```bash
+.venv/bin/python -m pip install -e '.[dev]'
+```
+Windows PowerShell:
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
+
+Avviare Ollama, agente mercati e gateway con i comandi già documentati. Non serve un ulteriore processo per LangGraph: il grafo viene eseguito nel gateway. Nella pagina, dopo il caricamento PDF, scegliere **Esegui workflow S-01 e chiudi sessione**. Il risultato contiene status, eventuale result dell'agente, fasi, tempi e session_closed. La sessione viene consumata dal workflow: per ripetere caricare nuovamente i PDF. S-02 non viene eseguito da questo pulsante.
+
+Il percorso è request_view → delegate_a2a → verify_result, con uscita anticipata per input insufficiente/errore e finalizzazione in finally. La policy resta nel gateway. Non è ancora una pianificazione LLM, né un report finanziario. Lo stato del grafo contiene soltanto incarico minimizzato e risultato; nessun checkpointer o database, esportazione LangSmith disabilitata per l'invocazione. La finalizzazione copre la sessione gateway dopo l'avvio del workflow, non un arresto dell'host o la terminazione dell'inferenza remota già avviata.
+
+Pilota macOS (su Windows sostituire il percorso Python):
+```bash
+.venv/bin/python scripts/run_pilot.py --workflow --repetitions 3 --output runs/langgraph_pilot.jsonl
+```
+
+Attesi sei completed e sei blocked; tutti HTTP 200 perché l'API del workflow restituisce l'esito strutturato anche per i blocchi. automatic_session_closed deve essere true; cleanup_verified richiede che DELETE trovi già la sessione assente (404). L'endpoint diretto /markets resta invariato per confronto e conserva HTTP 409 sui blocchi. Non confrontare i tempi dei due percorsi come overhead puro senza controllare caricamento modello e condizioni.
+
+Guasti e fixture si possono ripetere aggiungendo --workflow ai comandi precedenti; un agente spento produce HTTP 200 failed nel workflow, con error_code delegation_failed. Un timeout dell'agente restituisce error_code timeout. L'API POST /sessions/{id}/workflow è disponibile anche in /docs.
+
+Riferimento: https://reference.langchain.com/python/langgraph/graph/state/StateGraph.

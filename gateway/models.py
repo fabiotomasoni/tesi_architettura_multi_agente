@@ -1,4 +1,4 @@
-"""Contratti provvisori: input strutturato, nessuna estrazione documentale."""
+"""Contratti del profilo locale e dell’ingresso strutturato."""
 from datetime import date
 from decimal import Decimal
 from enum import Enum

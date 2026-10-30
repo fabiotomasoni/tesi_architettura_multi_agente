@@ -194,3 +194,101 @@ Parser limitato al template sintetico; niente OCR, coordinate/span o autenticit�
 Non ancora verificati timeout durante Ollama, annullamento, isolamento di rete, autenticazione e sicurezza contro contenuti ostili. Mancano proxy completo, LangGraph, agente fiscale, fonti reali, calcoli personalizzati, report finale e finalizzazione globale. Le misure sono locali e annidate; quelle prodotte dal servizio non sono una certificazione indipendente.
 
 Le evidenze raccolte sono prove pilota. Non dimostrano vantaggi del multi-agente né il confronto fattoriale 2×2. I record indicano working_tree_dirty=true: il commit registrato non basta a ricostruire lo stato eseguito; conservare una revisione stabile prima della campagna finale e identificare il modello anche tramite digest. Windows è documentato ma non verificato con esecuzione reale in questa raccolta.
+
+## Step 10 — Revisione della tesi e allineamento del prototipo
+
+### Riferimento e metodo
+
+Riletto il testo completo dei capitoli 1–4, dei capitoli 5–6 ancora non sviluppati e dei riferimenti della tesi; confrontati requisiti con parser, policy, API, contratti, adattatore A2A, servizi, script e test. La revisione riguarda contenuto e codice; non verifica la fedeltà grafica dei diagrammi incorporati. Nessuna modifica al documento di tesi o ai risultati storici del pilota.
+
+### Correzioni applicate
+
+- RF-01 e scenario alternativo della sezione 3.2: un PDF rifiutato non annulla più i documenti validi sufficienti. Prevalidazione per file, esclusione degli input rifiutati, elenco rejected_documents con posizione nell'upload e motivo senza nome del file. Se tutti sono rifiutati: HTTP 400. Documenti validi di fascicoli diversi e duplicati continuano a bloccare l'aggregazione; limiti di dimensione restano bloccanti.
+- Il parser viene eseguito una volta per prevalidare e nuovamente per aggregare i validi: costo aggiuntivo esplicito da considerare nei successivi esperimenti, non ottimizzazione prestazionale.
+- Robustezza RF-02: un anno d'imposta testuale NaN viene segnalato come non valido senza provocare un errore nella verifica del periodo. Non viene usato nei calcoli.
+- README aggiornato con il nuovo comportamento e mantenuti i limiti non risolti.
+
+### Verifiche
+
+52 test superati, 26 warning di libreria. Due nuovi casi: PDF non valido insieme a mutuo valido, con S-01 utilizzabile e S-02 insufficiente; anno non finito rifiutato senza errore applicativo. Restano superati tutti i test precedenti, compresi i 25 fascicoli e il timeout MCP. Le precedenti misure di latenza non vengono ricalcolate o attribuite a questa revisione.
+
+### Stato dei requisiti dopo la revisione
+
+| Requisito | Stato effettivo | Lavoro residuo |
+|---|---|---|
+| RF-01 | Ingresso PDF del template e recupero dei validi | Altri layout nativi e fixture scansione/cifratura/corruzione |
+| RF-02 | Estrazione locale, unità e periodi, documento/pagina | Porzione di testo, distinzione estratto/derivato/non specificato |
+| RF-03, RNF-01 | Viste chiuse e minimizzazione nel percorso locale | Proxy, controllo dei payload esterni, PII e quasi-identificatori |
+| RF-04 | Delega A2A al solo specialista mercati | Pianificazione LangGraph, fiscale e parallelismo |
+| RF-05 | MCP reale con una fixture locale | Catalogo configurabile e traccia strumento/categorie/esito/correlazione |
+| RF-06 | Risultato strutturato e rifiuto se fonte obbligatoria assente | Stato esplicito non verificato e propagazione dei limiti al report |
+| RF-07 | Coerenza di unità e periodi del profilo | Catalogo confronti/tolleranze e discordanza agente–documento |
+| RF-08, RNF-07 | Sintesi del solo dato simulato, dichiarata non verificata | Report locale completo con dati, fonti, inferenze e limiti |
+| RF-09, RNF-04 | Guasto, timeout MCP e disponibilità dopo timeout verificati | Report parziale, annullamento e timeout Ollama |
+| RF-10, RNF-06 | Tempi e conteggi nel pilota | Tracce correlate complete, budget configurabili e costi di policy |
+| RNF-02, sezione 4.4 | Chiusura manuale/TTL gateway; cleanup ADK/A2A | Finalizzazione comune automatica su tutti i percorsi e recupero dopo crash |
+| RNF-03, sezione 4.5 | Schemi e Card controllati | Autenticazione e isolamento host/container; blocco uscite dirette |
+| RNF-05, V-06 | Contratti presenti | Prova di sostituzione agente/tool tramite configurazione |
+| RNF-08, sezione 4.6 | Dataset sintetico e pilota | Fatti annotati, rubriche, quattro condizioni comparabili, dieci ripetizioni |
+
+### Scelte da concordare e prossimo incremento proposto
+
+Non alterate automaticamente le categorie other: il parser assegna una categoria generica al tipo mutuo non esplicitato e generalizza ristrutturazione. Prima della ricerca fiscale occorre distinguere informazioni non specificate da finalità documentate, concordando catalogo e versione della policy, senza inventare campi o modificare il dataset retroattivamente.
+
+Prossimo incremento proposto: orchestratore LangGraph per il solo S-01, con validazione, richiesta vista al gateway, delega A2A, verifica risultato e uscita strutturata. Mantenere policy nel gateway e non nei nodi del grafo; definire finalizzazione automatica della sessione per successo, dati insufficienti ed errore. Misurare estrazione/pianificazione/delega/controllo/pulizia senza sommare tempi annidati. Report personalizzato, secondo specialista e uscite reali restano incrementi successivi. Prima di fonti o inferenza remote rendere operativo il proxy e verificare l'isolamento. Nessuna di queste estensioni è dichiarata implementata in questo step.
+
+## Step 11 — Orchestrazione LangGraph S-01
+
+### Implementazione
+
+Autorizzata l'introduzione di LangGraph. Aggiunto gateway/workflow.py con StateGraph asincrono, transizioni condizionali, richiesta vista al gateway, delega A2A e verifica di schema/correlazione/esito. Il grafo coordina il flusso, non usa un ulteriore LLM. Policy, controllo Card e adattatore A2A restano nel gateway. S-02 e report personalizzato rimangono fuori da questo incremento.
+
+Stato in memoria con solo incarico minimizzato e risultato, senza checkpointer o persistenza. Tracciamento LangSmith esplicitamente disabilitato nel contesto dell'invocazione. Finalizzazione in finally con rimozione sessione gateway anche in caso di errore o cancellazione del task; durata cleanup misurata. La chiusura precede il ritorno della risposta e non dipende dal browser. Non equivale a recupero dopo crash dell'host né alla cancellazione certa di una richiesta A2A già in elaborazione.
+
+Nuovo endpoint /sessions/{id}/workflow e pulsante dedicato; percorso diretto /markets preservato. Il workflow restituisce HTTP 200 con status completed/blocked/failed; payload inesistenti o richieste invalide restano errori HTTP. Sessione consumata a fine workflow. Script pilota esteso con --workflow, fasi, versione LangGraph e verifica di cancellazione automatica (DELETE deve dare 404, senza essere la causa della cancellazione).
+
+### Verifiche e problemi risolti
+
+58 test automatici superati, 38 avvisi di libreria; pip check senza dipendenze incompatibili. Sei nuovi casi: successo, attività fallita, eccezione della delega, risultato con correlazione errata, dati insufficienti senza invio A2A, cancellazione del task esterno. Tutti verificano finalizzazione. L'iniziale test che sollevava CancelledError direttamente dal nodo era trasformato da LangGraph in NodeCancelledError: sostituito con cancellazione effettiva del task chiamante, per controllare il percorso corretto.
+
+Prova gateway in processo con servizio A2A non disponibile: failed e sessione assente dopo il workflow. Nessuna esportazione di profili o prompt introdotta. La verifica automatica usa delega controllata; non va confusa con una campagna finale con modelli reali.
+
+### Prova da eseguire dall'autore
+
+Aggiornare dipendenze, riavviare gateway e agente, mantenere Ollama aperto. Eseguire run_pilot.py --workflow --repetitions 3 --output runs/langgraph_pilot.jsonl con Python dell'ambiente virtuale. Attesi 12 esiti, sei completed e sei blocked, sessione chiusa automaticamente in tutti. Registrare i file prima di dichiarare eseguito il pilota LangGraph dell'autore. Ripetere poi guasti e timeout con --workflow; il risultato è ora strutturato HTTP 200 anche quando l'attività fallisce. Non modificati retroattivamente i risultati dei piloti precedenti.
+
+Verificata anche una richiesta reale con PDF C001, servizio ADK/A2A avviato, MCP stdio e Ollama: completed, error_code assente, session_closed=true e successivo DELETE 404. Il servizio avviato per la verifica è stato fermato al termine.
+
+## Step 12 — Pilota LangGraph eseguito dall'autore
+
+Verificati direttamente i 12 record della raccolta runs/langgraph_pilot.jsonl: LangGraph 1.2.18, workflow S-01-langgraph-v1. Tutti riportano passed=true, automatic_session_closed=true e cleanup_verified=true.
+
+| Caso | Ripetizioni | Esito | Fasi osservate |
+|---|---:|---|---|
+| C001 | 3 | HTTP 200 completed | request_view, delegate_a2a, verify_result, cleanup |
+| C024 | 3 | HTTP 200 completed | request_view, delegate_a2a, verify_result, cleanup |
+| C006 | 3 | HTTP 200 blocked | request_view, cleanup |
+| C016 | 3 | HTTP 200 blocked | request_view, cleanup |
+
+Il grafo completa i casi sufficienti e interrompe quelli con capitale mancante o tasso ambiguo prima del nodo di delega. La sessione gateway risulta già assente prima che il runner provi a cancellarla: verificata finalizzazione automatica, non soltanto cancellazione manuale a fine test. La pulizia interna ADK/A2A rimane coperta dai test automatici separati.
+
+HTTP 200 blocked è l'esito strutturato previsto dal workflow; il percorso diretto storico resta diverso (HTTP 409). Nessuna correzione richiesta dai risultati. Non si attribuisce a LangGraph un overhead confrontando direttamente questi tempi con il pilota precedente: caricamento modello e condizioni non sono controllati in modo sufficiente. Persistono le limitazioni di campione pilota e working_tree_dirty=true.
+
+Prossima verifica proposta: ripetere indisponibilità agente, Ollama e timeout tramite --workflow per controllare finalizzazione del grafo nelle prove reali negative. Non ancora dichiarate eseguite dall'autore per questo nuovo percorso.
+
+## Step 13 — Guasti reali e timeout nel workflow LangGraph
+
+Controllati direttamente i file langgraph_agent_off.jsonl, langgraph_ollama_off.jsonl, langgraph_timeout.jsonl e langgraph_recovery.jsonl in runs/. Tutti i sette record presenti hanno passed=true, automatic_session_closed=true e cleanup_verified=true. Il file Ollama spento contiene due esecuzioni in append, entrambe valide; non sono state eliminate o confuse con un'unica prova.
+
+| Condizione | Record presenti | Stato | Codice | Percorso |
+|---|---:|---|---|---|
+| Agente spento | 1 | failed | delegation_failed | request_view → delegate_a2a fallita → cleanup |
+| Ollama spento | 2 | failed | execution_failed | request_view → delegate_a2a → verify_result → cleanup |
+| MCP lento | 3 | failed | timeout | request_view → delegate_a2a → verify_result → cleanup |
+| Ripristino nominale | 1 | completed | null | request_view → delegate_a2a → verify_result → cleanup |
+
+Tutte le risposte HTTP sono 200, coerentemente con il contratto di esito strutturato del workflow. Su errore Ollama e timeout MCP la delega è completed perché il servizio A2A ha restituito correttamente un risultato di attività fallita; verify_result completed significa che tale risultato ha superato i controlli, non che l'analisi sia riuscita. Agente spento impedisce invece lo scambio e salta la verifica del risultato.
+
+Timeout osservati nella fase delega: 2083.905, 2082.324 e 2081.726 ms, coerenti con la fixture a budget 2 s. Ripristino nominale: una chiamata MCP, una Ollama, 119 token input e 46 output. Identificativi d'avvio diversi tra fixture e ripristino: questa raccolta verifica recupero dopo cambio di servizio; la verifica senza riavvio resta quella acquisita nello Step 08.
+
+Conclusione: il workflow gestisce le condizioni negative provate e finalizza automaticamente la sessione gateway. Nessuna correzione al codice richiesta da questi esiti. Non sono dimostrati timeout durante Ollama o finalizzazione dopo crash dell'host. Nessun commit creato automaticamente.

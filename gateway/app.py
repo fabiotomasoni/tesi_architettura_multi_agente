@@ -67,17 +67,26 @@ def create_app() -> FastAPI:
             if not 1 <= len(files) <= 4:
                 raise HTTPException(400, "Caricare da uno a quattro PDF dello stesso fascicolo.")
             contents = []
-            for file in files:
+            rejected_documents = []
+            for index, file in enumerate(files, 1):
                 content = await file.read(5 * 1024 * 1024 + 1)
                 if len(content) > 5 * 1024 * 1024:
                     raise HTTPException(413, "Ogni PDF deve essere inferiore a 5 MiB.")
+                try:
+                    # Prevalidazione separata: un file rifiutato non entra nell'aggregazione.
+                    extract_profile([content])
+                except PDFInputError as exc:
+                    rejected_documents.append({'upload_index': index, 'reason': str(exc)})
+                    continue
                 contents.append(content)
+            if not contents:
+                raise HTTPException(400, {'message': 'Nessun PDF utilizzabile.', 'rejected_documents': rejected_documents})
             try:
                 profile, documents = extract_profile(contents)
             except PDFInputError as exc:
                 raise HTTPException(400, str(exc)) from None
             result = create_session(SessionInput(scenarios=scenarios, profile=profile))
-            return {**result, "documents": documents, "profile": profile.model_dump(mode="json")}
+            return {**result, "documents": documents, "rejected_documents": rejected_documents, "profile": profile.model_dump(mode="json")}
         finally:
             for file in files:
                 await file.close()
@@ -111,6 +120,19 @@ def create_app() -> FastAPI:
             raise HTTPException(502, "Delega non completata: controllare servizio mercati, Card e Ollama.") from None
         result.measurements.update({'view_ms':round(view_ms, 3), 'gateway_total_ms':round((perf_counter()-started)*1000, 3)})
         return result.model_dump(mode="json")
+
+    @app.post("/sessions/{session_id}/workflow")
+    async def workflow(session_id: UUID):
+        from .workflow import run_workflow
+        from .market_client import delegate
+        with lock:
+            get_session(session_id)
+        def request_view():
+            return view(session_id, ViewRequest(scenario=Scenario.MORTGAGE, recipient="markets"))
+        def cleanup():
+            with lock:
+                sessions.pop(session_id, None)
+        return await run_workflow(request_view, delegate, cleanup)
 
     @app.delete("/sessions/{session_id}", status_code=204)
     def close_session(session_id: UUID):

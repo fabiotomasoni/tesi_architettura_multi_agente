@@ -32,3 +32,17 @@ def test_invalid_mixed_duplicate_and_unknown_pdf():
         mixed=[('files',('a.pdf',(ROOT/'C001_mutuo.pdf').read_bytes())),('files',('b.pdf',(ROOT/'C002_interessi.pdf').read_bytes()))]
         assert client.post('/sessions/pdf',files=mixed,data={'scenarios':'S-01'}).status_code == 400
         assert upload(client,'C001',('mutuo','mutuo')).status_code == 400
+
+
+def test_rejected_pdf_does_not_discard_sufficient_valid_documents():
+    with TestClient(create_app()) as client:
+        response = client.post('/sessions/pdf',files=[
+            ('files',('broken.pdf',b'broken','application/pdf')),
+            ('files',('valid.pdf',(ROOT/'C001_mutuo.pdf').read_bytes(),'application/pdf'))], data={'scenarios':['S-01','S-02']})
+        assert response.status_code==201
+        data=response.json()
+        assert data['scenarios']['S-01']['ready']
+        assert not data['scenarios']['S-02']['ready']
+        assert len(data['documents'])==1
+        assert data['rejected_documents']==[{'upload_index':1,'reason':'Un file non è un PDF valido.'}]
+        assert 'broken.pdf' not in response.text

@@ -56,9 +56,10 @@ def issues(profile: Profile, scenario: Scenario) -> list[dict]:
             problems.append({"field": "period", "reason": "Date contrattuali non allineate"})
     if scenario == Scenario.TAX and profile.tax_year and profile.annual_interest:
         try:
-            if int(str(profile.tax_year.value)) != profile.annual_interest.period.year:
+            year = Decimal(str(profile.tax_year.value))
+            if year.is_finite() and year == year.to_integral_value() and int(year) != profile.annual_interest.period.year:
                 problems.append({"field": "period", "reason": "Interessi non riferiti all'anno d'imposta"})
-        except ValueError:
+        except (ValueError, InvalidOperation, OverflowError):
             pass
     return problems
 
