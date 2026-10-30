@@ -2,7 +2,7 @@
 from decimal import Decimal, InvalidOperation
 from .models import Profile, Scenario
 
-POLICY_VERSION = "0.1.0"
+POLICY_VERSION = "0.2.0"
 REQUIRED = {
     Scenario.MORTGAGE: ("mortgage_type", "rate_type", "remaining_principal", "remaining_months", "annual_rate", "payment_amount", "payment_frequency"),
     Scenario.TAX: ("tax_year", "purpose", "annual_interest", "ownership_share"),
@@ -11,7 +11,7 @@ CATEGORIES = {
     "mortgage_type": {"residential", "other"},
     "rate_type": {"fixed", "variable", "mixed"},
     "payment_frequency": {"monthly", "quarterly", "semiannual", "annual"},
-    "purpose": {"primary_home_purchase", "primary_home_construction", "other"},
+    "purpose": {"primary_home_purchase", "primary_home_construction", "renovation", "other"},
 }
 UNITS = {"remaining_principal": "EUR", "remaining_months": "month", "annual_rate": "percent_per_year", "payment_amount": "EUR", "tax_year": "year", "annual_interest": "EUR", "ownership_share": "fraction"}
 

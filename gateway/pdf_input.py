@@ -114,7 +114,7 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
             except (ValueError, TypeError):
                 raise PDFInputError("Anno d'imposta mancante o non valido.") from None
             add('tax_year', 'Anno imposta', 'year', period, number)
-            add('purpose', 'Finalita', 'category', period, lambda v: {'acquisto abitazione principale':'primary_home_purchase', 'ristrutturazione':'other'}[v])
+            add('purpose', 'Finalita', 'category', period, lambda v: {'acquisto abitazione principale':'primary_home_purchase', 'ristrutturazione':'renovation'}[v])
             add('annual_interest', 'Interessi annui documentati', 'EUR', period, number)
             add('ownership_share', 'Quota intestazione', 'fraction', period, lambda v: number(v) / 100)
     return profile, summaries

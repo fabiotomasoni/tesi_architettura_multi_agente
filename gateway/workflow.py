@@ -20,7 +20,7 @@ class State(TypedDict, total=False):
     phases: list[dict]
 
 
-async def run_workflow(request_view, delegate, cleanup):
+async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask, view_type=MarketView, result_type=MarketResult, scope="market_rate_context"):
     """Callback locali gateway; lo stato non contiene profilo esatto né PDF."""
     started = perf_counter()
     phases = []
@@ -33,8 +33,8 @@ async def run_workflow(request_view, delegate, cleanup):
         began = perf_counter()
         try:
             permitted = request_view()
-            task = MarketTask(correlation_id=uuid4(),deadline=datetime.now(timezone.utc)+timedelta(seconds=120),
-                              view=MarketView.model_validate(permitted['data']))
+            task = task_type(purpose=scope,correlation_id=uuid4(),deadline=datetime.now(timezone.utc)+timedelta(seconds=120),
+                              view=view_type.model_validate(permitted['data']))
         except HTTPException as exc:
             status = 'blocked' if exc.status_code in {403,409} else 'failed'
             phase('request_view',began,status)
@@ -60,7 +60,7 @@ async def run_workflow(request_view, delegate, cleanup):
     def verify(state):
         began=perf_counter()
         try:
-            result=MarketResult.model_validate(state['result'])
+            result=result_type.model_validate(state['result'])
             if result.correlation_id != state['task'].correlation_id:
                 raise ValueError('Correlazione errata')
             if result.status=='failed' and result.evidence is not None:

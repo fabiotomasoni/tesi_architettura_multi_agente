@@ -27,7 +27,7 @@ class MarketTask(Contract):
     correlation_id: UUID
     scenario: Literal['S-01'] = 'S-01'
     purpose: Literal['market_rate_context'] = 'market_rate_context'
-    policy_version: Literal['0.1.0'] = '0.1.0'
+    policy_version: Literal['0.1.0', '0.2.0'] = '0.2.0'
     deadline: datetime
     view: MarketView
 
@@ -61,3 +61,37 @@ class MarketResult(Contract):
         if self.status == 'completed' and self.evidence is None:
             raise ValueError('Provenienza obbligatoria')
         return self
+
+
+class TaxView(Contract):
+    tax_year: int = Field(ge=1900, le=2100)
+    expense_category: Literal['mortgage_interest'] = 'mortgage_interest'
+    purpose: Literal['primary_home_purchase', 'primary_home_construction', 'renovation', 'other']
+
+
+class TaxTask(Contract):
+    correlation_id: UUID
+    scenario: Literal['S-02'] = 'S-02'
+    purpose: Literal['tax_context'] = 'tax_context'
+    policy_version: Literal['0.2.0'] = '0.2.0'
+    deadline: datetime
+    view: TaxView
+
+    @model_validator(mode='after')
+    def timezone_required(self):
+        if self.deadline.tzinfo is None:
+            raise ValueError('Scadenza senza fuso orario')
+        return self
+
+
+class TaxEvidence(Contract):
+    source_id: Literal['simulated-tax-v1'] = 'simulated-tax-v1'
+    simulated: Literal[True] = True
+    tax_year: int = Field(ge=1900, le=2100)
+    purpose: Literal['primary_home_purchase', 'primary_home_construction', 'renovation', 'other']
+    reference: Literal['DEMO-TAX-001'] = 'DEMO-TAX-001'
+    conditions: list[str] = Field(min_length=1, max_length=10)
+
+
+class TaxResult(MarketResult):
+    evidence: TaxEvidence | None = None

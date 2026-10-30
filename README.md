@@ -186,3 +186,76 @@ Attesi sei completed e sei blocked; tutti HTTP 200 perché l'API del workflow re
 Guasti e fixture si possono ripetere aggiungendo --workflow ai comandi precedenti; un agente spento produce HTTP 200 failed nel workflow, con error_code delegation_failed. Un timeout dell'agente restituisce error_code timeout. L'API POST /sessions/{id}/workflow è disponibile anche in /docs.
 
 Riferimento: https://reference.langchain.com/python/langgraph/graph/state/StateGraph.
+
+## Due specialisti: mercati e fiscalità
+
+La policy 0.2.0 distingue esplicitamente `renovation` (ristrutturazione) da `other`. Le precedenti raccolte con policy 0.1.0 restano evidenze storiche, non vanno riscritte. La categoria generica del tipo mutuo rimane un limite separato.
+
+Il nuovo endpoint `POST /sessions/{id}/analysis` esegue solo gli scenari selezionati all'upload. I due subgrafi LangGraph lavorano in parallelo e il coordinatore chiude la sessione una sola volta. L'API restituisce HTTP 200 e stato completed, partial, blocked o failed. `partial` indica che almeno un'attività ha completato e almeno un'altra no. Non è ancora un report personalizzato. I precedenti /workflow (solo S-01) e /markets rimangono disponibili per regressione.
+
+### Avvio
+
+Con Ollama aperto verificare i due modelli:
+```bash
+ollama pull llama3.2:3b
+ollama pull qwen3:1.7b
+```
+
+Aggiornare le dipendenze come sopra. Riavviare gateway e agente mercati per caricare il nuovo codice. In tre terminali dalla radice:
+
+```bash
+.venv/bin/python -m uvicorn services.market_agent:app --host 127.0.0.1 --port 8001 --no-access-log
+```
+```bash
+.venv/bin/python -m uvicorn services.tax_agent:app --host 127.0.0.1 --port 8002 --no-access-log
+```
+```bash
+.venv/bin/python -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --no-access-log
+```
+
+Su Windows PowerShell sostituire `.venv/bin/python` con `.\.venv\Scripts\python.exe` in ciascun comando. MCP viene avviato dai rispettivi agenti. Nella pagina scegliere gli scenari, caricare i PDF e premere **Esegui scenari selezionati e chiudi sessione**.
+
+L'agente fiscale usa ADK/A2A, MCP stdio e qwen3:1.7b locale con thinking disabilitato, contesto 4096 e massimo 200 token generati. La fixture simulated-tax-v1 restituisce soltanto condizioni inventate, anno e finalità, senza riferimenti legislativi reali, aliquote o diritti alla detrazione. Nessuna informazione documentale esatta entra nella vista fiscale. Il gateway controlla anche anno/finalità dell'evidenza rispetto all'incarico. Le sintesi dei modelli restano non verificate.
+
+### Pilota
+
+In un quarto terminale:
+```bash
+.venv/bin/python scripts/run_multi_pilot.py --repetitions 3
+```
+
+Attesi 15 record: sei completed (C001/C024), nove partial (C006/C011/C016), tutti passed=true e pulizia=true. Controllare le attività nei record: C006/C016 bloccano solo mercati; C011 blocca solo fiscale. Ulteriori prove:
+```bash
+.venv/bin/python scripts/run_multi_pilot.py --cases C001 --scenarios S-01 --output runs/only_markets.jsonl
+.venv/bin/python scripts/run_multi_pilot.py --cases C001 --scenarios S-02 --output runs/only_tax.jsonl
+```
+
+Per guasto parziale, fermare solo l'agente fiscale e ripetere C001 con entrambi gli scenari: atteso partial, S-01 completed, S-02 delegation_failed e pulizia vera. Il runner confronta con il nominale e riporterà passed=false in questa prova negativa; leggere le attività, non interpretarlo come difetto della gestione del guasto. Riavviare poi l'agente fiscale. L'output JSONL contiene solo esiti, fasi e misure, senza sintesi o profili; è escluso da Git. Il nuovo runner è per verifica funzionale: la registrazione completa di revisioni e digest modello necessaria alla campagna finale resta da completare.
+
+## Report locale strutturato RF-08
+
+Il coordinatore /analysis compone ora il report dopo la verifica degli specialisti e prima della cancellazione della sessione. Non richiede un altro modello. Sezioni: dati documentali (fatti, unità, periodo, provenienza e stato), fonti simulate, sintesi dei modelli esplicitamente non verificate, esiti tecnici e limiti. Dati mancanti o ambigui restano segnalati; un ramo fallito non produce una fonte inventata. Non sono ancora calcolate convenienza, risparmio o spettanza di detrazioni.
+
+Riavviare il gateway dopo l'aggiornamento. Con entrambi gli agenti e Ollama attivi, caricare C001 e avviare gli scenari selezionati. Il report appare in sezioni separate; la sessione server è già chiusa. Il pulsante **Esporta report JSON** salva esplicitamente una copia locale con dati finanziari esatti. Non vengono effettuati salvataggi automatici del report sul server; un nuovo caricamento cancella dalla pagina il report precedente.
+
+Provare C006 per il report parziale: S-01 bloccato con capitale mancante, fonte e sintesi disponibili solo per S-02. Fermando il fiscale e usando C001, deve restare la sola fonte mercati con il limite fiscale esplicito. Il pilota JSONL salva solo report_present e report_ms, non il report, i suoi valori o le sintesi.
+
+Questa è la prima composizione strutturata del report, non pieno soddisfacimento di RF-08/RF-07: mancano confronto economico, verifica dei conflitti e fonti reali. La provenienza documentale è ancora documento/pagina; validazione non certifica autenticità. Il file only_tax.jsonl non era presente nella raccolta verificata: la prova reale di sola selezione fiscale resta da raccogliere.
+
+## Fedeltà della sintesi fiscale
+
+Report 0.2.0: la sintesi fiscale non usa prosa libera del modello. `faithful_summaries` contiene condizioni copiate dalla fixture autorizzata con riferimenti puntuali `source_ref`, contesto anno/finalità e digest SHA-256 del contenuto. `real_world_verified` rimane false: fedeltà alla fixture non significa validità fiscale reale.
+
+La fixture è verificata in tre punti: dopo MCP, nel client gateway e prima del report. L'ID della fonte da solo non autorizza il contenuto: condizioni alterate, anno/finalità incoerenti, riferimenti diversi o istruzioni aggiunte vengono rifiutati. Il digest identifica il contenuto, non è una firma di un'autorità esterna. Il catalogo fidato è gateway/tax_evidence.py, versionato insieme al codice.
+
+L'output libero di qwen3:1.7b è ancora generato per continuità della pipeline sperimentale, ma escluso dal report e dal riepilogo tecnico della risposta /analysis. `model_evaluation` conserva soltanto modello, hash dell'output e motivo di esclusione: non rappresenta una valutazione semantica automatica. La sintesi mercati resta non verificata nella propria sezione; non estendere la garanzia fiscale a tutte le sintesi.
+
+Riavviare agente fiscale e gateway. Ricaricare C001 e C006 ed esportare nuovi report: devono avere report_version 0.2.0, sintesi fiscale deterministica con riferimenti, nessuna frase fiscale generata liberamente e nessuna affermazione di spettanza. I report precedenti restano evidenze della limitazione osservata, non vanno sovrascritti come se fossero stati corretti retroattivamente. Il passaggio alle fonti istituzionali reali richiederà proxy, controllo delle uscite e verifica di versione/anno/ambito della fonte.
+
+## Fedeltà delle sintesi mercati e fiscale
+
+Report 0.3.0 estende il controllo anche ai mercati. La fixture fidata gateway/market_evidence.py definisce tasso per tipo, data, unità, origine e natura simulata. Contenuti controllati dopo MCP, nel client gateway e al report. Tasso variabile restituito per un incarico fisso, date/unità alterate, origini diverse o campi arbitrari sono rifiutati.
+
+Il report mostra tasso e data con riferimenti ai campi della fonte e digest del contenuto. Entrambe le sintesi sono in faithful_summaries; unverified_summaries è vuoto nei casi attuali. Nessuna prosa libera di llama3.2 o qwen3 entra nel report o nel riepilogo tecnico /analysis. model_evaluation conserva hash e motivo di esclusione; non dimostra che l'output escluso fosse corretto o scorretto. I modelli continuano a essere invocati nella pipeline. L'endpoint diretto storico /markets resta un'interfaccia tecnica con output non verificato del modello; usare /analysis per il report protetto.
+
+Riavviare gateway ed entrambi gli agenti. Riprovare C001, C024 e C006 ed esportare nuovi file: report_version 0.3.0, fonti ancora simulated=true e real_world_verified=false. C001 deve mostrare tasso sintetico 3.20, C024 3.60; C006 non deve avere sintesi mercati. Nessuna conclusione di convenienza o confronto economico viene dedotta. Data e valori delle fixture non rappresentano condizioni di mercato attuali.

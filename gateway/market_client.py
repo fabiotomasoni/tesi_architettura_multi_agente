@@ -6,6 +6,8 @@ from a2a.client import A2AClient
 from a2a.types import AgentCard, SendMessageRequest, MessageSendParams, Message, Role, Part, TextPart
 from .agent_contracts import MarketTask, MarketResult
 
+from .market_evidence import verify_evidence
+
 ENDPOINT = 'http://127.0.0.1:8001/'
 
 
@@ -32,6 +34,9 @@ async def delegate(task: MarketTask) -> MarketResult:
                 parsed = MarketResult.model_validate_json(part['text'])
                 if parsed.correlation_id != task.correlation_id:
                     raise ValueError('Correlazione del risultato non valida')
+                if parsed.evidence is not None:
+                    _, digest = verify_evidence(parsed.evidence, task.view)
+                    parsed.measurements.update({'fixture_content_verified':1,'source_sha256':digest})
                 parsed.measurements.update({'card_validation_ms':round(card_ms, 3), 'a2a_roundtrip_ms':round((perf_counter()-started)*1000, 3), 'a2a_requests':1, 'card_validated':1, 'result_validated':1})
                 return parsed
         raise ValueError('Risultato A2A privo di artefatto strutturato')

@@ -292,3 +292,135 @@ Tutte le risposte HTTP sono 200, coerentemente con il contratto di esito struttu
 Timeout osservati nella fase delega: 2083.905, 2082.324 e 2081.726 ms, coerenti con la fixture a budget 2 s. Ripristino nominale: una chiamata MCP, una Ollama, 119 token input e 46 output. Identificativi d'avvio diversi tra fixture e ripristino: questa raccolta verifica recupero dopo cambio di servizio; la verifica senza riavvio resta quella acquisita nello Step 08.
 
 Conclusione: il workflow gestisce le condizioni negative provate e finalizza automaticamente la sessione gateway. Nessuna correzione al codice richiesta da questi esiti. Non sono dimostrati timeout durante Ollama o finalizzazione dopo crash dell'host. Nessun commit creato automaticamente.
+
+## Step 14 — Agente fiscale e coordinamento dei due specialisti
+
+### Decisioni e implementazione
+
+Autorizzato il secondo specialista e il coordinamento delle attività richieste. Policy portata a 0.2.0 per mantenere ristrutturazione come renovation; nessuna modifica ai PDF o ai risultati pregressi. Il tipo mutuo generico other non è stato modificato in questo step.
+
+Aggiunti TaxView/TaxTask/TaxEvidence/TaxResult: solo anno, categoria e finalità nella vista, correlazione/scadenza/versione nell'incarico, fonte simulata e limiti nel risultato. Agente fiscale custom ADK esposto A2A sulla porta 8002, tool MCP lookup_tax e Ollama qwen3:1.7b. Fixture simulated-tax-v1 con riferimento DEMO-TAX-001: contenuto inventato, nessuna legge, aliquota o spettanza reale. Thinking disabilitato, contesto 4096, massimo 200 token generati e keep_alive=0. Sintesi non verificata, separata dall'evidenza.
+
+Client fiscale verifica Card, correlazione e corrispondenza di anno/finalità. Cleanup ADK/A2A analogo al servizio mercati. Nuovo endpoint /analysis: solo scenari selezionati, subgrafi LangGraph asincroni concorrenti con TaskGroup, aggregazione completed/partial/blocked/failed e finalizzazione unica gateway in finally. I subgrafi non possiedono la sessione e non dichiarano una propria cancellazione. Nessun checkpointer o traccia LangSmith esportata. Il risultato è aggregazione strutturata, non report o consiglio finanziario.
+
+UI aggiornata al coordinatore; API S-01 precedente conservata. Aggiunto scripts/run_multi_pilot.py per selezione scenari, casi sufficienti/incompleti e pulizia automatica. Il runner storico ora registra la versione policy effettiva dell'upload. Le versioni 0.1.0 delle evidenze storiche non vengono riscritte.
+
+### Verifiche eseguite
+
+69 test automatici superati, 49 warning di libreria; pip check senza incompatibilità. Nuovi casi: due scenari completi; solo mercati; solo fiscale; C006 capitale mancante, C011 interessi mancanti, C016 tasso ambiguo con esito partial e chiamata del solo specialista ammesso; indisponibilità di un ramo con conservazione dell'altro; rifiuto importi esatti nel contratto fiscale; finalità renovation conservata dal PDF; risposta fiscale A2A con store svuotati. Test di concorrenza con barriera: entrambi i rami entrano prima di procedere, poi timeout fiscale con mercato conservato e cleanup unico. Il test A2A usa lavorazione sostituita, non Ollama reale.
+
+L'avvio dei servizi sulle porte 8001/8002 per la nuova prova reale è stato impedito dall'ambiente (operation not permitted). Nessuna nuova esecuzione reale con due modelli è dichiarata superata. Procedura nel README: pilota con 15 record attesi, sei completed e nove partial; prove di selezione e guasto fiscale da eseguire dall'autore.
+
+### Limiti e lavoro successivo
+
+I modelli locali possono essere accodati da Ollama secondo memoria e configurazione: parallelismo dei rami non garantisce inferenza GPU simultanea o vantaggio prestazionale. Fonte fiscale solo inventata: non valuta correttezza normativa. Moduli fiscali riprendono la struttura del primo specialista; estrazione di helper condivisi possibile dopo verifica del pilota. Mancano ancora report, calcoli locali, proxy/isolamento, prove fiscali avversarie/timeout dedicate, controllo conflitti e valutazione 2×2. Il nuovo runner raccoglie risultati funzionali ma non ancora tutti i metadati necessari alla riproducibilità della campagna finale.
+
+## Step 15 — Pilota reale dei due specialisti
+
+Esaminati gli ultimi 15 record di runs/multi_pilot.jsonl, policy 0.2.0. Tutti passed=true, automatic_session_closed=true e cleanup_verified=true.
+
+| Caso | Ripetizioni | Mercati S-01 | Fiscale S-02 | Esito aggregato |
+|---|---:|---|---|---|
+| C001 | 3 | completed | completed | completed |
+| C024 | 3 | completed | completed | completed |
+| C006 | 3 | blocked/input_not_ready | completed | partial |
+| C011 | 3 | completed | blocked/input_not_ready | partial |
+| C016 | 3 | blocked/input_not_ready | completed | partial |
+
+Ogni attività completata riporta una richiesta A2A e una chiamata Ollama. Nei rami bloccati questi conteggi sono assenti, non valori zero misurati; i test automatici verificano separatamente il mancato invio della delega. Nessuna attività completata presenta error_code. Confermati sei esiti completi, nove parziali e pulizia automatica gateway per tutte le esecuzioni.
+
+Risultato acquisito: due specialisti locali reali completano le attività sufficienti e l'aggregazione conserva il risultato utilizzabile quando l'altro scenario è insufficiente. I record non dimostrano inferenza simultanea GPU, correttezza normativa delle fonti simulate o eliminazione di ogni rischio di privacy. Il runner resta funzionale e non registra tutti i metadati della campagna finale.
+
+Prossime prove suggerite: richiesta di ciascun solo scenario e guasto di un agente con l'altro disponibile. Sono controlli distinti dal blocco per dati insufficienti e, per il nuovo coordinatore, non ancora eseguiti dall'autore in questa raccolta. Nessuna modifica al codice richiesta dagli esiti nominali verificati.
+
+## Step 16 — Selezione, guasto parziale e primo report locale RF-08
+
+### Evidenze verificate
+
+Letto runs/only_markets.jsonl: C001, soltanto S-01, completed, passed=true, chiusura automatica e pulizia verificate. Letto runs/multi_tax_off.jsonl: C001 con due scenari, mercati completed e fiscale failed/delegation_failed, totale partial, chiusura e pulizia vere. passed=false è atteso nel confronto nominale del runner. runs/only_tax.jsonl non presente: prova reale di sola selezione fiscale non dichiarata eseguita; selezione coperta dal test automatico.
+
+### Implementazione
+
+Aggiunto gateway/report.py, composizione deterministica locale su profilo ed esiti già verificati. Sezioni distinte: fatti documentali per scenario richiesto con unità/periodo/provenienza/stato, fonti simulate con schema/provenienza controllati ma non verificate nel mondo reale, sintesi non verificate con modello, esiti tecnici e limiti. Mancanti/ambigui non sono stimati; i fallimenti non generano fonti né sintesi presentate come valide. Nessuna ulteriore inferenza e nessun calcolo finanziario o fiscale.
+
+Composizione dopo aggregazione e prima della finalizzazione; cleanup in finally anche se la composizione fallisce. Misurato report_ms. Lo snapshot locale del profilo resta nella richiesta solo fino al ritorno della risposta; nessun database o file report automatico. Il client riceve il report e può esportarlo esplicitamente come JSON; la copia contiene valori esatti e non è una traccia tecnica. Nuovo caricamento pulisce il report precedente dalla pagina.
+
+La pagina mostra sezioni separate tramite textContent, senza interpretare sintesi come HTML. Lo script multi pilota registra presenza e tempo del report, senza salvarne contenuto, profilo o sintesi nei log sperimentali.
+
+### Verifiche eseguite
+
+73 test automatici superati, 49 warning noti di libreria. Quattro nuovi casi: separazione fatti/fonti/sintesi, campo obbligatorio mancante senza fonte inventata, report prodotto via API con successiva sessione assente, cleanup anche se il generatore del report solleva errore. Restano superati i casi multi-agente parziali e di selezione. Test con servizi sostituiti: nessuna nuova esecuzione reale del report con entrambi i modelli ancora dichiarata; verifica visiva browser da eseguire dall'autore.
+
+### Prove manuali proposte
+
+Riavviare gateway, mantenere Ollama e i due agenti attivi. C001: report completo dei due esiti tecnici; verificare i cinque gruppi e nessuna conclusione personalizzata. C006: report partial, capitale missing, nessuna fonte mercati, fonte fiscale presente. Agente fiscale spento con C001: report partial, fonte mercati conservata, motivo delegation_failed fiscale. Ripristinare il fiscale. Provare esportazione esplicita JSON e nuovo caricamento, senza pubblicare dati documentali non necessari. Facoltativo: run_multi_pilot.py con nuovo file output per report_present/report_ms.
+
+### Limiti
+
+RF-08 parzialmente realizzato: manca ancora la valutazione dei valori documentali rispetto al contesto e il report personalizzato. RF-07 sui conflitti non è dimostrato dalla semplice separazione delle fonti. Fonte simulata non è normativa o quotazione reale. Mancano riferimenti puntuali al testo, proxy/isolamento e valutazione qualità/utilità. I report possono includere dati sensibili locali: non copiarli nelle tracce tecniche e non conservarli implicitamente lato server.
+
+## Step 17 — Fedeltà fiscale e verifica del contenuto delle fixture
+
+### Problema osservato e perimetro confermato
+
+Esaminati i due report esportati dall'autore: nel completo le sezioni sono correttamente distinte; nel parziale capitale missing, S-01 bloccato e fonte fiscale conservata. La sintesi fiscale libera del parziale contiene però l'affermazione non supportata “Non è attualmente soggetta a tasse”. Non è un difetto meramente stilistico: trasforma assenza di attestazione in conclusione fiscale. La precedente etichetta unverified non impediva l'esposizione al lettore. L'autore conferma di mantenere fonti simulate e consolidare prima la fedeltà.
+
+### Correzione e garanzie circoscritte
+
+Aggiunto catalogo fidato gateway/tax_evidence.py: contenuto esatto della fixture, contesto atteso dal profilo/incarico e digest canonico SHA-256. Verifica dopo MCP, client A2A gateway e composizione report: un ID corretto non basta se condizioni, riferimento, anno o finalità sono difformi. Nessuna nuova fonte normativa o chiamata Internet.
+
+Report portato a 0.2.0. Sintesi fiscale deterministica estrattiva: ciascuna condizione copiata senza parafrasi, riferimento source_ref alla posizione, contesto e digest. Nessuna deduzione di diritto, esenzione o aliquota. Campo real_world_verified=false mantenuto. Il digest è identificazione contenuto, non firma o prova di autenticità normativa.
+
+Prosa libera del modello fiscale esclusa dal report e sostituita nel riepilogo tecnico /analysis con un messaggio di esclusione. Il modello continua a essere invocato per continuità della pipeline; model_evaluation conserva hash e modello, senza testo o giudizio semantico automatico. La sintesi mercati rimane esplicitamente non verificata: la garanzia estrattiva riguarda solo la parte fiscale. Nessun aggiornamento retroattivo dei report precedenti.
+
+### Verifiche
+
+82 test superati prima del mascheramento aggiuntivo del riepilogo tecnico; suite completa rieseguita dopo la modifica. Nove nuovi casi: rifiuto anno, finalità, riferimento, ID, conclusione aggiunta o istruzione ostile nella fixture; corrispondenza esatta delle frasi con le condizioni e riferimenti; regressione sulla frase fiscale errata, assente dal report; riverifica del contenuto al report senza fidarsi dell'esito dell'agente. I test non dimostrano fedeltà semantica universale di un LLM: eliminano la parafrasi libera dal contenuto fiscale presentato.
+
+### Prossima prova manuale
+
+Riavviare fiscale e gateway, ripetere C001/C006 ed esportare nuovi report 0.2.0. Verificare faithful_summaries con riferimenti, unverified_summaries privo di S-02, model_evaluation senza prosa, fonte ancora simulata. Questa nuova esecuzione reale non è ancora dichiarata svolta dall'autore. Prima di fonti reali occorrono verifica istituzionale, validità temporale e ambito, oltre al proxy/isolamento della tesi. Il sistema non promette fedeltà al diritto reale usando fixture inventate.
+
+## Step 18 — Verifica reale dei report fiscali fedeli alla fixture
+
+Esaminati i due nuovi report esportati dall'autore, entrambi report_version 0.2.0. Il primo è completed con entrambi gli scenari; il secondo è partial, S-01 blocked/input_not_ready e S-02 completed.
+
+Ricalcolata per ciascuno la sintesi attesa con il catalogo fiscale fidato: corrispondenza esatta con faithful_summaries, condizioni e riferimenti di origine corretti e digest della fonte coincidente. Contesti mantenuti: anno 2025 con primary_home_purchase nel completo e renovation nel parziale. real_world_verified=false in entrambi.
+
+Nessuna prosa fiscale in unverified_summaries: nel completo resta soltanto S-01; nel parziale la lista è vuota. model_evaluation indica free_text_included=false e conserva solo modello, motivo e hash dell'output fiscale. La precedente conclusione fiscale non supportata non è riproposta dal report.
+
+Conclusione: confermata sulle due esportazioni la fedeltà estrattiva alla fixture autorizzata e l'esclusione della parafrasi libera fiscale. Non è una verifica della normativa reale né della fedeltà universale del modello. Nessuna modifica al codice richiesta dai risultati; nessun file esportato copiato nella repository o nelle tracce sperimentali.
+
+## Step 19 — Fedeltà delle sintesi mercati
+
+### Implementazione
+
+Autorizzata l'estensione dei controlli ai mercati. Aggiunto gateway/market_evidence.py come catalogo fidato simulated-rates-v1: tasso 3.20/3.60/3.40 per fisso/variabile/misto, data 2025-12-31 e unità annuale. Controlli dopo MCP, nel client A2A gateway e al report, confrontando il contenuto atteso per la vista richiesta. Il digest identifica il contenuto autorizzato, non è una firma né verifica del mercato reale.
+
+Report portato a 0.3.0; policy invariata a 0.2.0 perché nessuna nuova trasformazione dei dati personali. Sintesi mercati deterministica con tasso/data e riferimenti ai campi della fonte, contesto minimizzato e limiti. Nessun confronto di convenienza. Prosa libera dei modelli esclusa da entrambe le sezioni del report e dal riepilogo tecnico /analysis; hash e motivo rimangono in model_evaluation. Sintesi mercati e fiscale confluiscono in faithful_summaries; unverified_summaries è vuoto nei percorsi attuali. I modelli continuano a essere invocati; l'endpoint storico /markets resta tecnico e non protetto da questa composizione del report.
+
+### Verifiche eseguite
+
+90 test automatici superati, 49 warning noti. Otto nuovi casi: tasso, data, unità, ID o flag simulato alterati, campo di istruzione aggiunto, tasso incoerente col tipo richiesto e raccomandazione libera del modello non promossa nel report. Aggiornato il precedente test report che si aspettava la sintesi mercati non verificata: ora richiede estrazione fedele e prosa esclusa. Restano superati test fiscali, subgrafi, casi parziali e finalizzazione.
+
+### Prova reale da raccogliere
+
+Riavviare agenti e gateway; C001 e C024 devono esportare report 0.3.0 con entrambe le sintesi estrattive e tassi simulati rispettivamente 3.20 e 3.60. C006 deve restare partial con sola sintesi fiscale. Nessuna nuova prova browser/Ollama reale dichiarata in questo step. Conservare i report precedenti come evidenze storiche senza riscriverli.
+
+### Limiti
+
+Fedeltà verificata rispetto a fixture autorizzate, non verità del dato nel mondo reale. Un modello che risponde liberamente non viene dichiarato semanticamente affidabile: il testo mostrato è costruito dal codice. Restano da valutare utilità effettiva degli agenti/modelli, fonti istituzionali reali, confronto economico, conflitti, proxy e isolamento. Non si può usare questa scelta per sostenere qualità intrinseca delle sintesi LLM.
+
+## Step 20 — Verifica reale dei report 0.3.0
+
+Esaminati tre report esportati dall'autore, senza copiarli nella repository. Tutti report_version 0.3.0, unverified_summaries vuoto e prosa dei modelli esclusa secondo model_evaluation.
+
+| Esportazione | Stato | Mercati | Fiscale |
+|---|---|---|---|
+| Report 5 | completed | completed, fixture 3.20% | completed |
+| Report 6 | partial | blocked, nessuna fonte/sintesi mercati | completed |
+| Report 7 | completed | completed, fixture 3.60% | completed |
+
+Per ciascuna sintesi presente ricalcolato il risultato atteso dal catalogo fidato con il contesto dichiarato: corrispondenza esatta e digest fonte coincidente. Tutte le fonti mantengono real_world_verified=false. Nessun valore simulato presentato come quotazione o normativa reale. Nessuna correzione richiesta dagli esiti.
+
+La verifica conferma estrazione fedele alle fixture sui casi esportati, non affidabilità semantica della prosa esclusa o validità reale delle fonti. Il controllo dei dati documentali contro ogni PDF e la campagna 2×2 restano distinti da questa verifica delle sintesi.

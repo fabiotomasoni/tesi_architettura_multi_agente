@@ -42,7 +42,7 @@ def main():
                 started=perf_counter()
                 try:
                     response=client.post('/sessions/pdf',files={'files':('input.pdf',path.read_bytes(),'application/pdf')},data={'scenarios':'S-01'})
-                    response.raise_for_status();sid=response.json()['session_id']
+                    response.raise_for_status();sid=response.json()['session_id'];row['policy_version']=response.json()['policy_version']
                     response=client.post(f'/sessions/{sid}/'+('workflow' if args.workflow else 'markets'))
                     row['http_status']=response.status_code
                     body=response.json()

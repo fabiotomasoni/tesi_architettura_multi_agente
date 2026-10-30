@@ -134,6 +134,23 @@ def create_app() -> FastAPI:
                 sessions.pop(session_id, None)
         return await run_workflow(request_view, delegate, cleanup)
 
+    @app.post("/sessions/{session_id}/analysis")
+    async def analysis(session_id: UUID):
+        from .multi_workflow import run_analysis
+        from .report import build_report
+        from .market_client import delegate as markets
+        from .tax_client import delegate as tax
+        with lock:
+            session = get_session(session_id)
+            scenarios = list(dict.fromkeys(s.value for s in session.scenarios))
+        def request_view(scenario):
+            return view(session_id, ViewRequest(scenario=Scenario(scenario), recipient="markets" if scenario=="S-01" else "tax"))
+        def cleanup():
+            with lock:
+                sessions.pop(session_id, None)
+        return await run_analysis(scenarios, request_view, {"S-01":markets,"S-02":tax}, cleanup,
+                                  lambda activities,status:build_report(session.profile,scenarios,activities,status))
+
     @app.delete("/sessions/{session_id}", status_code=204)
     def close_session(session_id: UUID):
         with lock:
