@@ -10,6 +10,7 @@ from langgraph.graph import StateGraph, START, END
 from langsmith import tracing_context
 
 from .agent_contracts import MarketTask, MarketView, MarketResult
+from .a2a_egress import EgressDenied
 
 
 class State(TypedDict, total=False):
@@ -48,6 +49,9 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
             # Limite globale: include Card e delega, non solo la fase del modello.
             async with asyncio.timeout(125):
                 result=await delegate(state['task'])
+        except EgressDenied:
+            phase('delegate_a2a',began,'blocked')
+            return {'status':'blocked','error_code':'not_authorized'}
         except TimeoutError:
             phase('delegate_a2a',began,'failed')
             return {'status':'failed','error_code':'timeout'}

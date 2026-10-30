@@ -29,6 +29,7 @@ class MarketTask(Contract):
     purpose: Literal['market_rate_context'] = 'market_rate_context'
     policy_version: Literal['0.1.0', '0.2.0', '0.3.0'] = '0.3.0'
     deadline: datetime
+    inference_token: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$', repr=False)
     view: MarketView
 
     @model_validator(mode='after')
@@ -48,8 +49,8 @@ class RateEvidence(Contract):
 
 class MarketResult(Contract):
     correlation_id: UUID
-    status: Literal['completed', 'failed', 'unverified']
-    error_code: Literal['timeout', 'execution_failed', 'missing_provenance'] | None = None
+    status: Literal['completed', 'failed', 'unverified', 'blocked']
+    error_code: Literal['timeout', 'execution_failed', 'missing_provenance', 'not_authorized'] | None = None
     evidence: RateEvidence | None = None
     summary: str = Field(max_length=2000)
     limits: list[str] = Field(max_length=10)
@@ -60,6 +61,8 @@ class MarketResult(Contract):
     def provenance_required(self):
         if self.status == 'completed' and self.evidence is None:
             raise ValueError('Provenienza obbligatoria')
+        if self.status=='blocked' and (self.evidence is not None or self.error_code!='not_authorized'):
+            raise ValueError('Diniego incoerente')
         if self.status=='unverified' and (self.evidence is not None or self.error_code!='missing_provenance'):
             raise ValueError('Risultato non verificato incoerente')
         return self
@@ -77,6 +80,7 @@ class TaxTask(Contract):
     purpose: Literal['tax_context'] = 'tax_context'
     policy_version: Literal['0.2.0', '0.3.0'] = '0.3.0'
     deadline: datetime
+    inference_token: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$', repr=False)
     view: TaxView
 
     @model_validator(mode='after')

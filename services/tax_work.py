@@ -5,45 +5,49 @@ import json
 import sys
 from time import perf_counter
 
-import httpx
+from .inference_client import request_summary
+from .tool_client import request_tool, server_environment
+from gateway.a2a_egress import EgressDenied
+from gateway.inference import MODELS
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from gateway.agent_contracts import TaxTask, TaxResult, TaxEvidence
 
 from gateway.tax_evidence import verify_evidence
 
-MODEL = 'qwen3:1.7b'
+MODEL = MODELS['S-02']
 
 
-async def perform(task: TaxTask, *, mcp_module: str = 'services.tax_mcp', budget_seconds: float = 120) -> TaxResult:
+async def perform(task: TaxTask, *, mcp_module: str | None = None, budget_seconds: float = 120) -> TaxResult:
     seconds = (task.deadline - datetime.now(timezone.utc)).total_seconds()
     if seconds <= 0:
         raise ValueError('Incarico scaduto')
     async with asyncio.timeout(min(seconds, budget_seconds)):
         mcp_started = perf_counter()
-        parameters = StdioServerParameters(command=sys.executable, args=['-m', mcp_module])
+        permit = await request_tool(task, mcp_module=mcp_module)
+        if mcp_module is not None and mcp_module != permit.module:
+            raise EgressDenied('Server MCP difforme dal catalogo')
+        parameters = StdioServerParameters(command=sys.executable, args=['-m', permit.module], env=server_environment(task, permit))
         async with stdio_client(parameters) as streams:
             async with ClientSession(*streams) as client:
                 await client.initialize()
-                result = await client.call_tool('lookup_tax', task.view.model_dump(mode='json'))
+                result = await client.call_tool(permit.tool, permit.arguments)
                 if result.isError:
                     raise ValueError('Errore MCP')
                 evidence_text = result.content[0].text
-        evidence, source_digest = verify_evidence(json.loads(evidence_text), task.view)
+        raw = json.loads(evidence_text)
+        if raw == {'status':'blocked','error_code':'not_authorized'}:
+            raise EgressDenied('Fonte rifiutata dal gateway')
+        if raw == {'status':'failed','error_code':'timeout'}:
+            raise TimeoutError('Timeout fonte gateway')
+        evidence, source_digest = verify_evidence(raw, task.view)
         mcp_ms = (perf_counter() - mcp_started) * 1000
         ollama_started = perf_counter()
-        async with httpx.AsyncClient(timeout=90, trust_env=False) as client:
-            response = await client.post('http://127.0.0.1:11434/api/chat', json={
-                'model': MODEL, 'think': False, 'stream': False, 'keep_alive': 0,
-                'options': {'num_ctx':4096, 'num_predict':200, 'temperature':0},
-                'messages': [{'role':'system','content':'Scrivi in italiano due frasi che descrivono la fixture simulata. Non dare consigli, non dichiarare convenienza e non inventare informazioni. Specifica che sono riferimenti fiscali inventati per test, non normativa reale. Non dichiarare diritti a detrazioni. /no_think'},
-                             {'role':'user','content':json.dumps(evidence.model_dump(mode='json'))}]})
-            response.raise_for_status()
-            body = response.json()
-            summary = body['message']['content']
+        inference = await request_summary(task, evidence)
+        summary = inference.summary
         return TaxResult(correlation_id=task.correlation_id, status='completed', evidence=evidence,
             summary=summary, model=MODEL, measurements={
                 'fixture_content_verified':1, 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1,
-                'ollama_ms':round((perf_counter()-ollama_started)*1000, 3), 'ollama_calls':1,
-                'prompt_tokens':body.get('prompt_eval_count', 0), 'output_tokens':body.get('eval_count', 0),
-                'model_load_ms':round(body.get('load_duration', 0)/1e6, 3)}, limits=['Riferimenti fiscali inventati per test; nessuna normativa reale.', 'Sintesi generata dal modello e non verificata.', 'Nessun confronto economico personalizzato eseguito.'])
+                'ollama_ms':inference.ollama_ms, 'inference_gateway_roundtrip_ms':round((perf_counter()-ollama_started)*1000, 3), 'ollama_calls':1, 'inference_via_gateway':1,
+                'prompt_tokens':inference.prompt_tokens, 'output_tokens':inference.output_tokens,
+                'model_load_ms':inference.model_load_ms}, limits=['Riferimenti fiscali inventati per test; nessuna normativa reale.', 'Sintesi generata dal modello e non verificata.', 'Nessun confronto economico personalizzato eseguito.'])

@@ -1,6 +1,6 @@
 # Analisi locale di documenti finanziari
 
-Prototipo di tesi che legge PDF sintetici, affida attività a due specialisti locali — mercati e fiscalità — e produce un report con dati documentali, fonti e limiti. Le attività indipendenti vengono coordinate da LangGraph.
+Prototipo di tesi che legge PDF sintetici, affida attività a due specialisti locali — mercati e fiscalità — e produce un report con dati documentali, fonti e limiti. Le attività indipendenti vengono coordinate da LangGraph. Gli specialisti richiedono l’inferenza al gateway, che controlla l’incarico e costruisce il prompt per Ollama. Anche gli strumenti MCP ottengono le fonti simulate attraverso il gateway, con autorizzazioni temporanee per il compito.
 
 **Le fonti attuali sono simulate.** Il report riproduce fedelmente i dati delle simulazioni e confronta due scenari ipotetici del mutuo. Non fornisce quotazioni reali, consigli finanziari o attestazioni fiscali. Sono supportati i PDF del dataset incluso, non documenti bancari generici.
 
@@ -80,6 +80,8 @@ Terminale 3 — pagina di caricamento:
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
 ```
+
+Dopo aggiornamenti che coinvolgono il gateway e gli specialisti, riavviare tutti e tre i servizi. Il gateway deve essere attivo anche durante le richieste degli agenti a Ollama.
 
 Per fermare la demo premere **Ctrl+C** nei tre terminali. Agli avvii successivi basta aprire Ollama e ripetere questi tre comandi. Se una porta risulta occupata, controllare che il relativo servizio non sia già aperto in un altro terminale.
 

@@ -5,20 +5,21 @@ import httpx
 from a2a.client import A2AClient
 from a2a.types import AgentCard, SendMessageRequest, MessageSendParams, Message, Role, Part, TextPart
 from .result_validation import parse_result
+from .a2a_egress import A2AEgressTransport, ROUTES
 from .agent_contracts import TaxEvidence, TaxTask, TaxResult
 
 from .tax_evidence import verify_evidence
 
-ENDPOINT = 'http://127.0.0.1:8002/'
+ENDPOINT = ROUTES['S-02'].endpoint
 
 
 async def delegate(task: TaxTask) -> TaxResult:
-    async with httpx.AsyncClient(timeout=125, trust_env=False, follow_redirects=False) as client:
+    async with httpx.AsyncClient(timeout=125, trust_env=False, follow_redirects=False, transport=A2AEgressTransport(task)) as client:
         started = perf_counter()
         response = await client.get(ENDPOINT + '.well-known/agent-card.json')
         response.raise_for_status()
         card = AgentCard.model_validate(response.json())
-        if card.name != 'tax_agent' or card.url != ENDPOINT or card.version != '0.1.0' or {s.id for s in card.skills} != {'tax_context'} or card.capabilities.streaming:
+        if card.name != ROUTES['S-02'].agent_name or card.url != ENDPOINT or card.version != '0.1.0' or {s.id for s in card.skills} != {ROUTES['S-02'].skill} or card.capabilities.streaming:
             raise ValueError('Agent Card difforme dalla configurazione autorizzata')
         card_ms = (perf_counter()-started)*1000
         started = perf_counter()

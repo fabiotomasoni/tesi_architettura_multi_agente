@@ -1,5 +1,6 @@
 """Agente ADK con delega A2A 0.3 e pipeline applicativa vincolata."""
 import asyncio
+from gateway.a2a_egress import EgressDenied
 from gateway.result_validation import MissingProvenanceError
 from uuid import uuid4
 
@@ -22,6 +23,9 @@ class TaxAgent(BaseAgent):
         except MissingProvenanceError:
             result = TaxResult(correlation_id=task.correlation_id,status='unverified',error_code='missing_provenance',evidence=None,
                 summary='Fonte MCP non verificata; contenuto escluso.',limits=['Provenienza MCP obbligatoria mancante; nessun dato utilizzabile per conclusioni.'],model=MODEL,measurements={'provenance_verified':0})
+        except EgressDenied:
+            result = TaxResult(correlation_id=task.correlation_id,status='blocked',error_code='not_authorized',evidence=None,
+                summary='Inferenza bloccata dal gateway.',limits=['Nessuna inferenza autorizzata disponibile.'],model=MODEL)
         except TimeoutError:
             result = TaxResult(correlation_id=task.correlation_id, status='failed', error_code='timeout',
                 summary='Tempo massimo di elaborazione superato.', limits=['Nessun risultato disponibile entro la scadenza.'], model=MODEL)

@@ -57,20 +57,7 @@ def test_card_and_result_rejection(monkeypatch, fault):
     if fault=='card':assert not sent
 
 
-def test_ollama_payload_contains_only_simulated_evidence(monkeypatch):
+def test_unregistered_task_cannot_start_mcp():
     import services.market_work as work
-    captured=[]
-    class FakeHTTP:
-        def __init__(self,**kwargs):pass
-        async def __aenter__(self):return self
-        async def __aexit__(self,*args):pass
-        async def post(self,url,json):
-            captured.append(json)
-            return httpx.Response(200,json={'message':{'content':'Dati simulati'},'prompt_eval_count':10,'eval_count':3},request=httpx.Request('POST',url))
-    monkeypatch.setattr(work.httpx,'AsyncClient',FakeHTTP)
-    result=asyncio.run(work.perform(task()))  # MCP stdio reale, Ollama sostituito.
-    assert result.status=='completed'
-    payload=captured[0]
-    assert json.loads(payload['messages'][1]['content'])==result.evidence.model_dump(mode='json')
-    assert result.measurements['mcp_tool_calls']==1
-    assert result.measurements['output_tokens']==3
+    from gateway.a2a_egress import EgressDenied
+    with pytest.raises(EgressDenied):asyncio.run(work.perform(task()))

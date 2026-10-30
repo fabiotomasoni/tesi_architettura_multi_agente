@@ -690,3 +690,149 @@ P05 soddisfatto nel perimetro dei contratti, strumenti e scenari attuali:
 Non equivale a pieno soddisfacimento della tesi: V-08 va ancora inserito nella campagna finale dieci ripetizioni per ciascuna delle quattro configurazioni; fonti reali, proxy e isolamento restano da implementare. Nuovi strumenti e contratti richiederanno corrispondenti campi di provenienza obbligatori. Nessuna norma reale, autenticità documentale o affidabilità universale del modello dedotta da queste prove.
 
 P05 rimosso dai residui; P01–P05 chiusi nei rispettivi perimetri esplicitati. README conservato essenziale, codice di questa revisione da caricare riavviando gateway e agenti prima delle successive prove. Nessun commit creato automaticamente.
+
+
+## Step 33 — Primo confine applicativo delle deleghe A2A S01
+
+### Perimetro e implementazione
+
+Avviato S01 dopo la ripresa del lavoro. Nuovo gateway/a2a_egress.py: catalogo locale immutabile versione 0.1.0 con endpoint, tipo di incarico, identità e skill dei due specialisti. La policy delle viste resta 0.3.0. Gli adattatori mercati e fiscale usano il catalogo anche per i controlli Card e un trasporto HTTP vincolato al singolo incarico.
+
+Prima del trasporto vengono rivalidati incarico, versione corrente della policy e scadenza. Sono ammessi soltanto GET della Card configurata e POST message/send all’endpoint esatto dello scenario. Query, metodi o destinazioni differenti, corpi opachi, metadati aggiuntivi, intestazioni fuori catalogo e contenuti diversi dall’incarico autorizzato sono rifiutati. Il corpo viene ricostruito da template e contratto; intestazioni in uscita ricostruite da HTTPX, nessuna estensione arbitraria inoltrata. Timeout locali del trasporto fissati esplicitamente; nessun retry di connessione. Qualsiasi risposta 3xx è rifiutata, senza seguire Location: in questo catalogo nessun redirect è autorizzato.
+
+I dinieghi sono EgressDenied senza payload nell’errore. Il workflow li distingue dai guasti con blocked/not_authorized e conserva la finalizzazione comune. L’endpoint storico /markets restituisce 403 per questo diniego; mantiene il proprio ciclo di sessione esplicito preesistente.
+
+### Prove eseguite
+
+Suite completa: **184 passed, 72 warning**, 6.12 secondi. Tredici nuovi test, senza servizi esterni: SDK A2A reale sopra trasporto HTTP simulato per entrambi gli scenari; destinazione differente, query, metodo, intestazione aggiuntiva, metadati, vista alterata rispetto all’incarico, corpo opaco, redirect, incarico scaduto e policy storica; diniego nel workflow con pulizia. Nei dinieghi preventivi il ricevitore simulato registra zero richieste. Nel redirect ne registra una sola, quella alla destinazione ammessa, senza invio alla Location. La compatibilità SDK è verificata sul payload realmente serializzato: il suo ID JSON-RPC viene rigenerato come UUID con trattini; ammessi UUID canonici con o senza trattini.
+
+Suite precedente inclusa, nessun avviso soppresso. git diff --check superato. Nessuna nuova prova manuale con Ollama né nuovo report esportato acquisiti in questo incremento.
+
+### Procedura manuale da acquisire
+
+Lasciare aperti Ollama e i due specialisti nominali. Fermare soltanto il gateway con Ctrl+C nel suo terminale e riavviarlo dalla radice della repository con `.venv/bin/python -m uvicorn gateway.app:app --host 127.0.0.1 --port 8000 --workers 1 --no-access-log`. Caricare C001, selezionare entrambi gli scenari ed eseguire. Attesi report 0.8.0, completed per entrambi, fonti simulate e calcoli precedenti preservati. Esportare il nuovo report e verificarlo con i tre verificatori esistenti, usando il nome effettivo. Acquisire poi C006: S-01 blocked/input_not_ready, S-02 completed, esito partial. Non confondere tale blocco di ingresso con un diniego del trasporto. Le prove negative di trasporto sopra descritte sono automatiche, non prove manuali di isolamento.
+
+### Limiti e seguito
+
+S01 resta aperto. Questo è un trasporto applicativo delle deleghe A2A locali, non il proxy completo delle uscite della tesi. Le chiamate MCP stdio e le richieste Ollama degli specialisti restano nel percorso precedente. Il catalogo vincola gli schemi esistenti; non implementa ancora riconoscimento PII/valori sensibili di sessione, autenticazione dei chiamanti o isolamento host/container. I componenti non sono ancora impediti a livello rete dal creare connessioni alternative. Nessuna prova di non aggirabilità, nessuna fonte reale autorizzata, nessuna nuova garanzia di anonimato. Restano da centralizzare inferenza e connettori, ampliare catalogo/controlli e acquisire la prova manuale nominale. Nessun commit creato.
+
+
+## Step 34 — Verifica del report nominale dopo il primo incremento S01
+
+Esaminato direttamente report-locale-20.json esportato dall’utente: versione 0.8.0, policy 0.3.0, dati corrispondenti a C001, entrambi gli scenari completed senza error_code. Eseguiti i tre verificatori del progetto sul file effettivo: provenienza di dieci fatti verificata con zero problemi; tutti i sei controlli mutuo e i nove controlli fiscali veri.
+
+Lette anche fonti, sintesi, completezza e limiti: entrambe le fonti dichiarate simulate e non verificate nel mondo reale; sintesi deterministiche riferite ai campi delle fixture; prosa dei modelli esclusa. Tipologia mutuo non specificata mantenuta tale. Tasso contrattuale e benchmark distinti per grandezza, senza falso conflitto; nessuna spettanza fiscale, detrazione o raccomandazione dichiarata. Ipotesi di ripartizione e limiti economici conservati.
+
+La prova conferma il risultato nominale esportato dopo l’incremento. Il report non contiene identificativo della versione del trasporto, traccia di ogni richiesta o prova della pulizia: da questo file, da solo, non si dimostrano l’effettivo attraversamento del nuovo trasporto, i dinieghi o l’isolamento. Le verifiche automatiche dello Step 33 rimangono evidenze distinte. Nessuna correzione richiesta dal report. Non copiati nel diario importi o citazioni documentali.
+
+Resta da acquisire C006 con entrambi gli scenari: partial, S-01 blocked/input_not_ready, S-02 completed, senza capitale ricostruito e senza calcolo mutuo. S01 resta aperto per i residui dello Step 33.
+
+
+## Step 35 — Verifica del report C006 dopo il primo incremento S01
+
+Esaminato direttamente report-locale-21.json, versione 0.8.0 e policy 0.3.0. Dati corrispondenti a C006. Esito partial: S-01 blocked/input_not_ready per remaining_principal mancante; S-02 completed senza errore. Il capitale resta missing, il confronto mutuo not_calculated/input_not_ready. Nessuna fonte, sintesi o valutazione del modello mercati riportata; il ramo fiscale valido è preservato.
+
+Eseguiti i tre verificatori sul file effettivo: nove fatti documentali verificati, zero problemi; not_calculated_as_declared vero per il mutuo; tutti i nove controlli fiscali veri. Letti separatamente motivo del blocco, completezza, contesto fiscale, fonte simulata, sintesi deterministica e ipotesi. Nessun capitale ricostruito, nessuna detrazione o spettanza attestata. Nessun importo o citazione documentale copiato nel diario.
+
+Acquisite le due verifiche manuali dei risultati previste nello Step 33: C001 nominale (Step 34) e C006 parziale. Nessuna correzione richiesta da questa prova. Il blocco osservato è di sufficienza dell’ingresso, non un diniego del trasporto. Il report non prova da solo assenza di chiamate di rete, pulizia o caricamento della nuova versione del trasporto; tali proprietà restano distinte dalle evidenze dei test automatici. S01 rimane aperto per centralizzazione di inferenza e connettori e ulteriori controlli; nessuna prova di isolamento o uscita reale aggiunta.
+
+
+## Step 36 — Inferenza locale controllata dal gateway S01
+
+### Scelta e percorso
+
+Incremento autorizzato dall’utente dopo la proposta di spostare le chiamate Ollama nel gateway, coerentemente con il controllo dei payload di inferenza previsto nei capitoli 3–4. Il percorso applicativo è specialista → POST /internal/inference del gateway → Ollama locale → gateway → specialista. Nessun nuovo provider, fonte reale o ruolo dei modelli introdotto. Il report rimane 0.8.0 e la policy delle viste 0.3.0.
+
+Nuovo gateway/inference.py con catalogo inferenza 0.1.0, modelli e prompt precedenti, parametri invariati: contesto 4096, massimo 200 token, temperatura zero, keep_alive=0; thinking disabilitato per il fiscale. Il gateway costruisce integralmente il payload usando evidenza verificata contro il catalogo delle fixture. Lo specialista non sceglie URL, modello, prompt o opzioni. Credenziale, correlazione, profilo e documenti non entrano nel prompt Ollama.
+
+### Autorizzazione e ciclo di vita
+
+Ogni delega dei tre endpoint gateway (markets, workflow, analysis) registra un incarico con credenziale casuale di 256 bit, trasmessa nel contratto A2A come inference_token e nell’intestazione Authorization verso il gateway. Campo opzionale solo per compatibilità di lettura dei contratti: una richiesta di inferenza senza autorizzazione è rifiutata. Il token non è una PII e non entra nei risultati, report o misure. Il broker è in memoria e per istanza applicativa; continua il requisito di un solo worker.
+
+Il controllo associa credenziale, correlazione, scenario, incarico attivo, policy corrente e scadenza. Rivalida esplicitamente la provenienza MCP e il contenuto della fixture prima di chiamare Ollama. L’autorizzazione è consumata prima dell’invio: una chiamata, anche fallita o in timeout, non abilita retry. È rimossa nel finally della delega anche per eccezione o annullamento, alla chiusura della sessione, alla pulizia pigra delle sessioni scadute e allo shutdown ordinario. Una revoca durante la chiamata impedisce la consegna tardiva del risultato.
+
+Richieste non autorizzate: HTTP 403; schema con campi arbitrari: 422 senza riflettere il corpo; timeout: 504; guasti dell’inferenza: 502 con messaggio locale privo del contenuto originale. Redirect Ollama rifiutati, nessun endpoint alternativo. Gli specialisti convertono il diniego in blocked/not_authorized senza evidenza; timeout in failed/timeout. Il ramo indipendente rimane utilizzabile.
+
+Nuovo services/inference_client.py, utilizzato da entrambe le pipeline dopo MCP e verifica fonte. Nessuna chiamata diretta a /api/chat rimane nei moduli services. I moduli fidati del gateway non costituiscono tuttavia un confine di sicurezza di processo per il solo fatto di risiedere in una directory diversa.
+
+### Misure
+
+ollama_ms misura nel gateway il tempo della richiesta locale a Ollama; inference_gateway_roundtrip_ms misura nello specialista il giro completo attraverso il gateway. Sono tempi annidati e non vanno sommati. Nei risultati restituiti al gateway, gateway_inference_authorized e gateway_inference_completed vengono impostati dal broker usando il proprio stato, non accettati dall’agente; inference_catalog_version identifica il catalogo. I contatori mancanti di Ollama non sono sostituiti con zeri inventati: risposta senza prompt_eval_count, eval_count o load_duration è errore. Gli zeri nelle fixture di test sono valori espliciti della simulazione. Restano da completare le misure sui guasti in R03.
+
+### Verifiche eseguite
+
+Suite completa: **208 passed, 86 warning**, 6.65 secondi. Ventiquattro nuovi test rispetto allo Step 33; aggiornati due test precedenti per controllare il nuovo confine invece della chiamata diretta rimossa. Nessun avviso soppresso; nuovi avvisi ADK dai percorsi A2A aggiuntivi.
+
+Coperti: entrambi i payload Ollama e i parametri, credenziale/correlazione assenti nel payload al modello, consumo monouso; credenziale assente o errata, correlazione/scenario diversi, incarico scaduto o revocato, fonte mancante, contenuto alterato o aggiuntivo, scelta arbitraria di modello/prompt/URL/opzioni; nessuna chiamata Ollama nei dinieghi preventivi. Redirect con singola richiesta; revoca per eccezione/annullamento; risultato tardivo dopo revoca scartato. Due prove A2A reali in processo verificano conversione del diniego in blocked e pulizia degli store ADK/A2A.
+
+Prove integrate attraverso API gateway e nuovo client inferenza, con MCP stdio reale e Ollama simulato: entrambi i rami completati; timeout Ollama mercati con fiscale completato, esito partial e sessione chiusa. Le deleghe A2A in queste due prove sono sostituite dai callback delle pipeline; il trasporto A2A SDK è coperto separatamente dai test esistenti. Nessuna nuova inferenza Ollama reale eseguita o prestazione misurata con questi test. git diff --check superato.
+
+### Prove manuali ancora da acquisire
+
+Tenere Ollama aperto. Fermare e riavviare tutti e tre i servizi nominali con i comandi del README; i vecchi specialisti contatterebbero ancora direttamente Ollama. Nel browser caricare C001 con entrambi gli scenari, eseguire ed esportare il nuovo report. Attesi completed, versione report 0.8.0, stessi dati, fonti simulate e calcoli; verificare il file effettivo con i tre verificatori. Poi C006, attesi partial, mercati blocked/input_not_ready e fiscale completed. I report non contengono le misure del broker: raccogliere anche una ripetizione con `scripts/run_multi_pilot.py --cases C001 C006 --repetitions 1 --output runs/s01_inference_gateway.jsonl` tramite Python virtuale. Nel C001 attesi gateway_inference_authorized=1 e gateway_inference_completed=1 per entrambi i rami; nel C006 solo per il fiscale. Leggere direttamente JSONL, stati, fasi e pulizia prima di acquisire la verifica. Non dedurre la pulizia degli agenti dal solo flag gateway.
+
+### Limiti e residui
+
+S01 rimane aperto; MCP stdio è ancora eseguito dagli specialisti, non mediato dal nuovo broker. Nessun rilevatore generale di PII o valori di sessione e nessuna fonte reale introdotti. La credenziale temporanea limita operazione e vita dell’incarico, ma chi la possiede può presentare quella richiesta: non autentica il processo specialistico né sostituisce S03. Finché manca isolamento di rete, un processo può tentare connessioni dirette fuori da questo percorso. La revoca non garantisce l’arresto immediato di un’inferenza già in corso nel processo Ollama, né una cancellazione fisica della memoria. Gli arresti e l’annullamento end-to-end restano R01. La prosa LLM resta esclusa dal report; la sua qualità non è dimostrata da questi test. Nessun commit creato.
+
+
+## Step 37 — Verifica del report C001 dopo il broker inferenza
+
+Letto direttamente report-locale-22.json: versione 0.8.0, policy 0.3.0, dati C001, entrambi gli scenari completed senza errore. Eseguiti i tre verificatori sul file effettivo: dieci fatti verificati e zero problemi di provenienza, sei controlli mutuo e nove fiscali tutti veri. Fonti esplicitamente simulate, sintesi deterministiche, prosa LLM esclusa, ipotesi e limiti mantenuti; nessuna tipologia mutuo inventata né detrazione o convenienza attestata. Nessuna correzione richiesta dal report. Non copiati importi o citazioni nel diario.
+
+Acquisito il risultato nominale della prova manuale richiesta dopo lo Step 36. Il report non espone le misure del broker: da questo solo file non si dimostra l’attraversamento del nuovo percorso. runs/s01_inference_gateway.jsonl non presente al momento del controllo. Restano report C006 e pilota C001/C006 con controllo diretto di gateway_inference_authorized, gateway_inference_completed, esiti, fasi e pulizia. S01 rimane aperto.
+
+
+## Step 38 — Verifica reale del percorso inferenza e residuo S01
+
+Letto report-locale-23.json: C006, versione 0.8.0, partial; S-01 blocked/input_not_ready per capitale mancante, confronto mutuo not_calculated, S-02 completed con sola fonte fiscale simulata. Tre verificatori eseguiti: nove fatti verificati, zero problemi; not_calculated_as_declared vero; nove controlli fiscali veri. Nessun dato mancante ricostruito o conclusione di spettanza. Nessun importo o citazione copiato nel diario.
+
+Letti direttamente entrambi i record di runs/s01_inference_gateway.jsonl, una ripetizione ciascuno. C001 completed, passed=true: entrambi i rami con gateway_inference_authorized=1 e gateway_inference_completed=1, inference_catalog_version=0.1.0, una chiamata MCP e una Ollama per ramo, fonte verificata e assenza di errori. C006 partial, passed=true: S-01 fermo alla sola fase request_view, input_not_ready e misure vuote; S-02 completed con gli stessi indicatori del broker a 1. automatic_session_closed e cleanup_verified veri in entrambi. Le misure attestano l’utilizzo del broker nel percorso osservato; cleanup_verified riguarda il gateway, non dimostra da solo la pulizia degli store degli agenti. I tempi della richiesta Ollama sono inferiori ai corrispondenti roundtrip gateway; nessuna somma di tempi annidati né deduzione di accelerazione. Nessuna credenziale o corpo documentale nei record letti.
+
+Completata la verifica manuale del secondo incremento S01 (inferenza), insieme allo Step 37. S01 complessivo ancora aperto: manca completare catalogo fidato degli strumenti e autorizzazione delle richieste/uscite dei connettori MCP. L’architettura della tesi mantiene il client MCP nello specialista e il server MCP come adattatore della fonte: non occorre spostare l’intera comunicazione MCP nell’orchestratore o eliminare questo confine. Va invece estesa l’autorità del gateway sulle operazioni ammesse e sulle eventuali richieste esterne del connettore. Le fixture correnti non hanno uscite reali: non costituiscono una prova di controllo di tali uscite. Rilevazione PII/valori vietati resta S02; non aggirabilità di rete e autenticazione completa restano S03. Non dichiarato completato S01, nessun commit creato.
+
+
+## Step 39 — Completamento del catalogo MCP e chiusura S01
+
+### Incremento conclusivo
+
+L’utente ha chiesto di completare S01 dopo la verifica degli incrementi A2A e inferenza. Aggiunti gateway/tool_egress.py, services/tool_client.py e services/source_client.py. L’architettura conserva gli specialisti come client MCP e i server MCP come adattatori delle fonti. Prima di avviare il server, lo specialista richiede al gateway l’autorizzazione dello strumento e degli argomenti. Il server MCP richiede poi la fonte tramite il proxy del gateway. In produzione il catalogo 0.1.0 contiene soltanto lookup_rates/services.rates_mcp e lookup_tax/services.tax_mcp con le rispettive fixture locali: nessun endpoint Internet reale configurato.
+
+Il gateway lega autorizzazioni a incarico, scenario, correlazione, scadenza e credenziale temporanea. Confronta gli argomenti con la vista autorizzata in forma canonica, compresi tipi e campi; sceglie server, tool e destinazione dal catalogo fidato. Una credenziale distinta e monouso per la fonte è iniettata nel sottoprocesso MCP tramite ambiente e inviata al gateway nell’intestazione Authorization. Non è un argomento dello strumento né un campo di evidenza o report. Autorizzazione strumento e richiesta fonte sono consumate una sola volta; non sono previsti retry o fallback. La revoca comune della delega/sessione elimina anche la possibilità di usare la credenziale fonte.
+
+POST /internal/tools/authorize e POST /internal/sources sono i nuovi endpoint applicativi. Fonte, metodo, intestazioni e corpo devono rispettare il template. Percorsi o query aggiunti, campi arbitrari, credenziali sbagliate, scenari o correlazioni differenti sono negati prima del trasporto; corpi opachi o metodi fuori schema sono rifiutati. Il proxy HTTP, disponibile per futuri adattatori fidati ma senza fonti reali attive, ricostruisce il corpo dai soli campi autorizzati; non inoltra credenziali interne o intestazioni applicative del chiamante. Configurazioni HTTP con credenziali in URL, query o frammenti sono rifiutate. Qualunque redirect è negato senza seguire Location. Dinieghi e timeout delle fonti sono convertiti dai connettori in esiti strutturati e dagli agenti in blocked/not_authorized o failed/timeout. La verifica dell’evidenza avviene dopo la chiusura dei contesti MCP, conservando la distinzione della provenienza mancante.
+
+Misure locali aggiunte dal broker: gateway_tool_authorized, gateway_source_authorized, gateway_source_completed, gateway_source_ms e tool_catalog_version. I tempi delle fonti sono compresi nel giro MCP e non vanno sommati ai tempi che li includono. Nessun contenuto documentale o credenziale aggiunto alle misure.
+
+### Fixture negative e configurazione fidata
+
+Aggiunta services/forbidden_source_mcp, esclusivamente fixture avversaria: tenta di inserire un campo aggiuntivo nella richiesta fonte. Non è selezionata nel catalogo nominale. Le fixture precedenti restano separate dalla demo. Per autorizzare la fixture lenta nelle prove timeout/recupero, avviare il gateway con TESI_MCP_PROFILE=market_timeout: abilita la scelta esplicita di services.slow_rates_mcp e mantiene il nominale per le richieste successive, senza cambiare il processo agente. TESI_MCP_PROFILE=missing_source seleziona invece services.missing_source_mcp per entrambi gli scenari. Il profilo si sceglie nell’ambiente fidato del gateway prima dell’avvio, non attraverso richieste o output remoti. Profilo ignoto: avvio rifiutato. Alla fine delle prove ripristinare nominal e riavviare gateway. Verificate separatamente le selezioni dei due profili mediante import in processi nuovi; non dichiarata una nuova prova reale completa del recupero dopo timeout.
+
+### Suite automatica
+
+Suite completa finale: **237 passed, 106 warning**, 8.95 secondi. Ventinove test aggiunti al conteggio precedente di 208; aggiornate le verifiche dei connettori e delle fixture in seguito al nuovo controllo. Gli avvisi aggiuntivi derivano dai nuovi percorsi SDK/ADK e dai server locali di prova; nessuna soppressione. git diff --check superato.
+
+Nuove prove: catalogo di entrambi gli strumenti, argomenti e server non autorizzati, consumo monouso, sorgenti/percorsi/query/intestazioni/corpi vietati, credenziali non pertinenti o revocate, richieste non registrate, ingresso opaco/metodo errato, template HTTP e mancato inoltro del redirect. Il trasporto HTTP delle fonti è simulato; non è una prova contro una fonte Internet reale.
+
+Due prove complete su porte loopback temporanee, senza sostituire i servizi della demo già avviati: API gateway, SDK A2A, agenti ADK, MCP stdio, callback HTTP del connettore al gateway e inferenza. La suite ordinaria simula solo Ollama; i risultati sono controllati per C001/C006 sia con catalogo nominale sia con connettore avversario selezionato nella sola configurazione di test. Verificati risultato parziale, diniego prima della fonte/inferenza, chiusura gateway e store A2A degli agenti vuoti.
+
+### Verifica integrata con Ollama reale
+
+Eseguita autonomamente anche la variante esplicita con Ollama reale, dati sintetici e gli stessi servizi temporanei locali. Non è una prova manuale eseguita da Fabio. Comando riproducibile: TESI_S01_REAL_OLLAMA=1 TESI_S01_EVIDENCE=runs/s01_complete_final.jsonl .venv/bin/python -m pytest -q tests/test_tool_egress.py -k whole_stack. Esito: **2 passed, 27 deselected, 38 warning**, 9.47 secondi. La durata del test non costituisce una misura sperimentale comparativa.
+
+Letti direttamente i quattro record di runs/s01_complete_final.jsonl:
+
+- C001 nominale: completed, entrambi i rami con contatori strumento/fonte autorizzata/fonte completata/inferenza completata uguali a 1.
+- C006 nominale: partial; mercati bloccato in request_view con input_not_ready, nessuna misura di delega; fiscale completato con i quattro contatori a 1.
+- C001 con connettore avversario: partial; mercati blocked/not_authorized, strumento autorizzato ma fonte autorizzata/completata e inferenza completata a 0. Fiscale completato con il percorso intero.
+- C006 con connettore avversario: partial; il ramo mercati è fermato prima della delega per ingresso insufficiente; fiscale completato.
+
+Tutti i record hanno real_ollama=true, passed=true e cleanup_verified=true. Il controllo di pulizia registrato riguarda il gateway; la prova controlla separatamente gli store A2A vuoti. Nessun source_token, inference_token, importo documentale o citazione nei record. Una precedente raccolta reale, prima dell’ultima rifinitura della scelta del modulo, resta in runs/s01_complete_validation.jsonl; la raccolta finale indicata sopra è quella riferita al codice conclusivo. Nessuna statistica di campagna ricavata da queste esecuzioni.
+
+### Stato conclusivo e perimetro
+
+S01 completato e rimosso dai residui per i due scenari e il catalogo locale attuale: autorità applicativa centralizzata per A2A, inferenza, strumenti e richieste fonti; template chiusi, diniego predefinito, credenziali temporanee per incarico, nessun inoltro di payload opachi, redirect o alternative non autorizzate. Il proxy HTTP è verificato su trasporto controllato, non su una fonte remota reale. Una nuova integrazione richiederà la propria voce di catalogo e prove equivalenti: nessuna fonte può essere attivata liberamente tramite URL fornita da agente o modello.
+
+Restano S02 (rilevazione generale di PII/valori vietati, normalizzazione e misure privacy/utilità), S03 (identità dei processi e isolamento di rete/host), S04 (ulteriori attacchi), R01/R03 e campagna sperimentale. I processi non sono ancora impediti a livello host dal tentare connessioni dirette: S01 non dimostra non aggirabilità, anonimato o soddisfacimento completo dei requisiti di sicurezza della tesi. Le fonti reali X01 restano disabilitate fino ai controlli previsti. Nessun commit creato.
+
+I servizi della demo dell’utente, rimasti aperti durante queste prove su porte diverse, devono essere riavviati per caricare il codice aggiornato. Non è necessario ripetere adesso le stesse prove per chiudere S01: la verifica integrata reale conclusiva è già acquisita e letta. Una conferma visiva nella demo resta possibile, distinta dalle evidenze sopra. Prossimo lavoro S02.

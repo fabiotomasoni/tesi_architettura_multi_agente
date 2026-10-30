@@ -6,7 +6,12 @@ from gateway.app import create_app
 from gateway.agent_contracts import MarketResult,RateEvidence,TaxResult,TaxView
 import gateway.market_client as markets
 import gateway.tax_client as tax
-from services.tax_mcp import lookup_tax
+from gateway.tax_evidence import expected_evidence as fixture_evidence
+from gateway.agent_contracts import TaxView
+
+def lookup_tax(**arguments):
+    return fixture_evidence(TaxView(**arguments)).model_dump(mode="json")
+
 
 
 @pytest.mark.parametrize('case,scenarios,expected,called',[

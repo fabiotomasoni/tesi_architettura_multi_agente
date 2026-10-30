@@ -1,15 +1,19 @@
-"""API locale: avviare con un solo worker; nessuna chiamata esterna."""
+"""API locale: avviare con un solo worker; inferenza locale tramite broker autorizzato."""
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from threading import RLock
 from time import monotonic, perf_counter
 from uuid import UUID, uuid4
 
+import httpx
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Response, File, Form, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 
+from .inference import InferenceBroker, InferenceRequest
+from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request
+from .a2a_egress import EgressDenied
 from .models import SessionInput, ViewRequest, Scenario
 from .pdf_input import extract_profile, PDFInputError
 from .policy import POLICY_VERSION, issues, make_view
@@ -19,6 +23,7 @@ SESSION_TTL_SECONDS = 1800
 
 def create_app() -> FastAPI:
     sessions = {}
+    broker = InferenceBroker()
     lock = RLock()
 
     @asynccontextmanager
@@ -26,6 +31,7 @@ def create_app() -> FastAPI:
         yield
         with lock:
             sessions.clear()
+            broker.revoke()
 
     app = FastAPI(title="Gateway locale sperimentale", version="0.1.0", lifespan=lifespan)
 
@@ -38,9 +44,39 @@ def create_app() -> FastAPI:
         expired = [key for key, (_, deadline) in sessions.items() if deadline <= monotonic()]
         for key in expired:
             del sessions[key]
+            broker.revoke(key)
         if session_id not in sessions:
             raise HTTPException(404, "Sessione assente o scaduta")
         return sessions[session_id][0]
+
+    @app.post("/internal/inference")
+    async def inference(payload: InferenceRequest, request: Request):
+        try:
+            return await broker.infer(payload, request.headers.get('authorization'))
+        except EgressDenied:
+            raise HTTPException(403, "Inferenza non autorizzata dal gateway.") from None
+        except (TimeoutError, httpx.TimeoutException):
+            raise HTTPException(504, "Tempo massimo inferenza superato.") from None
+        except Exception:
+            raise HTTPException(502, "Inferenza locale non completata.") from None
+
+    @app.post("/internal/tools/authorize")
+    async def tool_authorization(payload: ToolRequest, request: Request):
+        try:
+            return authorize_tool(broker, payload, request.headers.get('authorization'))
+        except EgressDenied:
+            raise HTTPException(403, "Strumento non autorizzato dal gateway.") from None
+
+    @app.post("/internal/sources")
+    async def source_proxy(payload: SourceRequest, request: Request):
+        try:
+            return await source_request(broker, payload, request.headers.get('authorization'))
+        except EgressDenied:
+            raise HTTPException(403, "Fonte non autorizzata dal gateway.") from None
+        except (TimeoutError, httpx.TimeoutException):
+            raise HTTPException(504, "Tempo massimo fonte superato.") from None
+        except Exception:
+            raise HTTPException(502, "Fonte non disponibile.") from None
 
     @app.get("/health")
     def health():
@@ -52,6 +88,7 @@ def create_app() -> FastAPI:
             # Pulizia pigra anche in creazione; nessuna persistenza su disco.
             for key in [k for k, (_, end) in sessions.items() if end <= monotonic()]:
                 del sessions[key]
+                broker.revoke(key)
             sid = uuid4()
             sessions[sid] = (deepcopy(payload), monotonic() + SESSION_TTL_SECONDS)
             return {"session_id": str(sid), "policy_version": POLICY_VERSION,
@@ -109,13 +146,16 @@ def create_app() -> FastAPI:
         from datetime import datetime, timedelta, timezone
         from .agent_contracts import MarketTask, MarketView
         from .market_client import delegate
+        from .a2a_egress import EgressDenied
         started = perf_counter()
         permitted = view(session_id, ViewRequest(scenario=Scenario.MORTGAGE, recipient="markets"))
         view_ms = (perf_counter()-started)*1000
         task = MarketTask(correlation_id=uuid4(), deadline=datetime.now(timezone.utc) + timedelta(seconds=120),
                           view=MarketView.model_validate(permitted["data"]))
         try:
-            result = await delegate(task)
+            result = await broker.delegate(session_id, task, delegate)
+        except EgressDenied:
+            raise HTTPException(403, "Richiesta A2A bloccata dal catalogo delle uscite.") from None
         except Exception:
             raise HTTPException(502, "Delega non completata: controllare servizio mercati, Card e Ollama.") from None
         result.measurements.update({'view_ms':round(view_ms, 3), 'gateway_total_ms':round((perf_counter()-started)*1000, 3)})
@@ -132,7 +172,10 @@ def create_app() -> FastAPI:
         def cleanup():
             with lock:
                 sessions.pop(session_id, None)
-        return await run_workflow(request_view, delegate, cleanup)
+                broker.revoke(session_id)
+        async def authorized_delegate(task):
+            return await broker.delegate(session_id, task, delegate)
+        return await run_workflow(request_view, authorized_delegate, cleanup)
 
     @app.post("/sessions/{session_id}/analysis")
     async def analysis(session_id: UUID):
@@ -148,7 +191,12 @@ def create_app() -> FastAPI:
         def cleanup():
             with lock:
                 sessions.pop(session_id, None)
-        return await run_analysis(scenarios, request_view, {"S-01":markets,"S-02":tax}, cleanup,
+                broker.revoke(session_id)
+        async def authorized_markets(task):
+            return await broker.delegate(session_id, task, markets)
+        async def authorized_tax(task):
+            return await broker.delegate(session_id, task, tax)
+        return await run_analysis(scenarios, request_view, {"S-01":authorized_markets,"S-02":authorized_tax}, cleanup,
                                   lambda activities,status:build_report(session.profile,scenarios,activities,status))
 
     @app.delete("/sessions/{session_id}", status_code=204)
@@ -156,6 +204,7 @@ def create_app() -> FastAPI:
         with lock:
             get_session(session_id)
             del sessions[session_id]
+            broker.revoke(session_id)
         return Response(status_code=204)
 
     return app

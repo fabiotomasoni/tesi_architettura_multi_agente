@@ -124,5 +124,9 @@ def test_real_mcp_missing_source_stops_before_ollama(monkeypatch,fiscal):
     if fiscal:import services.tax_work as work
     else:import services.market_work as work
     def forbidden(*args,**kwargs):pytest.fail('Ollama non deve essere chiamato senza fonte MCP')
-    monkeypatch.setattr(work.httpx,'AsyncClient',forbidden)
+    monkeypatch.setattr(work,'request_summary',forbidden)
+    from gateway.tool_egress import ToolPermit
+    async def permit(t, **kwargs):
+        return ToolPermit(module='services.missing_source_mcp',tool='lookup_tax' if fiscal else 'lookup_rates',destination='fixture://test',source_token='test',arguments=t.view.model_dump(mode='json'))
+    monkeypatch.setattr(work,'request_tool',permit)
     with pytest.raises(MissingProvenanceError):asyncio.run(work.perform(task(fiscal),mcp_module='services.missing_source_mcp'))

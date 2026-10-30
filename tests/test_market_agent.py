@@ -5,7 +5,12 @@ import pytest
 from pydantic import ValidationError
 from gateway.agent_contracts import MarketTask, MarketResult
 from services.market_work import perform
-from services.rates_mcp import lookup_rates
+from gateway.market_evidence import expected_evidence as fixture_evidence
+from gateway.agent_contracts import MarketView
+
+def lookup_rates(**arguments):
+    return fixture_evidence(MarketView(**arguments)).model_dump(mode="json")
+
 
 
 def task():
@@ -55,6 +60,11 @@ def test_timeout_during_real_mcp_and_cleanup(monkeypatch):
     from fastapi.testclient import TestClient
     import services.market_agent as module
     from services.market_work import perform
+    import services.market_work as work
+    from gateway.tool_egress import ToolPermit
+    async def permit(t, **kwargs):
+        return ToolPermit(module='services.slow_rates_mcp',tool='lookup_rates',destination='fixture://test',source_token='test',arguments=t.view.model_dump(mode='json'))
+    monkeypatch.setattr(work,'request_tool',permit)
     async def slow(request):
         return await perform(request,mcp_module='services.slow_rates_mcp',budget_seconds=2)
     monkeypatch.setattr(module,'perform',slow)
