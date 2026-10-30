@@ -14,7 +14,7 @@ def payload():return json.loads(Path('examples/session_complete.json').read_text
 
 def test_report_separates_documents_fixture_and_unverified_summary():
     profile=SessionInput.model_validate(payload()).profile
-    activity={'status':'completed','error_code':None,'result':{'evidence':{'simulated':True,'source_id':'simulated-rates-v1','annual_rate_percent':'3.20'},'summary':'Testo modello','model':'test','limits':[]}}
+    activity={'status':'completed','error_code':None,'result':{'evidence':{'simulated':True,'source_id':'simulated-rates-v1','annual_rate_percent':'3.20','reference_date':'2025-12-31','unit':'percent_per_year'},'summary':'Testo modello','model':'test','limits':[]}}
     report=build_report(profile,['S-01'],{'S-01':activity},'completed')
     assert report['document_data'][0]['facts']['remaining_principal']['source']['page']==1
     assert report['simulated_sources'][0]['real_world_verified'] is False

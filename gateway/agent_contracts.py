@@ -18,7 +18,7 @@ class DurationBand(Contract):
 
 
 class MarketView(Contract):
-    mortgage_type: Literal['residential', 'other']
+    mortgage_type: Literal['residential', 'other', 'not_specified']
     rate_type: Literal['fixed', 'variable', 'mixed']
     remaining_years_band: DurationBand
 
@@ -27,7 +27,7 @@ class MarketTask(Contract):
     correlation_id: UUID
     scenario: Literal['S-01'] = 'S-01'
     purpose: Literal['market_rate_context'] = 'market_rate_context'
-    policy_version: Literal['0.1.0', '0.2.0'] = '0.2.0'
+    policy_version: Literal['0.1.0', '0.2.0', '0.3.0'] = '0.3.0'
     deadline: datetime
     view: MarketView
 
@@ -48,8 +48,8 @@ class RateEvidence(Contract):
 
 class MarketResult(Contract):
     correlation_id: UUID
-    status: Literal['completed', 'failed']
-    error_code: Literal['timeout', 'execution_failed'] | None = None
+    status: Literal['completed', 'failed', 'unverified']
+    error_code: Literal['timeout', 'execution_failed', 'missing_provenance'] | None = None
     evidence: RateEvidence | None = None
     summary: str = Field(max_length=2000)
     limits: list[str] = Field(max_length=10)
@@ -60,6 +60,8 @@ class MarketResult(Contract):
     def provenance_required(self):
         if self.status == 'completed' and self.evidence is None:
             raise ValueError('Provenienza obbligatoria')
+        if self.status=='unverified' and (self.evidence is not None or self.error_code!='missing_provenance'):
+            raise ValueError('Risultato non verificato incoerente')
         return self
 
 
@@ -73,7 +75,7 @@ class TaxTask(Contract):
     correlation_id: UUID
     scenario: Literal['S-02'] = 'S-02'
     purpose: Literal['tax_context'] = 'tax_context'
-    policy_version: Literal['0.2.0'] = '0.2.0'
+    policy_version: Literal['0.2.0', '0.3.0'] = '0.3.0'
     deadline: datetime
     view: TaxView
 

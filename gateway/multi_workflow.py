@@ -22,7 +22,7 @@ async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=
             results=[task.result() for task in running]
         tasks=dict(zip(scenarios,results))
         completed=sum(r['status']=='completed' for r in results)
-        status='completed' if completed==len(results) else 'partial' if completed else 'blocked' if all(r['status']=='blocked' for r in results) else 'failed'
+        status='completed' if completed==len(results) else 'partial' if completed else 'blocked' if all(r['status']=='blocked' for r in results) else 'unverified' if any(r['status']=='unverified' for r in results) else 'failed'
         report=None
         report_ms=0.0
         if make_report is not None:

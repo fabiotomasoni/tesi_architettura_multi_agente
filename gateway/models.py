@@ -20,6 +20,13 @@ class Source(Contract):
     # Codice opaco, non percorso del file o testo originale.
     document_id: Annotated[str, Field(pattern=r"^doc-[a-zA-Z0-9-]{1,40}$")]
     page: Annotated[int, Field(strict=True, ge=1)]
+    document_sha256: str | None = None
+    page_text_sha256: str | None = None
+    label: str | None = None
+    start: int | None = Field(default=None, ge=0)
+    end: int | None = Field(default=None, ge=0)
+    quote: str | None = None
+    extraction_method: str | None = None
 
 
 class Fact(Contract):
@@ -27,6 +34,9 @@ class Fact(Contract):
     unit: str
     period: date
     source: Source
+    period_source: Source | None = None
+    origin: Literal['extracted', 'transformed', 'derived', 'declared'] = 'declared'
+    transformation: str = 'caller_declared'
     status: Literal["validated", "ambiguous", "unvalidated"] = "unvalidated"
 
 

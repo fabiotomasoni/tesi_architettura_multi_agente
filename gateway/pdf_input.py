@@ -3,6 +3,8 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 import re
+import hashlib
+from importlib.metadata import version
 from uuid import uuid4
 
 from pypdf import PdfReader
@@ -59,22 +61,30 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
         seen.add(kind)
         document_id = 'doc-' + uuid4().hex
         summaries.append({'document_id': document_id, 'type': kind, 'pages': len(pages),
-                          'used_for_scenarios': kind in {'mutuo', 'interessi'}})
+                          'document_sha256':hashlib.sha256(content).hexdigest(), 'used_for_scenarios': kind in {'mutuo', 'interessi'}})
 
         def field(label):
             matches = []
             for page_number, page in enumerate(pages, 1):
                 for match in re.finditer(r'^\s*' + re.escape(label) + r'\s*\n([^\n]+)', page, re.M):
-                    matches.append((match.group(1).strip(), page_number))
+                    raw=match.group(1)
+                    value=raw.strip()
+                    start=match.start(1)+len(raw)-len(raw.lstrip())
+                    source=Source(document_id=document_id,page=page_number,
+                        document_sha256=hashlib.sha256(content).hexdigest(),
+                        page_text_sha256=hashlib.sha256(page.encode()).hexdigest(),
+                        label=label,start=start,end=start+len(value),quote=value,
+                        extraction_method='pypdf-'+version('pypdf')+'-extract_text')
+                    matches.append((value, page_number, source))
             if len(matches) > 1:
                 raise PDFInputError('Etichetta ripetuta nel prospetto: estrazione ambigua.')
             return matches[0] if matches else None
 
-        def add(name, label, unit, period, transform=lambda value: value):
+        def add(name, label, unit, period, transform=lambda value: value, rule="identity", period_source=None):
             found = field(label)
             if not found:
                 return
-            raw, page = found
+            raw, page, source = found
             try:
                 value = transform(raw)
                 status = 'validated'
@@ -82,7 +92,7 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
                 # Non conservare testo arbitrario come valore di un campo finanziario.
                 value, status = 'ambiguous', 'ambiguous'
             setattr(profile, name, Fact(value=value, unit=unit, period=period,
-                    source=Source(document_id=document_id, page=page), status=status))
+                    source=source, period_source=period_source, origin='extracted' if rule=='identity' else 'transformed', transformation=rule, status=status))
 
         def number(value):
             cleaned = value.removesuffix(' EUR').removesuffix('%').strip()
@@ -96,25 +106,22 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
                 period = datetime.strptime(reference[0], 'Situazione al %d/%m/%Y').date()
             except (ValueError, TypeError):
                 raise PDFInputError('Data della situazione mutuo mancante o non valida.') from None
-            # Il template documenta un mutuo immobiliare; non si deduce la residenzialità.
-            profile.mortgage_type = Fact(value='other', unit='category', period=period,
-                source=Source(document_id=document_id, page=reference[1]), status='validated')
-            add('rate_type', 'Tipo tasso', 'category', period, lambda v: {'fisso':'fixed','variabile':'variable','misto':'mixed'}[v])
-            add('remaining_principal', 'Capitale residuo', 'EUR', period, number)
-            add('remaining_months', 'Durata residua', 'month', period, lambda v: number(v.removesuffix(' mesi')))
-            add('annual_rate', 'Tasso annuo nominale', 'percent_per_year', period, number)
-            add('payment_amount', 'Rata mensile', 'EUR', period, number)
+            add('rate_type', 'Tipo tasso', 'category', period, lambda v: {'fisso':'fixed','variabile':'variable','misto':'mixed'}[v], rule='category_mapping', period_source=reference[2])
+            add('remaining_principal', 'Capitale residuo', 'EUR', period, number, rule='italian_number', period_source=reference[2])
+            add('remaining_months', 'Durata residua', 'month', period, lambda v: number(v.removesuffix(' mesi')), rule='months_from_label', period_source=reference[2])
+            add('annual_rate', 'Tasso annuo nominale', 'percent_per_year', period, number, rule='italian_number', period_source=reference[2])
+            add('payment_amount', 'Rata mensile', 'EUR', period, number, rule='italian_number', period_source=reference[2])
             if field('Rata mensile'):
                 profile.payment_frequency = Fact(value='monthly', unit='category', period=period,
-                    source=Source(document_id=document_id, page=field('Rata mensile')[1]), status='validated')
+                    source=field('Rata mensile')[2], period_source=reference[2], origin='derived', transformation='monthly_from_label', status='validated')
         elif kind == 'interessi':
             year = field('Anno imposta')
             try:
                 period = date(int(year[0]), 12, 31)
             except (ValueError, TypeError):
                 raise PDFInputError("Anno d'imposta mancante o non valido.") from None
-            add('tax_year', 'Anno imposta', 'year', period, number)
-            add('purpose', 'Finalita', 'category', period, lambda v: {'acquisto abitazione principale':'primary_home_purchase', 'ristrutturazione':'renovation'}[v])
-            add('annual_interest', 'Interessi annui documentati', 'EUR', period, number)
-            add('ownership_share', 'Quota intestazione', 'fraction', period, lambda v: number(v) / 100)
+            add('tax_year', 'Anno imposta', 'year', period, number, rule='italian_number', period_source=year[2])
+            add('purpose', 'Finalita', 'category', period, lambda v: {'acquisto abitazione principale':'primary_home_purchase', 'ristrutturazione':'renovation'}[v], rule='category_mapping', period_source=year[2])
+            add('annual_interest', 'Interessi annui documentati', 'EUR', period, number, rule='italian_number', period_source=year[2])
+            add('ownership_share', 'Quota intestazione', 'fraction', period, lambda v: number(v) / 100, rule='percentage_to_fraction', period_source=year[2])
     return profile, summaries

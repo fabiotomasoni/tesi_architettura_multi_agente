@@ -24,7 +24,7 @@ def main():
                 try:
                     files=[('files',(kind+'.pdf',(ROOT/'dataset'/'Documents'/f'{case}_{kind}.pdf').read_bytes(),'application/pdf')) for kind in ['mutuo','interessi']]
                     response=client.post('/sessions/pdf',files=files,data={'scenarios':args.scenarios});response.raise_for_status()
-                    sid=response.json()['session_id']
+                    sid=response.json()['session_id'];row['policy_version']=response.json()['policy_version']
                     response=client.post(f'/sessions/{sid}/analysis');response.raise_for_status()
                     body=response.json()
                     # Esportare solo metadati, senza sintesi o contenuto fiscale.

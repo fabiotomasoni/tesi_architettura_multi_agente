@@ -1,4 +1,5 @@
 """Catalogo fidato dei tassi di test: nessuna quotazione o convenienza reale."""
+from .result_validation import require_explicit_provenance
 import hashlib
 import json
 from .agent_contracts import MarketView, RateEvidence
@@ -11,6 +12,7 @@ def expected_evidence(view: MarketView) -> RateEvidence:
 
 
 def verify_evidence(evidence, view: MarketView):
+    require_explicit_provenance(evidence,RateEvidence,('source_id','reference_date','unit','simulated'))
     parsed=RateEvidence.model_validate(evidence)
     if parsed.model_dump()!=expected_evidence(view).model_dump():
         raise ValueError('Contenuto difforme dalla fixture mercati autorizzata')

@@ -1,5 +1,6 @@
 """Agente ADK con delega A2A 0.3 e pipeline applicativa vincolata."""
 import asyncio
+from gateway.result_validation import MissingProvenanceError
 from uuid import uuid4
 
 BOOT_ID = uuid4().hex
@@ -18,6 +19,9 @@ class TaxAgent(BaseAgent):
         task = TaxTask.model_validate_json(text)
         try:
             result = await perform(task)
+        except MissingProvenanceError:
+            result = TaxResult(correlation_id=task.correlation_id,status='unverified',error_code='missing_provenance',evidence=None,
+                summary='Fonte MCP non verificata; contenuto escluso.',limits=['Provenienza MCP obbligatoria mancante; nessun dato utilizzabile per conclusioni.'],model=MODEL,measurements={'provenance_verified':0})
         except TimeoutError:
             result = TaxResult(correlation_id=task.correlation_id, status='failed', error_code='timeout',
                 summary='Tempo massimo di elaborazione superato.', limits=['Nessun risultato disponibile entro la scadenza.'], model=MODEL)

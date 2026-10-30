@@ -432,3 +432,261 @@ README riscritto come guida unica: scopo e limiti della demo, prerequisiti, inst
 Creato DA_IMPLEMENTARE.md dal confronto dei requisiti e criteri di verifica della tesi con codice, test e risultati acquisiti. Ogni compito ha ID, riferimento e condizione di completamento; restano solo lavori residui. Una volta verificato uno step si registra qui l'evidenza e si rimuove il compito dalla lista, oppure si restringe al residuo. Non dichiarati interamente soddisfatti requisiti coperti solo in parte.
 
 Priorità proposta: provenienza documentale puntuale e distinzione estratto/derivato/non specificato, poi controlli di conflitto e analisi locale; proxy e isolamento obbligatori prima di fonti remote. Evidenziato il tema sperimentale ancora aperto: i modelli generano prosa esclusa, mentre report e scelta tool sono deterministici; non attribuire loro benefici di qualità non misurati. Fonti reali trattate come estensione separata dalla campagna 2×2 locale della tesi. Nessuna modifica al codice applicativo o ai risultati dei test in questo step.
+
+## Step 22 — Provenienza documentale puntuale e completezza del report
+
+### Decisione confermata
+
+L'autore conferma tipologia mutuo non specificata con limite esplicito, senza bloccare la ricerca simulata. Policy 0.3.0: mortgage_type è contesto facoltativo, distinto dai dati necessari al calcolo S-01. Se assente non viene creato un fatto fittizio other: la vista usa not_specified e il report dichiara l'assenza. Nessuna modifica retroattiva ai PDF o ai piloti precedenti; contratti aggiornati per i servizi, che vanno riavviati.
+
+### Implementazione
+
+Ogni fatto estratto conserva citazione esatta, posizione start/end nel testo della pagina (intervallo semiaperto), etichetta, pagina, ID opaco, SHA-256 del PDF e del testo pagina, metodo/versione pypdf. Origine extracted/transformed/derived distinta dall'input JSON dichiarato. Annotata la trasformazione: numeri italiani, mesi, categorie, percentuale/quota; frequenza mensile derivata dall'etichetta Rata mensile e non inventata. La provenienza del periodo è separata: situazione mutuo oppure anno d'imposta. Testo completo e originali non vengono aggiunti ai messaggi A2A/MCP; le citazioni finanziarie restano nel profilo/report locali.
+
+Report 0.4.0: include campi obbligatori e facoltativi di ciascuno scenario richiesto, stati missing/not_specified/ambiguous, problemi di validazione e stato della provenienza. completeness elenca inventario, obbligatori mancanti, ambigui/non validati, senza span e contesto opzionale assente. Il report non chiama completa l'intera conoscenza finanziaria dell'utente: la copertura riguarda lo schema dei due scenari. I valori JSON senza span restano caller_declared_not_document_verified, non diventano verificati per il solo fatto di avere documento/pagina.
+
+Aggiunto scripts/check_report_provenance.py, eseguito senza modelli: identifica i PDF per hash, verifica testo/citazione/intervalli/etichette, ricalcola trasformazioni e periodo, controlla inventario dei campi e sezioni documentali rispetto agli scenari. Non stampa valori finanziari. Il controllo confronta un'esportazione con i PDF disponibili: non certifica autenticità, esattezza di informazioni estranee allo schema o generalizzazione ad altri layout. Nessun digest è una firma di un'autorità esterna.
+
+### Verifiche eseguite
+
+124 test superati, 49 warning noti. Aggiunti controlli di provenienza/trasformazione su tutti i 25 fascicoli, citazioni ambigue mantenute senza interpretazione arbitraria, campi mancanti espliciti, impossibilità di far passare valori/citazioni/intervalli/periodi alterati e campi o sezioni omessi e un campo presente falsamente dichiarato mancante. Verificata la vista S-01 con not_specified e soli tre campi consentiti. Nessuna garanzia di provenienza puntuale attribuita ai vecchi report, che non contenevano questi metadati.
+
+### Procedura manuale da completare
+
+1. Riavviare gateway e due agenti con i comandi del README; Ollama aperto.
+2. Caricare C001, eseguire entrambi gli scenari ed esportare report 0.4.0. Attesi completed, policy 0.3.0, tipologia not_specified, citazioni nei fatti e nelle origini dei periodi, nessun obbligatorio mancante/ambiguo/senza span.
+3. Confrontare un importo, il tipo tasso, la quota e la periodicità con i PDF: leggere anche la regola di trasformazione, non solo la coincidenza del numero. Controllare che i periodi si riferiscano al prospetto corretto.
+4. Eseguire check_report_provenance.py passando il percorso del report esportato, usando il Python virtuale. Atteso Problemi: 0. Per C001 con due scenari sono presenti dieci fatti obbligatori verificabili; il tipo mutuo opzionale assente non viene contato come fatto inventato.
+5. Ripetere C006: partial, capitale missing, conteggio/limite esplicito e fonte mercati assente. Attesi nove fatti verificabili e zero problemi con il verificatore.
+6. Ripetere C016: partial, tasso ambiguous con citazione che conserva le alternative, senza scegliere un valore; la verifica della provenienza non trasforma l'ambiguità in validità. Attesi dieci fatti con riferimenti verificabili, uno ambiguo, zero problemi di corrispondenza.
+7. Conservare separatamente eventuali report con importi esatti; non inserirli nelle tracce tecniche. Windows: usare il percorso Python già documentato. Comunicare gli output prima di dichiarare la prova manuale completata.
+
+### Lista residui e limiti
+
+P01 ridotto nel file DA_IMPLEMENTARE alla sola raccolta manuale finale; P02 resta prossimo incremento. Rimangono limiti del parser specifico, assenza di coordinate grafiche, gestione di conflitti tra documenti e catalogo delle tolleranze. I riferimenti sono nel testo estratto, non coordinate sul PDF. Le copie esplicitamente esportate dall'utente sopravvivono alla cancellazione della sessione per scelta dell'utente; il server non aggiunge uno storico dei profili.
+
+## Step 23 — Verifica manuale finale della provenienza e chiusura P01
+
+L'autore ha eseguito il verificatore sui tre nuovi report; ripetuto il controllo direttamente sui file e confrontati esiti e completezza. Tutti report 0.4.0, policy 0.3.0.
+
+| Esportazione | Stato | Fatti con riferimenti verificati | Problemi | Limite documentale |
+|---|---|---:|---:|---|
+| Report 8, caso completo | completed | 10 | 0 | Nessun obbligatorio mancante/ambiguo |
+| Report 9, capitale assente | partial | 9 | 0 | remaining_principal missing, S-01 blocked |
+| Report 10, tasso ambiguo | partial | 10 | 0 | annual_rate ambiguous, S-01 blocked |
+
+S-02 completed in tutti i casi; mortgage_type opzionale non specificato, senza categoria inventata. Nessun fatto presente privo di span. Nel terzo caso la verifica conferma il riferimento al testo ambiguo, non la validità di un tasso: l'attività resta correttamente bloccata.
+
+La precedente esecuzione con 11 problemi riguardava il vecchio report 0.1.0, privo di metadati puntuali; il nuovo report 8 passa. Non attribuito al nuovo parser un difetto dovuto al file precedente e nessuna modifica retroattiva all'esportazione storica.
+
+P01 rimosso dalla lista dei lavori residui dopo completamento di codice, 124 test automatici e verifica manuale dei tre casi. Chiusura circoscritta al template sintetico: generalizzazione del parser, conflitti tra fonti e autenticità documentale restano fuori da questa evidenza. Prossimo lavoro proposto P02, catalogo dei confronti e gestione delle discordanti senza sovrascritture arbitrarie.
+
+## Step 24 — Catalogo dei confronti e discordanza P02
+
+### Implementazione
+
+Aggiunto gateway/comparisons.py: osservazioni con ID, grandezza, prodotto, periodo, valore/unità, tipo e riferimento di fonte e stato verificato. Prima dei numeri si controllano validazione, significato, prodotto e periodo. Catalogo 0.1.0: tasso contrattuale distinto dal benchmark, capitale residuo, rata, interessi annuali e durata. Conversioni esplicite tra percentuale/frazione/punti base annuali, euro/centesimi e anni/mesi. Nessuna conversione automatica fra tassi mensili e annuali, valute o periodi diversi.
+
+Tolleranza iniziale zero dopo conversione, dichiarata nel catalogo e nei risultati; l'API interna consente tolleranze esplicite per quantità, mai decise dal modello o dedotte dal pilota. Questi valori non sono soglie sperimentali di qualità già approvate: vanno congelati nel protocollo prima della campagna finale. Usata aritmetica Decimal.
+
+Esiti consistent/conflict/not_comparable con motivo, valori normalizzati, differenza e tolleranza. Entrambe le osservazioni e provenienze originali sono conservate; nessun vincitore, media o sovrascrittura. Osservazioni non verificate, quantità non configurate, unità incompatibili e numeri non finiti non producono un falso conflitto.
+
+Report 0.5.0 con consistency, numero di coppie confrontabili e conflitti irrisolti. In presenza di conflitto analysis_status=unresolved_conflict e limite esplicito; status resta esito tecnico delle attività, non approvazione dell'analisi. Nessuna conclusione personalizzata viene autorizzata. Nel percorso attuale il tasso contrattuale documentale e il tasso simulato del mercato hanno significato diverso: il confronto restituisce not_comparable/quantity_mismatch. Per S-02 non si inventano osservazioni numeriche da condizioni fiscali testuali.
+
+Il parametro interno di osservazioni aggiuntive serve alle fixture di report e non è un ingresso HTTP per dati arbitrari. Il percorso normale non ha ancora osservazioni agentiche sovrapposte dello stesso contratto: le prove di conflitto sono sintetiche e dichiarate tali. Completare nuovi adattatori solo quando una fonte effettivamente restituisca la stessa grandezza con contesto verificabile.
+
+### Verifiche eseguite
+
+137 test superati, 49 warning noti. Aggiunti casi agente–documento, agente–agente e documento–documento discordanti, conservazione delle provenienze e immutabilità del profilo, periodi/prodotti/grandezze diversi, dati non verificati, unità non supportate, NaN, conversione punti base/frazione, euro/centesimi e durata, tolleranza esplicita e conflitto nel report senza scelta arbitraria. Corretto un test che usava evidenza con default impliciti: osservazioni report normalizzate tramite il contratto RateEvidence prima di leggerne data e unità.
+
+Eseguito scripts/check_comparisons.py: sei fixture tutte passed=true. File runs/comparisons.json con osservazioni interamente sintetiche, escluso da Git. Il test agente–documento non deriva dall'alterazione di un PDF dell'autore né da un servizio reale. Non equivale alla campagna V-09 completa per quattro configurazioni.
+
+### Procedura manuale
+
+1. Dalla radice eseguire `.venv/bin/python scripts/check_comparisons.py`; Windows usare `.\.venv\Scripts\python.exe`. Nessun servizio richiesto. Attesi conflict per agent_document_conflict, consistent per equivalent_basis_points, not_comparable per gli altri quattro casi; tutti passed=True.
+2. Riavviare gateway, mantenere agenti e Ollama attivi. Caricare C001 e produrre un report 0.5.0. In consistency attesi zero conflitti, zero coppie confrontabili e una coppia not_comparable/quantity_mismatch tra tasso contrattuale e benchmark. Le provenienze e i valori originali restano visibili.
+3. Controllare che non sia riportata una contraddizione o convenienza solo perché i due tassi sono numericamente diversi. Le sintesi delle fixture restano fedeli; report 0.4.0 e precedenti rimangono evidenze storiche.
+4. Comunicare output e report per chiudere la verifica manuale residua P02. Il file di attività mantiene espliciti limiti e residui, senza dichiarare conflitti reali non osservati.
+
+### Limiti
+
+Il periodo attuale è una chiave esplicita, non un riconoscimento libero di intervalli nel linguaggio naturale. Il flag verified riguarda l'ammissione dell'osservazione da parte dei controlli applicativi, non autenticità del documento o validità del mercato reale. Nessun confronto esaustivo delle molteplici grandezze nei PDF implicito in zero conflitti. Catalogo confronti distinto dalla policy di minimizzazione: policy resta 0.3.0.
+
+## Step 25 — Verifica finale P02
+
+L'autore ha eseguito check_comparisons.py: sei casi tutti passed=True. Verificato direttamente runs/comparisons.json: conflitto agente–documento, equivalenza dopo conversione punti base e non confrontabilità per periodo, prodotto, benchmark e grandezza diversi confermati.
+
+Esaminato report esportato 11, versione 0.5.0, policy 0.3.0, stato completed. La coppia registrata conserva tasso contrattuale 3.1 e benchmark sintetico 3.20, entrambe le provenienze, periodo e unità. Esito not_comparable/quantity_mismatch; unresolved_conflicts=0, comparable_pairs=0, nessuna scelta o sovrascrittura. analysis_status circoscritto a no_conflict_in_registered_observations. Il report non presenta la differenza come contraddizione o convenienza. Ricalcolata provenienza documentale: dieci fatti verificati, zero problemi.
+
+P02 rimosso dalla lista residui nel perimetro del catalogo e delle fixture implementate, dopo test automatici e prova manuale. Restano espliciti: conflitti sintetici non sono conflitti osservati da fonti reali; le attuali osservazioni agentiche non duplicano la misura contrattuale. Nuove fonti sovrapposte richiederanno adattatori e verifiche dedicate. Il requisito generale RF-07 non è dichiarato verificato per qualsiasi documento o fonte futura. Nessuna modifica al codice richiesta dai risultati. Prossimo incremento proposto P03, confronto locale orientativo S-01 con ipotesi e calcoli verificabili.
+
+## Step 26 — Confronto locale orientativo del mutuo P03
+
+### Perimetro concordato
+
+Dopo spiegazione in linguaggio semplice l'autore approva rate mensili posticipate costanti, capitale e durata residui documentali, tasso contrattuale e tasso della fixture. Costi non documentati esclusi, non assunti realmente nulli. Variabile/misto trattati soltanto come scenari a tasso congelato, non previsioni. Periodicità diverse segnalate non supportate. Nessuna raccomandazione di rinegoziazione.
+
+### Implementazione
+
+Aggiunto gateway/mortgage.py. Formula rata A=P*i/[1-(1+i)^(-n)], con i=tasso annuo nominale percentuale/1200; per tasso zero A=P/n. Decimal con precisione locale 50; importi esposti a centesimi ROUND_HALF_UP. Totali teorici calcolati dalla rata non arrotondata; non sono un piano bancario con rate/ultima rata arrotondate e spese. Limite del modello 1–1200 mesi, tassi 0–100%, capitale positivo/finito.
+
+Report 0.6.0 con mortgage_comparison: input e riferimenti ai fatti, fonte alternativa e digest, rata documentale, rata teorica ai due tassi, totale rate/interessi teorici e differenze contratto meno simulato. Positivo indica scenario simulato più basso; negativo più alto. Nessuna etichetta di risparmio garantito. Eventuale differenza rata documentale–modello segnalata, senza correzione automatica del documento e senza dichiarare errore contrattuale.
+
+Calcolo solo locale dopo verifica della fixture, senza modificare viste A2A/MCP o prompt. Non eseguito su dati mancanti/ambigui, attività mercati fallita, evidenza assente, periodicità non mensile o conflitti irrisolti. Lo stato tecnico completed non equivale ad approvazione della convenienza. Confronto ipotetico tra scenari distinto dal confronto RF-07 fra due affermazioni sulla stessa grandezza: tasso contrattuale e benchmark restano non confrontabili come verità del medesimo fatto.
+
+### Test e risultati
+
+149 test superati, 49 warning noti. Nuovi casi tasso zero, singola rata, saldo residuo tramite ricorrenza mensile indipendente dalla formula, coerenza con rate del dataset fisso/variabile, segno delle differenze, mancanti/ambigui/conflitti, fonte assente, periodicità non supportata, rata documentale diversa preservata e input matematici invalidi.
+
+Aggiunto scripts/check_mortgage.py: ricostruisce la rata con ricerca numerica sul saldo mensile invece della formula chiusa; confronta rate/totali/interessi, tassi con fonti, differenze e rata documentale preservata. Test verifica anche rifiuto di un importo teorico alterato. Per not_calculated segnala soltanto che il report dichiara l'assenza del calcolo: non è verifica automatica della causa del blocco, che resta coperta dai test applicativi e dalla lettura del report.
+
+Verifica locale diretta senza modelli: C001 rata teorica contrattuale 1604.32, simulata 1608.35, differenza -4.03 EUR/mese; C024 867.11 e 809.91, differenza 57.20 EUR/mese sotto ipotesi di tassi costanti. Questi numeri sono scenari sintetici, non offerte o conclusioni economiche reali. Non ancora raccolta nuova esportazione browser dell'autore.
+
+### Procedura manuale
+
+1. Riavviare gateway; agenti e Ollama attivi. Caricare C001, eseguire scenari ed esportare nuovo report 0.6.0.
+2. Controllare mortgage_comparison: status calculated, rate teoriche 1604.32/1608.35, differenza -4.03, rata documentale preservata, ipotesi/costi esclusi e personalized_recommendation=false.
+3. Eseguire scripts/check_mortgage.py passando il percorso esatto del nuovo report con Python virtuale: attesi tutti True. Il verificatore usa un metodo numerico indipendente, ma le stesse ipotesi matematiche; non prova validità di un'offerta reale.
+4. Ripetere C024: 867.11/809.91, differenza 57.20; leggere il limite esplicito sul variabile, non interpretare il risultato come previsione.
+5. Ripetere C006 o C016: not_calculated/input_not_ready, nessun numero inventato. Fonte fiscale e report parziale restano disponibili.
+6. Verificare anche provenienza con check_report_provenance.py sui nuovi file. Per Windows usare il Python virtuale documentato nel README. Condividere report e output per chiudere P03.
+
+Lista residui aggiornata: P03 limitato alla verifica manuale finale. README rimane orientato all'uso, con breve spiegazione delle ipotesi; dettagli matematici e test restano nel diario. Policy invariata a 0.3.0 perché nessuna trasformazione dei dati condivisi è cambiata.
+
+## Step 27 — Verifica reale P03 e chiusura del compito
+
+Esaminati i tre report esportati 12/13/14, tutti versione 0.6.0; ripetuti controllo numerico indipendente e verifica di provenienza. Nessun file con importi copiato nella repository.
+
+| Report | Esito | Rata modello contrattuale | Rata scenario simulato | Differenza mensile | Provenienza |
+|---|---|---:|---:|---:|---|
+| 12, fisso | completed/calculated | 1604.32 EUR | 1608.35 EUR | -4.03 EUR | 10 fatti, zero problemi |
+| 13, variabile | completed/calculated | 867.11 EUR | 809.91 EUR | 57.20 EUR | 10 fatti, zero problemi |
+| 14, capitale mancante | partial/not_calculated, input_not_ready | Non calcolata | Non calcolata | Non calcolata | 9 fatti, zero problemi |
+
+Nei primi due report tutti i sei controlli numerici sono veri: scenario contrattuale, scenario simulato, tassi corrispondenti alle fonti, differenze, rata documentale preservata e nessuna raccomandazione. Nel terzo il verificatore conferma solo la dichiarazione not_calculated; letto separatamente il motivo input_not_ready e verificata l'assenza del capitale tramite provenienza/inventario del report.
+
+Ipotesi esplicite in tutti: stesso capitale/durata, tasso nominale diviso 12, rate mensili posticipate costanti, tassi congelati, costi/imposte/assicurazioni non documentati esclusi, arrotondamento dei soli importi esposti. Nel variabile presente il limite non previsivo. Nessuna offerta reale, risparmio garantito o conclusione definitiva di convenienza.
+
+P03 rimosso dai residui dopo implementazione, 149 test automatici e prova manuale nel perimetro concordato. Nessuna correzione richiesta dagli esiti. Prossimo lavoro P04: occorre concordare un'applicazione fiscale locale coerente con le sole fixture simulate, senza introdurre aliquote o diritti non verificati.
+
+## Step 28 — Riepilogo fiscale e ripartizione ipotetica P04
+
+### Perimetro concordato
+
+L'autore sceglie riepilogo e scenario ipotetico. I PDF non chiariscono se gli interessi siano già ripartiti: il prodotto interessi × quota viene presentato soltanto sotto l'ipotesi esplicita che l'importo riguardi l'intero mutuo e non sia già attribuito alla persona. Nessuna aliquota, soglia, base detraibile o diritto fiscale inventato. Quota di intestazione non interpretata come prova di spettanza.
+
+### Implementazione
+
+Aggiunto gateway/tax_application.py con calcolo deterministico locale, Decimal e arrotondamento HALF_UP ai centesimi dopo il prodotto. Report 0.7.0: documentary_context con anno/finalità/interessi/quota, input_refs ai fatti, hypothetical_allocation con formula/origine/arrotondamento, fonte simulata con digest e condizioni da verificare con riferimenti. Flag deduction_calculated=false, tax_entitlement=not_assessed e personalized_recommendation=false. Risultato derivato non presentato come importo personale documentato.
+
+Non calcolato se dati minimi mancanti/ambigui o non coerenti, fonte fiscale indisponibile o conflitti irrisolti. Fonte verificata nuovamente rispetto al catalogo. Solo S-02 richiesto produce questa sezione; nessun importo aggiunto alle viste degli agenti o ai prompt. Con S-01 ancora disponibile il report può restare parziale. Nessun aggiornamento retroattivo ai report precedenti; policy resta 0.3.0.
+
+### Verifiche eseguite
+
+156 test superati, 49 warning noti. Nuovi casi quote 100/50 percento e contesti diversi, controllo indipendente tramite aritmetica intera, mezzo centesimo HALF_UP, interessi zero, mancanti/ambigui/periodi errati/quote fuori intervallo, conflitti, fonte assente/alterata, ipotesi e limiti espliciti, profilo immutato. Verificata anche integrazione report con solo S-02 e assenza del confronto mutuo non richiesto.
+
+Aggiunto scripts/check_tax_application.py: ricalcola il prodotto con Fraction e arrotondamento intero, confronta contesto e valori documentali e controlla i flag di mancata attestazione fiscale. Il test rileva un importo derivato alterato. Il controllo not_calculated conferma la dichiarazione, non verifica da solo la causa; le cause sono coperte dai test applicativi e dalla lettura del report.
+
+Prove locali dirette senza Ollama: C001 prodotto ipotetico 4852.52 EUR; C024 2413.79 EUR (4827.57 × 0.5); C011 not_calculated/input_not_ready. Nessun nuovo report browser ancora raccolto per questo step.
+
+### Procedura manuale
+
+1. Riavviare gateway, lasciare agenti e Ollama attivi. C001 con entrambi gli scenari: esportare report 0.7.0. tax_application calculated, contesto documentale mantenuto, prodotto ipotetico 4852.52, nessuna detrazione.
+2. C024: quota 0.5, interessi 4827.57, prodotto ipotetico 2413.79. Verificare che il valore sia distinto dal dato documentale e dichiarato non già attribuibile alla persona senza l'ipotesi.
+3. C011: report partial, S-02 bloccato, tax_application not_calculated/input_not_ready; S-01 può continuare. Nessuna quota o interesse ricostruiti.
+4. Eseguire check_tax_application.py con il percorso esatto dei nuovi report e Python virtuale; attesi tutti True. Per C011 attesi flag di mancata detrazione/spettanza/raccomandazione e not_calculated_as_declared=True.
+5. Controllare anche provenienza e ipotesi nel testo; condividere report e output prima di chiudere P04. Windows: percorso Python come nel README.
+
+### Limiti e residui
+
+P04 ristretto alla verifica manuale finale. Il risultato non risponde alla normativa reale: la fixture è inventata. La correttezza aritmetica non dimostra spettanza né validità dell'ipotesi di ripartizione. Prima di un'applicazione fiscale reale servono semantica documentale, fonti istituzionali temporalmente pertinenti, requisiti verificati e controlli delle uscite. Le copie dei report con dati esatti restano consegne esplicite, non tracce sperimentali.
+
+## Step 29 — Verifica reale P04 e chiusura del compito
+
+Esaminati direttamente i report esportati 15/16/17, tutti report_version 0.7.0. Ripetuti controllo aritmetico indipendente e verifica della provenienza documentale.
+
+| Report | Stato | Contesto fiscale | Ripartizione ipotetica | Provenienza |
+|---|---|---|---|---|
+| 15 | completed/calculated | 2025, acquisto abitazione principale, quota 1 | 4852.52 × 1 = 4852.52 EUR | 10 fatti, zero problemi |
+| 16 | completed/calculated | 2024, ristrutturazione, quota 0.5 | 4827.57 × 0.5 = 2413.79 EUR dopo arrotondamento | 10 fatti, zero problemi |
+| 17 | partial/not_calculated | S-02 blocked/input_not_ready, S-01 completed | Nessun importo ricostruito | 9 fatti, zero problemi |
+
+Nei primi due report tutti i nove controlli del verificatore sono veri. Nel terzo sono veri i tre flag di mancata detrazione/spettanza/raccomandazione e not_calculated_as_declared. La verifica di provenienza e il motivo applicativo sono stati letti separatamente: il solo flag not_calculated non dimostra la correttezza del blocco.
+
+Controllati ipotesi e limiti: interessi assunti riferiti all'intero mutuo e non già ripartiti, quota usata solo come fattore aritmetico, rischio di doppia ripartizione esplicito, nessuna fonte normativa reale o attestazione fiscale. L'importo derivato è distinto da importo personale documentato. Nel report 16 il periodo 2024 è conservato, senza riallinearlo arbitrariamente alla situazione mutuo 2025.
+
+P04 rimosso dalle attività residue dopo implementazione, 156 test automatici e verifica manuale nel perimetro concordato. Nessuna correzione richiesta dai risultati. Non dimostrata spettanza o correttezza normativa reale. Prossimo lavoro P05: distinguere provenienza mancante da errore generico e gestire risultati non verificati senza perdere le altre attività utilizzabili.
+
+## Step 30 — Risultati senza provenienza e stato non verificato P05
+
+### Implementazione
+
+Stato unverified ed error_code missing_provenance nei contratti. Un risultato privo di evidenza non può più presentarsi come completed. Nel gateway gateway/result_validation.py distingue envelope non valido/correlazione errata da evidenza assente o metadati obbligatori omessi. Verifica la presenza esplicita nel payload ricevuto prima dei default Pydantic: i default della fixture non ricostruiscono una fonte non trasmessa. I campi non di provenienza restano sottoposti allo schema, quindi un valore malformato non diventa automaticamente unverified.
+
+I risultati non verificati conservano solo correlazione/modello e motivo del diniego, con evidenza rimossa e sintesi sostituita da testo locale esplicito. Nessuna ricostruzione della fonte o conclusione ricevuta esposta al lettore. Conteggio provenance_verified=0 distinto da result_validated, che riguarda il contratto sanitizzato. La verifica Card rimane separata.
+
+I subgrafi propagano unverified; aggregazione partial se esiste un altro ramo completed, altrimenti unverified se almeno un ramo ha provenienza mancante. Report 0.8.0: esito esplicito, nessuna fonte/sintesi fedele o calcolo da quel ramo, limite dichiarato e altre attività preservate. La sessione viene comunque chiusa. Calcoli P03/P04 richiedono completed, quindi non usano dati non verificati.
+
+Fixture services/unverified_market_agent: dichiara intenzionalmente completed senza evidence tramite bypass dello schema esclusivamente per la prova negativa di protocollo. Non chiama modelli o MCP e non sostituisce il servizio nominale. Il gateway deve riclassificarla, non fidarsi dell'etichetta completed. Nessuna modifica ai report storici; policy resta 0.3.0.
+
+### Verifiche
+
+165 test superati, 56 warning noti. Nove nuovi casi: fonte/evidenza assente in mercati e fiscale, mancata promozione dei default, contenuto malformato distinto, esclusione da report/calcoli, altro ramo conservato, API con solo risultato unverified e cleanup, fixture A2A realmente serializzata con risultato incompleto e store svuotato. Aggiornato test storico che si aspettava errore generico per fonte assente: ora richiede unverified/missing_provenance; Card o correlazione errate restano errori.
+
+Prove automatiche in processo/controllate, non nuova prova manuale dell'autore. README aggiornato brevemente; P05 ristretto al residuo manuale nel file lavori.
+
+### Verifica manuale passo per passo
+
+1. Riavviare gateway per caricare il codice. Lasciare fiscale e Ollama attivi.
+2. Fermare solo agente mercati sulla porta 8001. Avviare al suo posto `.venv/bin/python -m uvicorn services.unverified_market_agent:app --host 127.0.0.1 --port 8001 --no-access-log`. Windows: Python virtuale come nel README.
+3. Aprire pagina locale, caricare C001 e richiedere entrambi gli scenari. Attesi partial; attività S-01 unverified/missing_provenance, fiscale completed; report 0.8.0 con sole fonte/sintesi fiscale. mortgage_comparison not_calculated/market_evidence_unavailable. Nessuna frase della fixture senza fonte presente come conclusione; messaggio esplicito di mancata provenienza.
+4. Esportare il report. Verificare il percorso reale anche con `.venv/bin/python scripts/run_multi_pilot.py --cases C001 --output runs/multi_missing_provenance.jsonl`: atteso partial e pulizia True; passed False rispetto al nominale è atteso. Leggere nei record missing_provenance, non delegation_failed.
+5. Con solo S-01 selezionato in una nuova sessione: atteso unverified, nessuna fonte/sintesi/calcolo, report e pulizia comunque disponibili. Il blocco non deve inventare risultato personalizzato.
+6. Fermare fixture, riavviare services.market_agent:app sulla stessa porta. Riprovare C001 con entrambi: completed e fonti/sintesi corrette; condividere report e record prima di chiudere P05.
+
+### Limiti
+
+Non è verifica della normativa o affidabilità semantica del modello. La fonte alterata con contenuto invalido resta distinta da fonte semplicemente mancante; può ancora produrre errore di delega generico. Il rifiuto della fonte obbligatoria impedisce l'attività personalizzata interessata, non necessariamente le altre. Restano catalogo/proxy, isolamento e completamento delle prove avversarie oltre alle fixture note.
+
+## Step 31 — Prova reale di provenienza mancante con altro ramo disponibile
+
+Esaminato report 18 versione 0.8.0 e ultimo record di runs/multi_missing_provenance.jsonl. Esito partial; S-01 unverified/missing_provenance, S-02 completed. Fonti e sintesi fedeli presenti soltanto per S-02. mortgage_comparison not_calculated/market_evidence_unavailable; applicazione fiscale ipotetica ancora calculated. Dieci fatti documentali con riferimenti verificati, zero problemi: la mancanza di provenienza riguarda il risultato agente, non i PDF.
+
+Pilota: passed=false rispetto al nominale previsto completed, come atteso per la prova negativa; automatic_session_closed=true e cleanup_verified=true. Entrambi i rami attraversano request_view, delegate_a2a, verify_result; lo scambio A2A è completato, ma il risultato mercati è riclassificato non verificato e non usato. Nessuna correzione necessaria.
+
+Verificata la distinzione fra risultato non verificato e guasto generico nel percorso reale. P05 ristretto a due residui manuali: solo S-01 non verificato e ripristino nominale dopo rimozione della fixture. Non dichiarate eseguite queste prove finché non raccolte le evidenze. Fonte non verificata non diventa valida per effetto di provenienza documentale corretta degli input.
+
+## Step 32 — Revisione RF-06/RNF-07/V-08 e chiusura P05
+
+### Evidenze reali finali
+
+Esaminato runs/only_unverified.jsonl: soltanto S-01, stato unverified/missing_provenance, provenance_verified=0, report presente, chiusura automatica e pulizia vere. passed=false è corretto nel confronto con il nominale. Nessuna attività fiscale avviata.
+
+Esaminato runs/p05_recovery.jsonl: entrambi gli scenari completed, fonte e contenuto fixture verificati per entrambi, provenance_verified=1, report presente, passed=true e pulizia automatica verificata. Ripristino dopo rimozione della fixture confermato.
+
+### Rilettura della tesi e lacuna trovata
+
+Riletti RF-06, RF-08/RF-09, RNF-07, V-08 e sezioni 4.3/4.5. La gestione deve riguardare anche una fonte omessa prima del confine A2A. La revisione ha individuato che la validazione della risposta MCP poteva applicare default di provenienza e trasformare l'omissione in metadati apparentemente presenti. La verifica A2A da sola non era sufficiente: P05 non è stato chiuso prima della correzione.
+
+### Correzioni e nuove regressioni
+
+Aggiunto controllo di presenza esplicita dei metadati di provenienza nella risposta MCP prima dei default, condiviso dai cataloghi mercati e fiscale. Il contenuto non di provenienza resta sottoposto allo schema; una struttura malformata non viene promossa a evidenza valida. MissingProvenanceError è convertito dagli agenti in unverified/missing_provenance, evidence nulla e testo locale di esclusione, prima dell'inferenza.
+
+Nuova fixture services/missing_source_mcp con due strumenti reali stdio che restituiscono dati strutturati senza source_id. Test per mercati e fiscale verificano che l'omissione interrompa la pipeline prima di Ollama. Un primo test ha rilevato che l'eccezione dentro il contesto async MCP veniva avvolta in ExceptionGroup: spostata la validazione del contenuto dopo la chiusura dei contesti MCP, mantenendo errore specifico e pulizia. Aggiornato un precedente test con evidenza abbreviata per usare tutti i metadati espliciti.
+
+Suite finale: **171 test superati, 70 warning di libreria**. I nuovi test coprono controllo catalogo, conversione dell'errore nell'agente tramite A2A e passaggio MCP reale senza invocazione del modello. Gli avvisi aumentano con i percorsi ADK esercitati, non sono fallimenti.
+
+### Valutazione di soddisfacimento
+
+P05 soddisfatto nel perimetro dei contratti, strumenti e scenari attuali:
+
+- fonte obbligatoria assente distinta da schema/correlazione errati e guasto di esecuzione;
+- stato unverified esplicito attraverso agente, gateway, grafo e report;
+- evidenza/sintesi/calcoli del ramo non verificato esclusi, senza fonti ricostruite dai default;
+- attività indipendente valida preservata con risultato partial;
+- se manca l'unica attività indispensabile, nessuna risposta personalizzata, ma esito unverified e limiti;
+- sessioni chiuse e ritorno al nominale verificato.
+
+Non equivale a pieno soddisfacimento della tesi: V-08 va ancora inserito nella campagna finale dieci ripetizioni per ciascuna delle quattro configurazioni; fonti reali, proxy e isolamento restano da implementare. Nuovi strumenti e contratti richiederanno corrispondenti campi di provenienza obbligatori. Nessuna norma reale, autenticità documentale o affidabilità universale del modello dedotta da queste prove.
+
+P05 rimosso dai residui; P01–P05 chiusi nei rispettivi perimetri esplicitati. README conservato essenziale, codice di questa revisione da caricare riavviando gateway e agenti prima delle successive prove. Nessun commit creato automaticamente.

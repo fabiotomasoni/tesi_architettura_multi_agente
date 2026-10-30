@@ -4,7 +4,8 @@ from time import perf_counter
 import httpx
 from a2a.client import A2AClient
 from a2a.types import AgentCard, SendMessageRequest, MessageSendParams, Message, Role, Part, TextPart
-from .agent_contracts import TaxTask, TaxResult
+from .result_validation import parse_result
+from .agent_contracts import TaxEvidence, TaxTask, TaxResult
 
 from .tax_evidence import verify_evidence
 
@@ -31,7 +32,7 @@ async def delegate(task: TaxTask) -> TaxResult:
             parts.extend(artifact.get('parts', []))
         for part in parts:
             if part.get('kind') == 'text':
-                parsed = TaxResult.model_validate_json(part['text'])
+                parsed = parse_result(part['text'], task, TaxResult, TaxEvidence, ('source_id','reference'))
                 if parsed.correlation_id != task.correlation_id:
                     raise ValueError('Correlazione del risultato non valida')
                 if parsed.evidence is not None and (parsed.evidence.tax_year != task.view.tax_year or parsed.evidence.purpose != task.view.purpose):
@@ -39,6 +40,6 @@ async def delegate(task: TaxTask) -> TaxResult:
                 if parsed.evidence is not None:
                     _, digest = verify_evidence(parsed.evidence, task.view)
                     parsed.measurements.update({'fixture_content_verified':1,'source_sha256':digest})
-                parsed.measurements.update({'card_validation_ms':round(card_ms, 3), 'a2a_roundtrip_ms':round((perf_counter()-started)*1000, 3), 'a2a_requests':1, 'card_validated':1, 'result_validated':1})
+                parsed.measurements.update({'card_validation_ms':round(card_ms, 3), 'a2a_roundtrip_ms':round((perf_counter()-started)*1000, 3), 'a2a_requests':1, 'card_validated':1, 'result_validated':1, 'provenance_verified':int(parsed.status=='completed')})
                 return parsed
         raise ValueError('Risultato A2A privo di artefatto strutturato')

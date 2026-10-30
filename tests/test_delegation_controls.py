@@ -49,7 +49,11 @@ def test_card_and_result_rejection(monkeypatch, fault):
             return SimpleNamespace(model_dump=lambda **kw:{'result':{'parts':[{'kind':'text','text':json.dumps(result)}]}})
     monkeypatch.setattr(module.httpx,'AsyncClient',FakeHTTP)
     monkeypatch.setattr(module,'A2AClient',FakeA2A)
-    with pytest.raises(ValueError):asyncio.run(module.delegate(request))
+    if fault=='source':
+        parsed=asyncio.run(module.delegate(request))
+        assert parsed.status=='unverified' and parsed.error_code=='missing_provenance'
+    else:
+        with pytest.raises(ValueError):asyncio.run(module.delegate(request))
     if fault=='card':assert not sent
 
 

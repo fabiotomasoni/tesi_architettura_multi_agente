@@ -2,7 +2,7 @@
 
 Prototipo di tesi che legge PDF sintetici, affida attività a due specialisti locali — mercati e fiscalità — e produce un report con dati documentali, fonti e limiti. Le attività indipendenti vengono coordinate da LangGraph.
 
-**Le fonti attuali sono simulate.** Il report riproduce fedelmente i dati delle simulazioni, ma non fornisce quotazioni reali, consigli finanziari o attestazioni fiscali. Sono supportati i PDF del dataset incluso, non documenti bancari generici.
+**Le fonti attuali sono simulate.** Il report riproduce fedelmente i dati delle simulazioni e confronta due scenari ipotetici del mutuo. Non fornisce quotazioni reali, consigli finanziari o attestazioni fiscali. Sono supportati i PDF del dataset incluso, non documenti bancari generici.
 
 ## Cosa serve
 
@@ -91,7 +91,7 @@ Per fermare la demo premere **Ctrl+C** nei tre terminali. Agli avvii successivi 
 4. Premere **Esegui scenari selezionati e chiudi sessione**.
 5. Leggere le sezioni del report. **Esporta report JSON** salva una copia solo se richiesto.
 
-Un esito completo indica che tutte le attività richieste sono terminate. Un esito parziale conserva le attività riuscite e spiega quelle bloccate o fallite. La sessione viene chiusa automaticamente al termine; per ripetere l'analisi caricare nuovamente i PDF.
+Il report distingue valori trasformati, dati mancanti o non specificati e mostra citazioni del testo di origine con un riepilogo di completezza per scenario. La sezione confronti distingue valori coerenti, conflitti e informazioni non confrontabili, mantenendo le provenienze. Il confronto del mutuo mostra rate e interessi teorici a parità di debito e durata: costi esclusi e tassi ipotizzati costanti, anche per il variabile. La rata del documento resta distinta da quella ricalcolata. Il riepilogo fiscale mostra anche interessi × quota come semplice ripartizione ipotetica: vale solo se gli interessi riguardano l’intero mutuo e non sono già ripartiti. Non è un importo detraibile né una detrazione spettante. Un esito completo indica che tutte le attività richieste sono terminate. Un esito parziale conserva le attività riuscite e spiega quelle bloccate, fallite o non verificate. Un risultato senza provenienza obbligatoria è indicato come non verificato ed escluso dai calcoli. La sessione viene chiusa automaticamente al termine; per ripetere l'analisi caricare nuovamente i PDF.
 
 Per provare un caso incompleto usare `C006_*`: manca il capitale del mutuo, quindi l'attività mercati viene bloccata e quella fiscale può proseguire. Conto e busta paga sono riconosciuti, ma non aggiungono ancora dati ai due scenari.
 

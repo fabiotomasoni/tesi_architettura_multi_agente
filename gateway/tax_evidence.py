@@ -1,4 +1,5 @@
 """Catalogo fidato della sola fixture fiscale: non certifica norme reali."""
+from .result_validation import require_explicit_provenance
 import hashlib
 import json
 from .agent_contracts import TaxEvidence, TaxView
@@ -15,6 +16,7 @@ def expected_evidence(view: TaxView) -> TaxEvidence:
 
 
 def verify_evidence(evidence, view: TaxView) -> tuple[TaxEvidence, str]:
+    require_explicit_provenance(evidence,TaxEvidence,('source_id','reference'))
     parsed=TaxEvidence.model_validate(evidence)
     if parsed.model_dump() != expected_evidence(view).model_dump():
         raise ValueError('Contenuto fiscale difforme dalla fixture autorizzata')

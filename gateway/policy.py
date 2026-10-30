@@ -2,11 +2,12 @@
 from decimal import Decimal, InvalidOperation
 from .models import Profile, Scenario
 
-POLICY_VERSION = "0.2.0"
+POLICY_VERSION = "0.3.0"
 REQUIRED = {
-    Scenario.MORTGAGE: ("mortgage_type", "rate_type", "remaining_principal", "remaining_months", "annual_rate", "payment_amount", "payment_frequency"),
+    Scenario.MORTGAGE: ("rate_type", "remaining_principal", "remaining_months", "annual_rate", "payment_amount", "payment_frequency"),
     Scenario.TAX: ("tax_year", "purpose", "annual_interest", "ownership_share"),
 }
+OPTIONAL = {Scenario.MORTGAGE: ("mortgage_type",), Scenario.TAX: ()}
 CATEGORIES = {
     "mortgage_type": {"residential", "other"},
     "rate_type": {"fixed", "variable", "mixed"},
@@ -69,6 +70,6 @@ def make_view(profile: Profile, scenario: Scenario) -> dict:
         months = int(str(profile.remaining_months.value))
         # Fasce (0,60], (60,120], ...: nessun valore esatto nella vista.
         lower = ((months - 1) // 60) * 5
-        return {"mortgage_type": profile.mortgage_type.value, "rate_type": profile.rate_type.value,
+        return {"mortgage_type": profile.mortgage_type.value if profile.mortgage_type and profile.mortgage_type.status=='validated' and profile.mortgage_type.value in CATEGORIES['mortgage_type'] else 'not_specified', "rate_type": profile.rate_type.value,
                 "remaining_years_band": {"lower_exclusive": lower, "upper_inclusive": lower + 5}}
     return {"tax_year": int(str(profile.tax_year.value)), "expense_category": "mortgage_interest", "purpose": profile.purpose.value}

@@ -6,15 +6,10 @@ Lista dei lavori residui ricavata dai capitoli 3–4 della tesi e confrontata co
 
 Ogni attività ha un ID stabile. Quando codice e prove previste sono completati, registrare nel diario ID, decisioni ed evidenze, quindi rimuovere qui il compito. Se completato solo in parte, restringere la descrizione al residuo e mantenere l'ID. Non eliminare un requisito perché esiste una dimostrazione nominale. Scelte che cambiano perimetro, catalogo o protocollo sperimentale vanno concordate prima di implementarle.
 
-Il prossimo lavoro proposto è P01. L'ordine seguente è una proposta operativa; i riferimenti RF/RNF/V indicano invece i requisiti della tesi.
+P03 completato nel perimetro ipotetico concordato (Step 27); P04 completato nel perimetro ipotetico concordato (Step 29); P05 completato per i contratti e le fixture attuali (Step 32); prossimo lavoro proposto S01, proxy e catalogo delle uscite. P01 completato nel perimetro del template sintetico (Step 23); P02 completato per il catalogo attuale e le fixture (Step 25). Le osservazioni del percorso reale oggi riguardano grandezze diverse: nuovi adattatori per fonti sovrapposte richiederanno ulteriori verifiche. L'ordine seguente è una proposta operativa; i riferimenti RF/RNF/V indicano invece i requisiti della tesi.
 
 ## Priorità 1 — Provenienza e correttezza dell'analisi
 
-- [ ] **P01 — Provenienza documentale puntuale** (RF-02, RQ1). Collegare ogni fatto alla porzione di testo oltre a documento/pagina, distinguendo valore estratto, trasformazione e informazione non specificata. Correggere mortgage_type=other oggi attribuito senza una corrispondente etichetta esplicita. Completato quando valori, trasformazioni e riferimenti sono verificabili sui PDF e le prove coprono assenza/ambiguità senza inventare dati. Concordare prima la rappresentazione della tipologia non specificata e l'eventuale aggiornamento della policy.
-- [ ] **P02 — Confronti e discordanza** (RF-07, V-09). Catalogo di grandezze, unità, periodi e tolleranze; segnalare conflitti agente–agente e agente–documento senza sovrascritture. Completato con fixture di conflitto e casi negativi: periodi, prodotti o grandezze differenti non sono falsi conflitti. La corrispondenza con una fixture non sostituisce questa verifica.
-- [ ] **P03 — Analisi locale S-01** (sezione 3.2, RF-08). Definire e implementare il confronto orientativo sui valori esatti locali con ipotesi esplicite, modello di calcolo e test indipendenti. Non trattare tassi sintetici come offerte reali né concludere convenienza definitiva senza costi/offerta. Portare risultati e limiti nel report.
-- [ ] **P04 — Applicazione locale S-02** (sezione 3.2, RF-08). Definire quali risultati personalizzati sono sostenibili dai documenti e dalle fonti selezionate; condizioni non documentate restano da verificare. Non aggiungere aliquote o diritto a detrazioni inventati. Con fixture mantenere esplicita la natura dimostrativa di ogni calcolo.
-- [ ] **P05 — Provenienza mancante e stato non verificato** (RF-06, RNF-07, V-08). Distinguere risultato formalmente scorretto da risultato strutturato senza fonte obbligatoria: quest'ultimo va marcato non verificato, non usato per conclusioni verificate e propagato al report/gestione parziale. Oggi molti casi confluiscono nel generico errore di delega.
 
 ## Priorità 2 — Confine dei dati e controlli di sicurezza
 

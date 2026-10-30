@@ -28,7 +28,8 @@ async def perform(task: TaxTask, *, mcp_module: str = 'services.tax_mcp', budget
                 result = await client.call_tool('lookup_tax', task.view.model_dump(mode='json'))
                 if result.isError:
                     raise ValueError('Errore MCP')
-                evidence, source_digest = verify_evidence(json.loads(result.content[0].text), task.view)
+                evidence_text = result.content[0].text
+        evidence, source_digest = verify_evidence(json.loads(evidence_text), task.view)
         mcp_ms = (perf_counter() - mcp_started) * 1000
         ollama_started = perf_counter()
         async with httpx.AsyncClient(timeout=90, trust_env=False) as client:
