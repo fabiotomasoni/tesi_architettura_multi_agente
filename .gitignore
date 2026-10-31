@@ -43,3 +43,5 @@ coverage.xml
 *.key
 # Evidenze locali del pilota, esportate solo dopo revisione
 /runs/
+# Identità locali della modalità isolata: mai nel repository o nelle immagini
+/.local/

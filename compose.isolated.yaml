@@ -1,0 +1,120 @@
+name: tesi-s03
+x-app: &app
+  image: tesi-s03-app:local
+  build:
+    context: .
+    dockerfile: deployment/Dockerfile
+  user: '10001:10001'
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  tmpfs: ['/tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777']
+  pids_limit: 96
+  mem_limit: 768m
+  cpus: 1.0
+  environment: &environment
+    TESI_RUNTIME: isolated
+    TESI_IDENTITY_FILE: /run/secrets/identity
+    PYTHONDONTWRITEBYTECODE: '1'
+    PYTHONUNBUFFERED: '1'
+    HOME: /tmp
+    LANGSMITH_TRACING: 'false'
+x-guard: &guard
+  image: tesi-s03-netguard:local
+  build:
+    context: .
+    dockerfile: deployment/Dockerfile.netguard
+  read_only: true
+  cap_drop: [ALL]
+  cap_add: [NET_ADMIN]
+  security_opt: [no-new-privileges:true]
+  tmpfs: ['/run:rw,noexec,nosuid,nodev,size=1m']
+  mem_limit: 32m
+  pids_limit: 16
+  dns: ['127.0.0.1']
+  dns_opt: ['timeout:1','attempts:1']
+  healthcheck:
+    test: ['CMD-SHELL','test -f /run/netguard-ready']
+    interval: 2s
+    timeout: 1s
+    retries: 15
+services:
+  net-gateway:
+    <<: *guard
+    environment: {TESI_NETWORK_ROLE: gateway}
+    ports: ['127.0.0.1:8080:8000']
+    networks:
+      markets: {ipv4_address: 172.30.241.2}
+      tax: {ipv4_address: 172.30.242.2}
+      ingress: {ipv4_address: 172.30.243.2}
+  net-markets:
+    <<: *guard
+    environment: {TESI_NETWORK_ROLE: markets}
+    networks:
+      markets: {ipv4_address: 172.30.241.3}
+  net-tax:
+    <<: *guard
+    environment: {TESI_NETWORK_ROLE: tax}
+    networks:
+      tax: {ipv4_address: 172.30.242.3}
+  gateway:
+    <<: *app
+    network_mode: service:net-gateway
+    depends_on:
+      net-gateway: {condition: service_healthy}
+    secrets:
+      - source: gateway_identity
+        target: identity
+    command: ['python','-m','uvicorn','gateway.app:app','--host','0.0.0.0','--port','8000','--workers','1','--no-access-log','--no-proxy-headers']
+  markets:
+    <<: *app
+    network_mode: service:net-markets
+    depends_on:
+      net-markets: {condition: service_healthy}
+    secrets:
+      - source: markets_identity
+        target: identity
+    command: ['python','-m','uvicorn','services.market_agent:app','--host','0.0.0.0','--port','8001','--no-access-log','--no-proxy-headers']
+  tax:
+    <<: *app
+    network_mode: service:net-tax
+    depends_on:
+      net-tax: {condition: service_healthy}
+    secrets:
+      - source: tax_identity
+        target: identity
+    command: ['python','-m','uvicorn','services.tax_agent:app','--host','0.0.0.0','--port','8002','--no-access-log','--no-proxy-headers']
+  sentinel:
+    <<: *app
+    profiles: [verification]
+    environment: {PYTHONDONTWRITEBYTECODE: '1', HOME: /tmp}
+    networks:
+      markets: {ipv4_address: 172.30.241.4}
+      tax: {ipv4_address: 172.30.242.4}
+    command: ['python','-m','services.network_sentinel']
+  control:
+    <<: *app
+    profiles: [verification]
+    environment: {PYTHONDONTWRITEBYTECODE: '1', HOME: /tmp}
+    networks:
+      markets: {ipv4_address: 172.30.241.5}
+      tax: {ipv4_address: 172.30.242.5}
+    command: ['sleep','infinity']
+
+networks:
+  ingress:
+    ipam:
+      config: [{subnet: 172.30.243.0/29}]
+  markets:
+    internal: true
+    ipam:
+      config: [{subnet: 172.30.241.0/29}]
+  tax:
+    internal: true
+    ipam:
+      config: [{subnet: 172.30.242.0/29}]
+secrets:
+  gateway_identity: {file: ./.local/s03/gateway.json}
+  markets_identity: {file: ./.local/s03/markets.json}
+  tax_identity: {file: ./.local/s03/tax.json}

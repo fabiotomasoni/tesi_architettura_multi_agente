@@ -34,7 +34,7 @@ def test_summary_statements_have_exact_source_references():
 def test_report_never_promotes_unsupported_tax_prose():
     profile=SessionInput.model_validate(json.loads(Path('examples/session_complete.json').read_text())).profile
     dangerous='Non è attualmente soggetta a tasse, aliquote o spettanti.'
-    activity={'status':'completed','error_code':None,'result':{'evidence':expected_evidence(view()).model_dump(),'summary':dangerous,'model':'test','limits':[]}}
+    activity={'status':'completed','error_code':None,'result':{'evidence':expected_evidence(view()).model_dump(),'summary':dangerous,'model':'test','limits':[dangerous]}}
     report=build_report(profile,['S-02'],{'S-02':activity},'completed')
     assert dangerous not in json.dumps(report,ensure_ascii=False)
     assert report['unverified_summaries']==[]

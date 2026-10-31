@@ -1,5 +1,7 @@
 """Agente ADK con delega A2A 0.3 e pipeline applicativa vincolata."""
 import asyncio
+from gateway.identity import AgentIdentityApp
+from gateway.runtime import AGENT_ENDPOINTS
 from gateway.a2a_egress import EgressDenied
 from gateway.result_validation import MissingProvenanceError
 from uuid import uuid4
@@ -38,7 +40,7 @@ class MarketsAgent(BaseAgent):
 
 
 card = AgentCard(name='markets_agent', description='Ricerca tassi simulati S-01', version='0.1.0',
-    url='http://127.0.0.1:8001/', capabilities=AgentCapabilities(streaming=False),
+    url=AGENT_ENDPOINTS['S-01'], capabilities=AgentCapabilities(streaming=False),
     default_input_modes=['text/plain'], default_output_modes=['text/plain'],
     skills=[AgentSkill(id='market_rate_context', name='Tassi simulati', description='Fixture MCP sintetica, non quotazioni reali.', tags=['S-01'])])
 agent = MarketsAgent(name='markets_agent', description='Agente mercati locale con risultati simulati')
@@ -73,4 +75,4 @@ class SingleRequestApp:
                     task_store.tasks.clear()
 
 
-app = SingleRequestApp(inner_app)
+app = AgentIdentityApp(SingleRequestApp(inner_app), 'S-01')

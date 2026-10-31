@@ -79,3 +79,28 @@ def test_nonfinite_tax_year_does_not_crash(client, payload):
     sid=create(client,payload)
     response=client.post(f'/sessions/{sid}/views',json={'scenario':'S-02','recipient':'tax'})
     assert response.status_code==409
+
+
+def test_abandoned_session_expires_without_new_requests(monkeypatch, payload):
+    import importlib
+    import threading
+    from gateway.inference import InferenceBroker
+    module=importlib.import_module('gateway.app')
+    broker=InferenceBroker();revoked=threading.Event();clock=[0.0]
+    original=broker.revoke
+    def revoke(sid=None):
+        original(sid)
+        if sid is not None:revoked.set()
+    broker.revoke=revoke
+    monkeypatch.setattr(module,'InferenceBroker',lambda:broker)
+    monkeypatch.setattr(module,'monotonic',lambda:clock[0])
+    monkeypatch.setattr(module,'SESSION_TTL_SECONDS',1)
+    monkeypatch.setattr(module,'SESSION_SWEEP_SECONDS',0.01)
+    with TestClient(create_app()) as client:
+        sid=create(client,payload)
+        assert broker._privacy
+        clock[0]=2.0
+        # Nessun'altra richiesta HTTP: deve agire il supervisore periodico.
+        assert revoked.wait(timeout=1)
+        assert not broker._privacy and not broker._grants
+        assert client.delete('/sessions/'+sid).status_code==404

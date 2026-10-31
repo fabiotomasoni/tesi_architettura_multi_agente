@@ -29,7 +29,7 @@ def test_rate_must_match_requested_type():
 def test_report_does_not_promote_model_recommendation():
     profile=SessionInput.model_validate(json.loads(Path('examples/session_complete.json').read_text())).profile
     dangerous='Conviene rinegoziare subito e il risparmio è garantito.'
-    result={'evidence':expected_evidence(view()).model_dump(),'summary':dangerous,'model':'test','limits':[]}
+    result={'evidence':expected_evidence(view()).model_dump(),'summary':dangerous,'model':'test','limits':[dangerous]}
     report=build_report(profile,['S-01'],{'S-01':{'status':'completed','error_code':None,'result':result}},'completed')
     assert dangerous not in json.dumps(report,ensure_ascii=False)
     assert report['unverified_summaries']==[]

@@ -1,0 +1,12 @@
+# Contesto a lista chiusa: niente PDF, dataset, segreti, risultati o .git.
+**
+!pyproject.toml
+!requirements-lock.txt
+!gateway/
+!gateway/**
+!services/
+!services/**
+!deployment/
+!deployment/**
+**/__pycache__
+**/*.pyc

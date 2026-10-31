@@ -13,6 +13,7 @@ from uuid import UUID
 import httpx
 from pydantic import Field
 from .models import Contract
+from . import runtime
 from .privacy import SensitiveContext, check, PRIVACY_VERSION, view_paths
 from .a2a_egress import authorized_task, EgressDenied
 from .market_evidence import verify_evidence as verify_market
@@ -53,10 +54,12 @@ class Grant:
     source_ms: float = 0.0
     used: bool = False
     completed: bool = False
+    bridge_roundtrip_ms: float | None = None
 
 
 class InferenceBroker:
     def __init__(self):
+        self.bridge = None
         self._grants = {}
         self._privacy = {}
         self._lock = RLock()
@@ -78,8 +81,12 @@ class InferenceBroker:
                                         'gateway_source_completed':int(grant.source_completed),
                                         'gateway_source_ms':grant.source_ms,
                                         'privacy_version':PRIVACY_VERSION,
+                                        'runtime_mode':runtime.MODE,
+                                        'workload_identity_enforced':int(runtime.ISOLATED),
                                         'tool_catalog_version':'0.1.0',
                                         'inference_catalog_version': INFERENCE_CATALOG_VERSION})
+            if grant.bridge_roundtrip_ms is not None:
+                result.measurements['gateway_bridge_roundtrip_ms']=grant.bridge_roundtrip_ms
             return result
         finally:
             with self._lock:
@@ -121,14 +128,21 @@ class InferenceBroker:
             payload['think'] = False
         seconds = min(90, (task.deadline - datetime.now(timezone.utc)).total_seconds())
         started = perf_counter()
-        async with asyncio.timeout(max(0, seconds)):
-            async with httpx.AsyncClient(timeout=seconds, trust_env=False, follow_redirects=False) as client:
-                response = await client.post(OLLAMA_ENDPOINT, json=payload)
-                if 300 <= response.status_code < 400:
-                    raise EgressDenied('Redirect inferenza non autorizzato')
-                response.raise_for_status()
-                body = response.json()
-        ollama_ms = round((perf_counter() - started)*1000, 3)
+        if runtime.ISOLATED:
+            if self.bridge is None:
+                raise RuntimeError('Ponte inferenza obbligatorio non configurato')
+            reply = await self.bridge.infer(payload, seconds)
+            grant.bridge_roundtrip_ms = round((perf_counter() - started)*1000,3)
+            body = reply['body']
+        else:
+            async with asyncio.timeout(max(0, seconds)):
+                async with httpx.AsyncClient(timeout=seconds, trust_env=False, follow_redirects=False) as client:
+                    response = await client.post(OLLAMA_ENDPOINT, json=payload)
+                    if 300 <= response.status_code < 400:
+                        raise EgressDenied('Redirect inferenza non autorizzato')
+                    response.raise_for_status()
+                    body = response.json()
+        ollama_ms = reply['ollama_ms'] if runtime.ISOLATED else round((perf_counter() - started)*1000, 3)
         # Una revoca mentre il modello risponde impedisce la consegna tardiva.
         with self._lock:
             if self._grants.get(token) is not grant:

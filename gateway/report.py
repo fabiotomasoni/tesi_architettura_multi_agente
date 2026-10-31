@@ -72,8 +72,8 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
                 evaluation.append({'scenario':scenario,'model':result['model'],
                     'free_text_included':False,'reason':'Prosa del modello non verificata; esclusa dalla sintesi mercati.',
                     'output_sha256':hashlib.sha256(result['summary'].encode()).hexdigest()})
-        if result:
-            limits.extend(x for x in result.get('limits',[]) if x!='Nessun confronto economico personalizzato eseguito.')
+        # Le note libere dell’agente non sono fonti: i limiti del documento
+        # provengono dai controlli locali e dai modelli di calcolo verificati.
         if activity['status']!='completed':
             limits.append(f"{scenario}: attività {activity['status']} ({activity.get('error_code') or 'esito incompleto'}).")
     observations=report_observations(profile,sources) if 'S-01' in scenarios else []

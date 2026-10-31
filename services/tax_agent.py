@@ -1,5 +1,7 @@
 """Agente ADK con delega A2A 0.3 e pipeline applicativa vincolata."""
 import asyncio
+from gateway.identity import AgentIdentityApp
+from gateway.runtime import AGENT_ENDPOINTS
 from gateway.a2a_egress import EgressDenied
 from gateway.result_validation import MissingProvenanceError
 from uuid import uuid4
@@ -38,7 +40,7 @@ class TaxAgent(BaseAgent):
 
 
 card = AgentCard(name='tax_agent', description='Ricerca fiscale simulata S-02', version='0.1.0',
-    url='http://127.0.0.1:8002/', capabilities=AgentCapabilities(streaming=False),
+    url=AGENT_ENDPOINTS['S-02'], capabilities=AgentCapabilities(streaming=False),
     default_input_modes=['text/plain'], default_output_modes=['text/plain'],
     skills=[AgentSkill(id='tax_context', name='Fiscalità simulata', description='Fixture inventata, non normativa fiscale.', tags=['S-02'])])
 agent = TaxAgent(name='tax_agent', description='Agente mercati locale con risultati simulati')
@@ -73,4 +75,4 @@ class SingleRequestApp:
                     task_store.tasks.clear()
 
 
-app = SingleRequestApp(inner_app)
+app = AgentIdentityApp(SingleRequestApp(inner_app), 'S-02')

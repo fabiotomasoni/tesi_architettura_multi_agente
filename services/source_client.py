@@ -1,6 +1,8 @@
 """Adattatore MCP: usa esclusivamente il proxy del gateway per la fonte."""
 import os
 import httpx
+from gateway.identity import callback_headers
+from gateway import runtime
 
 
 def fetch_source(tool, arguments):
@@ -9,9 +11,11 @@ def fetch_source(tool, arguments):
         return {'status':'blocked', 'error_code':'not_authorized'}
     # URL e autorizzazione sono iniettate dal client applicativo fidato,
     # mai ricavate dal testo di una risposta MCP.
+    if runtime.ISOLATED and os.environ['TESI_SOURCE_GATEWAY'] != runtime.GATEWAY_ENDPOINTS[os.environ['TESI_SCENARIO']] + '/internal/sources':
+        return {'status':'blocked', 'error_code':'not_authorized'}
     with httpx.Client(timeout=35, trust_env=False, follow_redirects=False) as client:
         response = client.post(os.environ['TESI_SOURCE_GATEWAY'],
-            headers={'Authorization':'Bearer '+os.environ['TESI_SOURCE_TOKEN']}, json={
+            headers={**callback_headers(os.environ['TESI_SCENARIO']), 'Authorization':'Bearer '+os.environ['TESI_SOURCE_TOKEN']}, json={
                 'correlation_id':os.environ['TESI_CORRELATION_ID'], 'scenario':os.environ['TESI_SCENARIO'],
                 'tool':tool, 'arguments':arguments, 'destination':os.environ['TESI_SOURCE_DESTINATION'],
                 'method':'POST', 'headers':{}})

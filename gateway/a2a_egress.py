@@ -11,6 +11,8 @@ from uuid import UUID
 
 import httpx
 from .agent_contracts import MarketTask, TaxTask
+from .runtime import AGENT_ENDPOINTS
+from .identity import a2a_headers
 
 
 class EgressDenied(ValueError):
@@ -27,8 +29,8 @@ class Route:
 
 CATALOG_VERSION = '0.1.0'
 ROUTES = MappingProxyType({
-    'S-01': Route('http://127.0.0.1:8001/', MarketTask, 'markets_agent', 'market_rate_context'),
-    'S-02': Route('http://127.0.0.1:8002/', TaxTask, 'tax_agent', 'tax_context'),
+    'S-01': Route(AGENT_ENDPOINTS['S-01'], MarketTask, 'markets_agent', 'market_rate_context'),
+    'S-02': Route(AGENT_ENDPOINTS['S-02'], TaxTask, 'tax_agent', 'tax_context'),
 })
 
 
@@ -96,6 +98,7 @@ class A2AEgressTransport(httpx.AsyncBaseTransport):
         except Exception:
             raise EgressDenied('Richiesta A2A fuori catalogo') from None
         outbound = httpx.Request(request.method, url, json=payload) if payload is not None else httpx.Request('GET', url)
+        outbound.headers.update(a2a_headers(task.scenario))
         # Timeout locali fissati dal gateway; nessuna estensione arbitraria inoltrata.
         outbound.extensions = {'timeout': {'connect': 5.0, 'read': 125.0, 'write': 5.0, 'pool': 5.0}}
         response = await self.inner.handle_async_request(outbound)

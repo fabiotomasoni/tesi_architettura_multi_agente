@@ -1,5 +1,6 @@
 """API locale: avviare con un solo worker; inferenza locale tramite broker autorizzato."""
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+import asyncio
 from copy import deepcopy
 from threading import RLock
 from time import monotonic, perf_counter
@@ -11,6 +12,9 @@ from fastapi import FastAPI, HTTPException, Request, Response, File, Form, Uploa
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 
+from . import runtime
+from .identity import HEADER, load_identity, matching_key, SCENARIO_ROLES
+from .ollama_bridge import OllamaBridge
 from .privacy import SensitiveContext, PRIVACY_VERSION, ENTITY_RECOGNIZER_VERSION
 from .inference import InferenceBroker, InferenceRequest
 from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request
@@ -20,21 +24,106 @@ from .pdf_input import extract_profile, PDFInputError
 from .policy import POLICY_VERSION, issues, make_view
 
 SESSION_TTL_SECONDS = 1800
+SESSION_SWEEP_SECONDS = 30
 
 
 def create_app() -> FastAPI:
     sessions = {}
     broker = InferenceBroker()
+    if runtime.ISOLATED:
+        if load_identity()['role'] != 'gateway':
+            raise RuntimeError('Identità gateway obbligatoria')
+        broker.bridge = OllamaBridge()
     lock = RLock()
+
+    def expire_sessions():
+        with lock:
+            for key in [key for key, (_, deadline) in sessions.items() if deadline <= monotonic()]:
+                del sessions[key]
+                broker.revoke(key)
+
+    async def sweep_sessions():
+        while True:
+            await asyncio.sleep(SESSION_SWEEP_SECONDS)
+            expire_sessions()
 
     @asynccontextmanager
     async def lifespan(app):
-        yield
-        with lock:
-            sessions.clear()
-            broker.revoke()
+        sweeper = asyncio.create_task(sweep_sessions())
+        try:
+            yield
+        finally:
+            sweeper.cancel()
+            with suppress(asyncio.CancelledError):
+                await sweeper
+            with lock:
+                sessions.clear()
+                broker.revoke()
+                if broker.bridge is not None:
+                    broker.bridge.close()
 
     app = FastAPI(title="Gateway locale sperimentale", version="0.1.0", lifespan=lifespan)
+
+    @app.middleware('http')
+    async def verify_workload_identity(request: Request, call_next):
+        if runtime.ISOLATED:
+            path = request.url.path
+            peer = request.client.host if request.client else ''
+            values = request.headers.getlist(HEADER)
+            received = values[0] if len(values) == 1 else None
+            if path.startswith('/internal/'):
+                principal = next((role for role in ('markets', 'tax')
+                                  if matching_key(received, role + '_to_gateway')), None)
+                if principal is None or runtime.PEER_SCENARIOS.get(peer) not in (None, 'S-01' if principal == 'markets' else 'S-02'):
+                    return JSONResponse(status_code=403, content={'detail':'Identità del chiamante non autorizzata.'})
+                request.state.principal = principal
+            elif path.startswith('/_bridge/'):
+                if peer in runtime.PEER_SCENARIOS or not matching_key(received, 'bridge'):
+                    return JSONResponse(status_code=403, content={'detail':'Ponte non autorizzato.'})
+            elif peer in runtime.PEER_SCENARIOS or received is not None:
+                return JSONResponse(status_code=403, content={'detail':'Percorso non autorizzato al componente.'})
+        return await call_next(request)
+
+    def verify_scenario(request, scenario):
+        if runtime.ISOLATED and request.state.principal != SCENARIO_ROLES[scenario]:
+            raise EgressDenied('Scenario non autorizzato al chiamante')
+
+    @app.get('/_bridge/poll', include_in_schema=False)
+    async def bridge_poll():
+        if broker.bridge is None:
+            raise HTTPException(404, 'Ponte non attivo.')
+        job = await broker.bridge.poll()
+        return JSONResponse(job) if job else Response(status_code=204)
+
+    @app.post('/_bridge/result/{job_id}', include_in_schema=False)
+    async def bridge_result(job_id: str, request: Request):
+        if broker.bridge is None:
+            raise HTTPException(404, 'Ponte non attivo.')
+        # Limite sulla lettura effettiva, anche senza Content-Length.
+        data = bytearray()
+        async for chunk in request.stream():
+            data.extend(chunk)
+            if len(data) > 65536:
+                raise HTTPException(413, 'Risultato del ponte troppo grande.')
+        try:
+            import json
+            result = json.loads(data)
+            if set(result) != {'body','error','ollama_ms'} or result['error'] not in (None,'timeout','unavailable'):
+                raise ValueError()
+            if (result['body'] is None) == (result['error'] is None):
+                raise ValueError()
+            import math
+            ms=result['ollama_ms']
+            if result['error'] is None and (type(ms) not in (int,float) or not math.isfinite(ms) or ms < 0):
+                raise ValueError()
+            if result['error'] is not None and ms is not None:
+                raise ValueError()
+            accepted = broker.bridge.complete(job_id, **result)
+        except Exception:
+            raise HTTPException(422, 'Risultato del ponte non conforme.') from None
+        if not accepted:
+            raise HTTPException(409, 'Incarico del ponte assente o terminato.')
+        return {'accepted': True}
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
@@ -42,10 +131,7 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=422, content={"detail": "Ingresso non conforme allo schema; controllare campi, tipi e categorie."})
 
     def get_session(session_id):
-        expired = [key for key, (_, deadline) in sessions.items() if deadline <= monotonic()]
-        for key in expired:
-            del sessions[key]
-            broker.revoke(key)
+        expire_sessions()
         if session_id not in sessions:
             raise HTTPException(404, "Sessione assente o scaduta")
         return sessions[session_id][0]
@@ -53,6 +139,7 @@ def create_app() -> FastAPI:
     @app.post("/internal/inference")
     async def inference(payload: InferenceRequest, request: Request):
         try:
+            verify_scenario(request, payload.scenario)
             return await broker.infer(payload, request.headers.get('authorization'))
         except EgressDenied:
             raise HTTPException(403, "Inferenza non autorizzata dal gateway.") from None
@@ -64,6 +151,7 @@ def create_app() -> FastAPI:
     @app.post("/internal/tools/authorize")
     async def tool_authorization(payload: ToolRequest, request: Request):
         try:
+            verify_scenario(request, payload.scenario)
             return authorize_tool(broker, payload, request.headers.get('authorization'))
         except EgressDenied:
             raise HTTPException(403, "Strumento non autorizzato dal gateway.") from None
@@ -71,6 +159,7 @@ def create_app() -> FastAPI:
     @app.post("/internal/sources")
     async def source_proxy(payload: SourceRequest, request: Request):
         try:
+            verify_scenario(request, payload.scenario)
             return await source_request(broker, payload, request.headers.get('authorization'))
         except EgressDenied:
             raise HTTPException(403, "Fonte non autorizzata dal gateway.") from None
@@ -82,6 +171,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "policy_version": POLICY_VERSION,
+                "runtime_mode": runtime.MODE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
     @app.post("/sessions", status_code=201)
@@ -90,10 +180,7 @@ def create_app() -> FastAPI:
 
     def register_session(payload, context):
         with lock:
-            # Pulizia pigra anche in creazione; nessuna persistenza su disco.
-            for key in [k for k, (_, end) in sessions.items() if end <= monotonic()]:
-                del sessions[key]
-                broker.revoke(key)
+            expire_sessions()
             sid = uuid4()
             broker._privacy[sid]=context
             sessions[sid] = (deepcopy(payload), monotonic() + SESSION_TTL_SECONDS)
@@ -207,8 +294,17 @@ def create_app() -> FastAPI:
             return await broker.delegate(session_id, task, markets)
         async def authorized_tax(task):
             return await broker.delegate(session_id, task, tax)
-        return await run_analysis(scenarios, request_view, {"S-01":authorized_markets,"S-02":authorized_tax}, cleanup,
-                                  lambda activities,status:build_report(session.profile,scenarios,activities,status))
+        result = await run_analysis(scenarios, request_view, {"S-01":authorized_markets,"S-02":authorized_tax}, cleanup,
+                                    lambda activities,status:build_report(session.profile,scenarios,activities,status))
+        # Presentazione ricavata dallo stesso JSON, senza inferenze e senza storico.
+        # Un guasto di impaginazione non deve perdere il risultato strutturato valido.
+        from .report_document import render_report_document
+        try:
+            result['report_document_html'] = render_report_document(result['report'])
+        except Exception:
+            result['report_document_html'] = None
+            result['presentation_warning'] = 'Documento leggibile non disponibile; il report JSON rimane utilizzabile.'
+        return result
 
     @app.delete("/sessions/{session_id}", status_code=204)
     def close_session(session_id: UUID):

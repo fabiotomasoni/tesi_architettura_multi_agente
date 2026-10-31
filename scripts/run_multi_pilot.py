@@ -11,12 +11,13 @@ def main():
     parser.add_argument('--cases',nargs='+',default=['C001','C024','C006','C011','C016'])
     parser.add_argument('--scenarios',nargs='+',choices=['S-01','S-02'],default=['S-01','S-02'])
     parser.add_argument('--repetitions',type=int,default=1)
+    parser.add_argument('--gateway-url',choices=['http://127.0.0.1:8000','http://127.0.0.1:8080'],default='http://127.0.0.1:8000')
     parser.add_argument('--output',default='runs/multi_pilot.jsonl')
     args=parser.parse_args()
     if not 1<=args.repetitions<=10:parser.error('Ripetizioni da 1 a 10')
     if any(c not in {f'C{i:03}' for i in range(1,26)} for c in args.cases):parser.error('Caso non valido')
     output=Path(args.output);output.parent.mkdir(parents=True,exist_ok=True)
-    with httpx.Client(base_url='http://127.0.0.1:8000',timeout=135,trust_env=False) as client:
+    with httpx.Client(base_url=args.gateway_url,timeout=135,trust_env=False) as client:
         for case in args.cases:
             for repetition in range(1,args.repetitions+1):
                 sid=None
