@@ -1,0 +1,6 @@
+# Opt-in della demo reale: cambia solo la fonte del gateway, non le regole di rete.
+# Il ponte host deve essere avviato separatamente con --enable-ecb.
+services:
+  gateway:
+    environment:
+      TESI_MARKET_SOURCE: ecb

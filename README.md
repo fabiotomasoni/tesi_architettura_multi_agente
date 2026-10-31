@@ -1,15 +1,15 @@
 # Analisi locale di documenti finanziari
 
-Prototipo di tesi che legge PDF sintetici, affida attività a due specialisti locali — mercati e fiscalità — e produce un report con dati documentali, fonti e limiti. Le attività indipendenti vengono coordinate da LangGraph. Gli specialisti richiedono l’inferenza al gateway, che controlla l’incarico e costruisce il prompt per Ollama. Anche gli strumenti MCP ottengono le fonti simulate attraverso il gateway, con autorizzazioni temporanee per il compito.
+Prototipo di tesi che legge PDF sintetici, affida attività a due specialisti locali — mercati e fiscalità — e produce un report con dati documentali, fonti e limiti. Le attività indipendenti vengono coordinate da LangGraph. Gli specialisti richiedono l’inferenza al gateway, che controlla l’incarico e costruisce il prompt per Ollama. Anche gli strumenti MCP ottengono le fonti attraverso il gateway, con autorizzazioni temporanee per il compito.
 
-**Le fonti attuali sono simulate.** Il report riproduce fedelmente i dati delle simulazioni e confronta due scenari ipotetici del mutuo. Non fornisce quotazioni reali, consigli finanziari o attestazioni fiscali. Sono supportati i PDF del dataset incluso, non documenti bancari generici.
+**La modalità predefinita usa fonti simulate; è disponibile anche una fonte BCE reale per i mercati.** Il report riproduce fedelmente i dati delle simulazioni e confronta due scenari ipotetici del mutuo. Non fornisce quotazioni reali, consigli finanziari o attestazioni fiscali. Sono supportati i PDF del dataset incluso, non documenti bancari generici.
 
 ## Cosa serve
 
 - Python 3.11 o successivo, disponibile su [python.org](https://www.python.org/downloads/).
 - [Ollama](https://ollama.com/download) installato e aperto.
 - Docker Desktop installato e avviato per la modalità isolata.
-- Connessione Internet per installare dipendenze e scaricare i modelli. L'elaborazione della demo avviene localmente.
+- Connessione Internet per installare dipendenze e scaricare i modelli. L’elaborazione avviene localmente; la modalità BCE consulta una fonte pubblica via Internet.
 
 Aprire i terminali nella cartella principale della repository. Non occorrono chiavi API per usare la demo.
 
@@ -123,3 +123,41 @@ Il report esportato contiene importi esatti. La demo non conserva uno storico de
 
 - [Diario di progetto](DIARIO_PROGETTO.md): sintesi delle modifiche e delle verifiche.
 - [Attività da completare](DA_IMPLEMENTARE.md): lavori residui, priorità e criteri di completamento.
+
+## Fonte BCE reale per l’agente mercati
+
+Fermare il ponte precedente con Ctrl+C. Dopo una modifica al codice, ricostruire l’immagine e avviare questa configurazione (macOS e Windows):
+
+```bash
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+docker compose -f compose.isolated.yaml -f compose.ecb.yaml --profile verification up -d --no-build
+```
+
+Avviare poi un solo ponte, in un terminale separato:
+
+```bash
+# macOS
+.venv/bin/python scripts/run_ollama_bridge.py --enable-ecb
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/run_ollama_bridge.py --enable-ecb
+```
+
+Aprire http://127.0.0.1:8080 e caricare i PDF come prima. Il report distingue la statistica BCE dai riferimenti fiscali, ancora simulati. Mostra valore, mese di osservazione, momento del recupero e collegamento istituzionale. Si consulta l’ultima pubblicazione mensile disponibile: non sono offerte in tempo reale. L’indicatore aggregato AAR/NDER non viene sostituito al TAN nel calcolo della rata. Se la fonte non risponde, il report dichiara il limite senza usare una simulazione di riserva.
+
+Agenti e strumenti restano isolati: il ponte esegue soltanto la richiesta pubblica fissata dal gateway, senza documenti o dati personali. Per tornare alle fixture, fermare il ponte, eseguire l’avvio Compose senza `-f compose.ecb.yaml` e riavviare il ponte senza `--enable-ecb`.
+
+Per controllare il JSON esportato nella modalità BCE:
+
+```bash
+# macOS; sostituire report.json con il file esportato
+.venv/bin/python scripts/check_ecb_report.py report.json
+```
+
+```powershell
+.\.venv\Scripts\python.exe scripts/check_ecb_report.py report.json
+```
+
+Il controllo verifica la coerenza con la risposta pubblica salvata nel report; non effettua una nuova consultazione Internet.

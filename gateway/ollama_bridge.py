@@ -52,7 +52,11 @@ class OllamaBridge:
         except TimeoutError:
             return None
 
-    def complete(self, job_id, *, body=None, error=None, ollama_ms=None):
+    def kind(self, job_id):
+        job=self.pending.get(job_id)
+        return job.payload.get('kind','inference') if job is not None else None
+
+    def complete(self, job_id, *, body=None, error=None, ollama_ms=None, source_ms=None):
         job = self.pending.get(job_id)
         if job is None or not job.claimed or job.future.done():
             return False
@@ -60,7 +64,9 @@ class OllamaBridge:
             job.future.set_exception(TimeoutError('Timeout del ponte') if error == 'timeout'
                                      else RuntimeError('Inferenza del ponte non completata'))
         else:
-            job.future.set_result({'body':body,'ollama_ms':ollama_ms})
+            reply={'body':body,'ollama_ms':ollama_ms}
+            if source_ms is not None:reply['source_ms']=source_ms
+            job.future.set_result(reply)
         return True
 
     def close(self):

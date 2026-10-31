@@ -16,10 +16,16 @@ def apply_tax_scenario(profile, activity, *, has_conflicts=False):
               'Fonte simulata: nessuna norma, aliquota, soglia o spettanza reale verificata.',
               'Il prodotto interessi × quota non è un importo detraibile né una detrazione spettante.',
               'Condizioni di accesso e significato fiscale dei documenti restano da verificare su fonti reali.']}
-    if has_conflicts:return {**base,'status':'not_calculated','reason':'unresolved_conflict'}
-    if issues(profile,Scenario.TAX):return {**base,'status':'not_calculated','reason':'input_not_ready'}
+    def not_calculated(reason, **context):
+        # Le ipotesi del modello e le note della fixture valgono solo per un calcolo eseguito.
+        return {**base, 'assumptions': [],
+                'limits': ['Calcolo non eseguito; nessun risultato numerico derivato o conclusione personalizzata.'],
+                'status': 'not_calculated', 'reason': reason, **context}
+
+    if has_conflicts:return not_calculated('unresolved_conflict')
+    if issues(profile,Scenario.TAX):return not_calculated('input_not_ready')
     if activity['status']!='completed' or not activity.get('result',{}).get('evidence'):
-        return {**base,'status':'not_calculated','reason':'tax_evidence_unavailable'}
+        return not_calculated('tax_evidence_unavailable')
     evidence,digest=verify_evidence(activity['result']['evidence'],TaxView.model_validate(make_view(profile,Scenario.TAX)))
     interest=Decimal(str(profile.annual_interest.value));share=Decimal(str(profile.ownership_share.value))
     with localcontext() as ctx:

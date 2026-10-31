@@ -80,6 +80,20 @@ Corretta anche la scadenza soltanto pigra delle sessioni: un controllo periodico
 
 **Verifiche:** suite completa 331 passed, 106 warning. Otto nuovi test verificano fedeltà del documento su cinque casi, precisione, trattamento sicuro del testo e conservazione del JSON se la presentazione fallisce; una nuova prova conferma la scadenza senza richieste successive. Controllata la sintassi dello script della pagina. La prova browser della presentazione usa deleghe simulate su un server locale temporaneo: non sostituisce le verifiche reali di A2A/MCP/Ollama. Nessuna fonte Internet attivata e nessun nuovo attacco S04 avviato.
 
+## Modifica 44 — Prima fonte mercati istituzionale
+
+Aggiunta modalità BCE esplicita, mantenendo le fixture come configurazione predefinita per gli esperimenti. Il tool MCP passa dal gateway; il ponte locale esegue una sola richiesta HTTPS predefinita alla serie MIR italiana sui nuovi mutui abitativi. Nessun documento o dato personale nella richiesta. Container e regole di isolamento invariati.
+
+Il gateway conserva e controlla risposta CSV, serie, unità, periodo, momento del recupero e impronta; confronta il risultato dell’agente con la risposta effettivamente recuperata. Il report separa fonte reale e fiscale simulata. L’AAR/NDER aggregato non è un TAN né un’offerta: il confronto della rata alternativa resta non calcolato, senza fallback inventati. La prosa del modello resta non verificata ed esclusa dalle conclusioni.
+
+**Verifiche:** 373 test superati, 106 warning. Prova reale Docker → A2A → MCP → gateway/ponte → BCE e Ollama: C001 completed, C006 partial con mercati bloccati; sessioni cancellate. Artefatti locali in runs/ecb_validation.jsonl e runs/ecb_report_validation.json. Controllo BCE: 13 verifiche positive; provenienza: 10 fatti, zero problemi; controlli fiscali positivi. Queste sono prove pilota, non la campagna finale. Restano fonte fiscale reale, verifica manuale della demo e ruolo sostanziale del modello. S04 non avviato.
+
+## Modifica 45 — Fedeltà degli esiti senza calcolo e chiusura mercati BCE
+
+La verifica manuale dei report C001 e C006 conferma rispettivamente esito completo e parziale, citazione BCE separata dalla fiscalità simulata e provenienza documentale senza problemi (10 e 9 fatti). C006 ha evidenziato note su un tasso simulato mai utilizzato: la causa era l’inserimento anticipato di ipotesi e limiti nei blocchi comuni. Corretti tutti i percorsi senza calcolo, anche fiscali: niente ipotesi applicate o note sulle fixture; restano motivo, limiti pertinenti e contesto verificato. Nessun cambiamento alle formule dei calcoli eseguiti.
+
+Aggiunte dieci regressioni su input mancanti, conflitti, periodicità non supportata, errori, evidenze assenti e parametri non supportati; esteso il controllo BCE. Suite completa: 383 passed, 106 warning; quattro test inizialmente impediti dal blocco delle connessioni locali sono passati dopo l’abilitazione. Il primo collegamento mercati reale è chiuso nel suo perimetro: statistica aggregata, non ricerca di offerte personali. Fiscalità reale e ruolo sostanziale dei modelli restano da completare; S04 fermo.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

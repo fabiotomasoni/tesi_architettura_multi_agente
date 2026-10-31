@@ -80,3 +80,21 @@ def test_independent_report_checker():
     assert all(verify(report).values())
     report['mortgage_comparison']['simulated_rate_scenario']['theoretical_monthly_payment']='1.00'
     assert not all(verify(report).values())
+
+
+@pytest.mark.parametrize('cause', ['input', 'conflict', 'frequency', 'failed', 'missing_evidence', 'parameters'])
+def test_skipped_comparison_does_not_claim_fixture_or_applied_assumptions(cause, monkeypatch):
+    p=profile('C006' if cause=='input' else 'C001')
+    a=activity(p) if cause!='input' else {'status':'blocked'}
+    if cause=='frequency':p.payment_frequency.value='quarterly'
+    if cause=='failed':a={'status':'failed'}
+    if cause=='missing_evidence':a={'status':'completed','result':{}}
+    if cause=='parameters':
+        def unsupported(*args):raise ValueError('unsupported')
+        monkeypatch.setattr('gateway.mortgage.payment',unsupported)
+    result=compare_mortgage(p,a,has_conflicts=cause=='conflict')
+    assert result['status']=='not_calculated'
+    assert result['assumptions']==[]
+    assert all('simulat' not in note.lower() for note in result['limits'])
+    assert 'alternative_source' not in result
+    assert 'simulated_rate_scenario' not in result

@@ -17,7 +17,7 @@ from .identity import HEADER, load_identity, matching_key, SCENARIO_ROLES
 from .ollama_bridge import OllamaBridge
 from .privacy import SensitiveContext, PRIVACY_VERSION, ENTITY_RECOGNIZER_VERSION
 from .inference import InferenceBroker, InferenceRequest
-from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request
+from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request, MARKET_SOURCE
 from .a2a_egress import EgressDenied
 from .models import SessionInput, ViewRequest, Scenario
 from .pdf_input import extract_profile, PDFInputError
@@ -108,15 +108,20 @@ def create_app() -> FastAPI:
         try:
             import json
             result = json.loads(data)
-            if set(result) != {'body','error','ollama_ms'} or result['error'] not in (None,'timeout','unavailable'):
+            if set(result) not in ({'body','error','ollama_ms'}, {'body','error','ollama_ms','source_ms'}) or result['error'] not in (None,'timeout','unavailable'):
                 raise ValueError()
             if (result['body'] is None) == (result['error'] is None):
                 raise ValueError()
             import math
-            ms=result['ollama_ms']
+            kind=broker.bridge.kind(job_id)
+            if kind is None:
+                return JSONResponse(status_code=409,content={'detail':'Incarico del ponte assente o terminato.'})
+            field='source_ms' if kind=='ecb_market_source' else 'ollama_ms'
+            ms=result.get(field)
             if result['error'] is None and (type(ms) not in (int,float) or not math.isfinite(ms) or ms < 0):
                 raise ValueError()
-            if result['error'] is not None and ms is not None:
+            other='ollama_ms' if field=='source_ms' else 'source_ms'
+            if result.get(other) is not None or (result['error'] is not None and ms is not None):
                 raise ValueError()
             accepted = broker.bridge.complete(job_id, **result)
         except Exception:
@@ -171,7 +176,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "policy_version": POLICY_VERSION,
-                "runtime_mode": runtime.MODE, "identity_version": runtime.IDENTITY_VERSION,
+                "runtime_mode": runtime.MODE, "market_source": MARKET_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
     @app.post("/sessions", status_code=201)

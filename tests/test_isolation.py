@@ -210,3 +210,23 @@ def test_guard_inspection_normalizes_capability_names_without_broadening(change,
     if change=='writable_root':info['HostConfig']['ReadonlyRootfs']=False
     if change=='socket_mount':info['Mounts']=[{'Type':'bind','Destination':'/var/run/docker.sock'}]
     assert guard_policy(info) is expected
+
+
+def test_source_bridge_uses_own_duration_field(isolated,monkeypatch):
+    import importlib,httpx
+    from gateway.inference import InferenceBroker
+    from gateway.ecb_source import BRIDGE_JOB
+    module=importlib.import_module('gateway.app');broker=InferenceBroker()
+    monkeypatch.setattr(module,'InferenceBroker',lambda:broker)
+    app=create_app();keys,_=isolated
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app),base_url='http://test') as client:
+            pending=asyncio.create_task(broker.bridge.infer(BRIDGE_JOB,2))
+            headers={HEADER:keys['bridge']}
+            job=(await client.get('/_bridge/poll',headers=headers)).json();url='/_bridge/result/'+job['job_id']
+            assert (await client.post(url,headers=headers,json={'body':{},'error':None,'ollama_ms':1})).status_code==422
+            assert (await client.post(url,headers=headers,json={'body':{},'error':None,'ollama_ms':None,'source_ms':1})).status_code==200
+            reply=await pending
+            assert reply['ollama_ms'] is None and reply['source_ms']==1
+            assert not broker.bridge.pending
+    asyncio.run(run())

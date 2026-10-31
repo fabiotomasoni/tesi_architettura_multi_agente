@@ -17,13 +17,13 @@ CATEGORIES = {
     'renovation': 'Ristrutturazione', 'other': 'Altro, come dichiarato',
     'residential': 'Residenziale',
 }
-COMPARISON_REASONS = {'quantity_mismatch': 'grandezze differenti', 'product_mismatch': 'prodotti differenti',
+COMPARISON_REASONS = {'incompatible_market_measure': 'Il riferimento BCE AAR/NDER è aggregato, non un TAN o un’offerta: non viene usato per calcolare una rata alternativa.','quantity_mismatch': 'grandezze differenti', 'product_mismatch': 'prodotti differenti',
     'period_mismatch': 'periodi differenti', 'unverified_observation': 'provenienza non verificata',
     'unknown_quantity': 'grandezza non supportata', 'unsupported_unit': 'unità non convertibile',
     'invalid_numeric_value': 'valore numerico non utilizzabile'}
 STATUSES = {'completed': 'Completato', 'partial': 'Parziale', 'blocked': 'Non eseguito',
             'failed': 'Non completato', 'unverified': 'Non verificato'}
-REASONS = {'input_not_ready': 'Dati obbligatori mancanti, ambigui o non validati.',
+REASONS = {'incompatible_market_measure': 'Il riferimento BCE AAR/NDER è aggregato, non un TAN o un’offerta: non viene usato per calcolare una rata alternativa.','input_not_ready': 'Dati obbligatori mancanti, ambigui o non validati.',
            'timeout': 'Tempo massimo superato.', 'missing_provenance': 'Provenienza obbligatoria assente.',
            'not_authorized': 'Richiesta non autorizzata dal gateway.',
            'market_evidence_unavailable': 'Fonte mercati non disponibile o non utilizzabile.',
@@ -83,7 +83,10 @@ def render_report_document(report):
             parts.append('<tr>' + ''.join('<td>' + text(cell) + '</td>' for cell in row) + '</tr>')
         parts.append('</tbody></table>')
     paragraph('Esito dell’analisi: ' + STATUSES.get(report.get('status'), str(report.get('status', 'Non disponibile'))))
-    paragraph('Dati del dataset sintetico. Le fonti di questa versione sono simulate: questo documento non verifica offerte di mercato o normative reali.')
+    if report.get('external_sources'):
+        paragraph('Documenti del dataset sintetico. Il contesto mercati include una statistica istituzionale reale; i riferimenti fiscali, se presenti, restano simulati. Nessuna offerta personale o normativa fiscale reale verificata.')
+    else:
+        paragraph('Dati del dataset sintetico. Le fonti di questa versione sono simulate o non disponibili: questo documento non verifica offerte di mercato o normative reali.')
     heading('1. Attività e risultati disponibili')
     table(['Attività', 'Esito', 'Indicazione'], [
         ['Mutuo' if item.get('scenario') == 'S-01' else 'Interessi e fiscalità',
@@ -128,6 +131,8 @@ def render_report_document(report):
                 paragraph(differences.get('sign_convention', ''))
         else:
             paragraph('Confronto non calcolato. ' + REASONS.get(mortgage.get('reason'), 'Dati o condizioni non sufficienti; consultare gli esiti.'))
+            if 'documented_monthly_payment' in mortgage:
+                paragraph('Rata documentata, mantenuta distinta dal riferimento BCE: '+number(mortgage['documented_monthly_payment'])+' €.')
         listing(mortgage.get('assumptions', []))
         listing(mortgage.get('limits', []))
     tax = report.get('tax_application')
@@ -148,12 +153,25 @@ def render_report_document(report):
         listing(item.get('text', '') for item in tax.get('conditions_to_verify', []))
         listing(tax.get('limits', []))
     heading('5. Fonti consultate e contenuti verificati')
-    sources = report.get('simulated_sources', [])
+    sources = report.get('simulated_sources', []) + report.get('external_sources', [])
     if not sources:
         paragraph('Nessuna fonte utilizzabile disponibile per gli scenari richiesti.')
     for source in sources:
         evidence = source.get('evidence') or {}
-        paragraph(str(evidence.get('source_id', 'Fonte senza identificativo')) + ' — fonte simulata; fedeltà al catalogo di test, non verifica del mondo reale.')
+        if evidence.get('simulated') is False:
+            paragraph('BCE / Eurosistema — statistica istituzionale recuperata via HTTPS e controllata dal gateway. Non è un’offerta personalizzata.')
+            paragraph('Serie: '+str(evidence.get('series_key','')))
+            paragraph('Valore: '+number(evidence.get('annual_rate_percent',''))+' % annuo AAR/NDER; mese osservato: '+str(evidence.get('observation_period','')))
+            paragraph('Recuperato: '+str(evidence.get('retrieved_at',''))+'; ultimo dato restituito dalla fonte, non aggiornamento continuo.')
+            from .ecb_source import SOURCE_URL, PORTAL_URL
+            for label,key in (('Scheda della serie','portal_url'),('Dati consultati','source_url')):
+                url=evidence.get(key,'')
+                if url in {SOURCE_URL,PORTAL_URL}:
+                    parts.append('<p>'+text(label)+': <a href="'+text(url)+'" target="_blank" rel="noopener noreferrer">'+text(url)+'</a></p>')
+                else:
+                    paragraph(label+': '+str(url))
+        else:
+            paragraph(str(evidence.get('source_id', 'Fonte senza identificativo')) + ' — fonte simulata; fedeltà al catalogo di test, non verifica del mondo reale.')
         if 'reference_date' in evidence:
             paragraph('Periodo di riferimento della fonte: ' + str(evidence['reference_date']))
         if 'reference' in evidence:

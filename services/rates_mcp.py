@@ -1,13 +1,13 @@
-"""Server MCP stdio: fixture sintetica, nessuna fonte reale."""
+"""Server MCP stdio: contesto tassi attraverso il gateway, fonte scelta dalla configurazione fidata."""
 from mcp.server.fastmcp import FastMCP
 from services.source_client import fetch_source
 
-server = FastMCP('simulated_market_rates')
+server = FastMCP('authorized_market_rates')
 
 
 @server.tool()
 def lookup_rates(mortgage_type: str, rate_type: str, remaining_years_band: dict) -> dict:
-    """Restituisce un tasso simulato per verificare gli scambi del prototipo."""
+    """Richiede un riferimento sui tassi alla fonte autorizzata dal gateway."""
     return fetch_source('lookup_rates', {'mortgage_type':mortgage_type,'rate_type':rate_type,'remaining_years_band':remaining_years_band})
 
 

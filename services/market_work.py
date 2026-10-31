@@ -11,7 +11,7 @@ from gateway.a2a_egress import EgressDenied
 from gateway.inference import MODELS
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from gateway.agent_contracts import MarketTask, MarketResult, RateEvidence
+from gateway.agent_contracts import MarketTask, MarketResult, RateEvidence, is_ecb_evidence
 
 from gateway.market_evidence import verify_evidence
 
@@ -47,7 +47,7 @@ async def perform(task: MarketTask, *, mcp_module: str | None = None, budget_sec
         summary = inference.summary
         return MarketResult(correlation_id=task.correlation_id, status='completed', evidence=evidence,
             summary=summary, model=MODEL, measurements={
-                'fixture_content_verified':1, 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1,
+                'source_content_verified':1, **({} if is_ecb_evidence(evidence) else {'fixture_content_verified':1}), 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1,
                 'ollama_ms':inference.ollama_ms, 'inference_gateway_roundtrip_ms':round((perf_counter()-ollama_started)*1000, 3), 'ollama_calls':1, 'inference_via_gateway':1,
                 'prompt_tokens':inference.prompt_tokens, 'output_tokens':inference.output_tokens,
-                'model_load_ms':inference.model_load_ms}, limits=['Fonte interamente simulata; nessuna quotazione reale.', 'Sintesi generata dal modello e non verificata.', 'Nessun confronto economico personalizzato eseguito.'])
+                'model_load_ms':inference.model_load_ms}, limits=[('Statistica BCE aggregata; non è un’offerta personale né un TAN contrattuale.' if is_ecb_evidence(evidence) else 'Fonte interamente simulata; nessuna quotazione reale.'), 'Sintesi generata dal modello e non verificata.', 'Nessun confronto economico personalizzato eseguito.'])

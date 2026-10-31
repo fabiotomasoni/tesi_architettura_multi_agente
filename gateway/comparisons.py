@@ -4,7 +4,7 @@ from itertools import combinations
 from typing import Literal
 from pydantic import Field
 from .models import Contract
-from .agent_contracts import RateEvidence
+from .agent_contracts import RateEvidence, MarketEvidence, is_ecb_evidence
 
 CATALOG_VERSION='0.1.0'
 # Tolleranza iniziale esatta, nessuna soglia sperimentale dedotta dai risultati.
@@ -67,6 +67,10 @@ def report_observations(profile, sources):
         result.append(Observation(observation_id='document-contract-rate',quantity='contract_annual_rate',product='uploaded_mortgage',period=fact.period.isoformat(),value=str(fact.value),unit=fact.unit,source_kind='document',source_ref=f'{fact.source.document_id}#page/{fact.source.page}',verified=True))
     for source in sources:
         if source['scenario']=='S-01':
-            evidence=RateEvidence.model_validate(source['evidence']).model_dump(mode='json')
+            parsed=MarketEvidence.model_validate(source['evidence'])
+            if is_ecb_evidence(parsed):
+                result.append(Observation(observation_id='agent-ecb-statistical-rate',quantity='aggregate_aar_nder',product='Italy_new_house_purchase_loans',period=parsed.observation_period,value=parsed.annual_rate_percent,unit=parsed.unit,source_kind='agent',source_ref=parsed.series_key+'#'+parsed.observation_period,verified=True))
+                continue
+            evidence=parsed.model_dump(mode='json')
             result.append(Observation(observation_id='agent-market-rate',quantity='market_annual_rate',product='market_fixture',period=evidence['reference_date'],value=evidence['annual_rate_percent'],unit=evidence['unit'],source_kind='agent',source_ref=evidence['source_id']+'#annual_rate_percent',verified=True))
     return result

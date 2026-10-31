@@ -41,4 +41,4 @@ async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=
         cleanup_ms=(perf_counter()-began)*1000
     return {'workflow':'multi-langgraph-v1','status':status,'activities':tasks,'session_closed':True,
             'report':report,'report_ms':round(report_ms,3),'cleanup_ms':round(cleanup_ms,3),'total_ms':round((perf_counter()-started)*1000,3),
-            'limits':['Fonti simulate; nessuna conclusione finanziaria o fiscale personalizzata.']}
+            'limits':['Fonti classificate nel report; nessuna conclusione definitiva di convenienza o spettanza fiscale.']}

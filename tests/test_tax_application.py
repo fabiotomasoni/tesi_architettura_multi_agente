@@ -65,3 +65,18 @@ def test_report_and_rational_verifier_detect_tampering():
     assert all(verify(report).values())
     report['tax_application']['hypothetical_allocation']['amount_EUR']='1.00'
     assert not all(verify(report).values())
+
+
+@pytest.mark.parametrize('cause', ['input', 'conflict', 'failed', 'missing_evidence'])
+def test_skipped_tax_does_not_claim_source_or_applied_allocation(cause):
+    p=profile('C011' if cause=='input' else 'C001')
+    a=activity(p) if cause!='input' else {'status':'blocked'}
+    if cause=='failed':a={'status':'failed'}
+    if cause=='missing_evidence':a={'status':'completed','result':{}}
+    result=apply_tax_scenario(p,a,has_conflicts=cause=='conflict')
+    assert result['status']=='not_calculated'
+    assert result['assumptions']==[]
+    assert all('simulat' not in note.lower() for note in result['limits'])
+    assert 'source' not in result
+    assert 'hypothetical_allocation' not in result
+    assert result['deduction_calculated'] is False

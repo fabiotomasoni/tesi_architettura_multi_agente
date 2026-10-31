@@ -4,6 +4,7 @@ from typing import Literal
 from uuid import UUID
 from pydantic import Field, model_validator
 from .models import Contract
+from .ecb_source import EcbRateEvidence
 
 
 class DurationBand(Contract):
@@ -51,7 +52,7 @@ class MarketResult(Contract):
     correlation_id: UUID
     status: Literal['completed', 'failed', 'unverified', 'blocked']
     error_code: Literal['timeout', 'execution_failed', 'missing_provenance', 'not_authorized'] | None = None
-    evidence: RateEvidence | None = None
+    evidence: RateEvidence | EcbRateEvidence | None = None
     summary: str = Field(max_length=2000)
     limits: list[str] = Field(max_length=10)
     model: str
@@ -101,3 +102,16 @@ class TaxEvidence(Contract):
 
 class TaxResult(MarketResult):
     evidence: TaxEvidence | None = None
+
+
+class MarketEvidence:
+    @classmethod
+    def model_validate(cls, data):
+        if is_ecb_evidence(data):
+            return EcbRateEvidence.model_validate(data)
+        return RateEvidence.model_validate(data)
+
+
+def is_ecb_evidence(data):
+    return isinstance(data,EcbRateEvidence) or (isinstance(data,dict) and
+        (data.get('source_id')=='ecb-mir-it-house-purchase-v1' or data.get('simulated') is False or 'series_key' in data))

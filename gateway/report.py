@@ -1,7 +1,7 @@
 """Report locale deterministico: separa evidenze e sintesi senza inferenza aggiuntiva."""
 from .policy import REQUIRED, OPTIONAL, POLICY_VERSION, make_view, issues
 from .models import Scenario
-from .agent_contracts import TaxView, MarketView
+from .agent_contracts import TaxView, MarketView, is_ecb_evidence
 from .tax_evidence import faithful_summary
 from .market_evidence import faithful_summary as market_summary
 import hashlib
@@ -19,9 +19,9 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
     evaluation=[]
     completeness=[]
     limits=[
-        'Fonti esterne sostituite da fixture simulate: nessuna quotazione o norma reale verificata.',
+        'Le fonti simulate non attestano quotazioni o norme reali; ogni fonte è classificata separatamente.',
         'Le sintesi dei modelli non costituiscono evidenze o conclusioni verificate.',
-        'Confronto mutuo solo ipotetico con tasso simulato e costi esclusi; nessuna spettanza fiscale calcolata.',
+        'I tassi statistici non sono offerte personali; eventuali calcoli sono orientativi e nessuna spettanza fiscale è calcolata.',
         'Estrazione limitata al template sintetico; validazione non significa autenticità del documento.',
         'Le citazioni riguardano il testo estratto dal parser, non coordinate grafiche o autenticità del PDF.',
     ]
@@ -45,7 +45,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
             'optional_not_specified':[n for n in optional if getattr(profile,n) is None],
             'scope':'Copertura dei campi degli scenari richiesti, non completezza di tutte le informazioni nei PDF.'})
         if any(getattr(profile,n) is None for n in optional):
-            limits.append(f'{scenario}: tipologia del mutuo non specificata; ricerca simulata generica. Nessuna categoria inventata.')
+            limits.append(f'{scenario}: tipologia del mutuo non specificata; ricerca di contesto generica. Nessuna categoria inventata.')
         document_data.append({'scenario':scenario,'facts':facts})
         activity=activities[scenario]
         result=activity.get('result')
@@ -58,6 +58,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
                 view=TaxView(tax_year=int(str(profile.tax_year.value)),purpose=profile.purpose.value)
                 checked=faithful_summary(result['evidence'],view)
                 faithful.append(checked)
+                limits.append(checked['limit'])
                 sources[-1]['verification']='authorized_fixture_content_checked'
                 sources[-1]['source_sha256']=checked['source_sha256']
                 evaluation.append({'scenario':scenario,'model':result['model'],
@@ -65,9 +66,16 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
                     'output_sha256':hashlib.sha256(result['summary'].encode()).hexdigest()})
             else:
                 view=MarketView.model_validate(make_view(profile,Scenario.MORTGAGE))
+                real=is_ecb_evidence(result['evidence'])
+                if real and result.get('measurements',{}).get('gateway_source_receipt_verified')!=1:
+                    raise ValueError('Ricevuta di recupero BCE del gateway assente')
                 checked=market_summary(result['evidence'],view)
                 faithful.append(checked)
-                sources[-1]['verification']='authorized_fixture_content_checked'
+                limits.append(checked['limit'])
+                sources[-1]['verification']='gateway_retrieval_and_series_checked' if real else 'authorized_fixture_content_checked'
+                if real:
+                    sources[-1].pop('real_world_verified',None)
+                    sources[-1]['institutional_retrieval_verified']=True
                 sources[-1]['source_sha256']=checked['source_sha256']
                 evaluation.append({'scenario':scenario,'model':result['model'],
                     'free_text_included':False,'reason':'Prosa del modello non verificata; esclusa dalla sintesi mercati.',
@@ -85,6 +93,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
         limits.append('Conflitti non risolti: conservate entrambe le provenienze; nessuna conclusione personalizzata autorizzata.')
     mortgage=compare_mortgage(profile,activities['S-01'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-01' in scenarios else None
     tax_application=apply_tax_scenario(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
-    return {'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.8.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
-        'consistency':consistency,'analysis_status':'unresolved_conflict' if consistency['unresolved_conflicts'] else 'no_conflict_in_registered_observations','completeness':completeness,'status':status,'requested_scenarios':scenarios,'document_data':document_data,'simulated_sources':sources,
+    return {'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.9.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
+        'consistency':consistency,'analysis_status':'unresolved_conflict' if consistency['unresolved_conflicts'] else 'no_conflict_in_registered_observations','completeness':completeness,'status':status,'requested_scenarios':scenarios,'document_data':document_data,'simulated_sources':[s for s in sources if s['evidence'].get('simulated') is True],
+        'external_sources':[s for s in sources if s['evidence'].get('simulated') is False],
         'faithful_summaries':faithful,'model_evaluation':evaluation,'unverified_summaries':summaries,'outcomes':outcomes,'limits':list(dict.fromkeys(limits))}

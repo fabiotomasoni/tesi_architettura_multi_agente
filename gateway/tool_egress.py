@@ -1,5 +1,6 @@
 """Catalogo MCP e proxy delle fonti: tutto negato salvo template configurati."""
 from dataclasses import dataclass
+from copy import deepcopy
 import json
 import os
 from secrets import token_hex
@@ -12,12 +13,19 @@ import asyncio
 from datetime import datetime, timezone
 import httpx
 from .models import Contract
+from . import runtime
+from .ecb_source import DESTINATION as ECB_DESTINATION, BRIDGE_JOB, WIRE_REQUEST, verify_ecb
 from .privacy import SensitiveContext, check, view_paths
 from .a2a_egress import EgressDenied, authorized_task
 from .market_evidence import expected_evidence as market
 from .tax_evidence import expected_evidence as tax
 
-TOOL_CATALOG_VERSION = '0.1.0'
+TOOL_CATALOG_VERSION = '0.2.0'
+MARKET_SOURCE = os.environ.get('TESI_MARKET_SOURCE','simulated')
+if MARKET_SOURCE not in {'simulated','ecb'}:
+    raise RuntimeError('Fonte mercati non riconosciuta')
+if MARKET_SOURCE=='ecb' and not runtime.ISOLATED:
+    raise RuntimeError('La fonte reale richiede la modalità isolata')
 
 
 @dataclass(frozen=True)
@@ -29,7 +37,7 @@ class ToolRoute:
 
 
 TOOL_ROUTES = MappingProxyType({
-    'S-01': ToolRoute('services.rates_mcp', 'lookup_rates', 'fixture://simulated-rates-v1'),
+    'S-01': ToolRoute('services.rates_mcp', 'lookup_rates', ECB_DESTINATION if MARKET_SOURCE=='ecb' else 'fixture://simulated-rates-v1'),
     'S-02': ToolRoute('services.tax_mcp', 'lookup_tax', 'fixture://simulated-tax-v1'),
 })
 
@@ -37,6 +45,8 @@ TOOL_ROUTES = MappingProxyType({
 # Selezione esplicita all'avvio del gateway delle fixture negative già presenti.
 # Non proviene da Card, richieste HTTP o output del modello.
 _profile = os.environ.get('TESI_MCP_PROFILE', 'nominal')
+if MARKET_SOURCE=='ecb' and _profile!='nominal':
+    raise RuntimeError('Fixture negative non ammesse insieme alla fonte reale')
 if _profile != 'nominal':
     _profiles = {
         'market_timeout': {'S-01':'services.slow_rates_mcp'},
@@ -115,6 +125,18 @@ async def source_request(broker, request, authorization):
         if route.destination != expected_destination:
             raise EgressDenied('Fixture non configurata')
         evidence = (market if task.scenario == 'S-01' else tax)(task.view).model_dump(mode='json')
+    elif route.destination == ECB_DESTINATION:
+        if task.scenario!='S-01' or not runtime.ISOLATED or broker.bridge is None:
+            raise EgressDenied('Percorso BCE non autorizzato')
+        # Template pubblico fisso: nessun valore del fascicolo entra nella richiesta.
+        context=broker._privacy.get(grant.session_id,SensitiveContext())
+        check(context,WIRE_REQUEST,public_paths=frozenset({('url',),('headers','accept'),('headers','accept-encoding')}))
+        seconds=min(30,(task.deadline-datetime.now(timezone.utc)).total_seconds())
+        reply=await broker.bridge.infer(BRIDGE_JOB,seconds)
+        parsed,_=verify_ecb(reply['body'])
+        evidence=parsed.model_dump(mode='json')
+        grant.external_http_ms=reply['source_ms']
+        grant.external_http_requests=1
     else:
         # Solo configurazione fidata può scegliere un endpoint HTTP. Nessuno
         # configurato in produzione: nei test il trasporto è simulato.
@@ -133,6 +155,7 @@ async def source_request(broker, request, authorization):
         if not any(g is grant for g in broker._grants.values()):
             raise EgressDenied('Autorizzazione fonte revocata')
         authorized_task(task)
+        grant.source_evidence = deepcopy(evidence)
         grant.source_completed = True
         grant.source_ms = round((perf_counter() - started)*1000, 3)
     return evidence

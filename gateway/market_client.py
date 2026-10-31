@@ -1,14 +1,15 @@
 """Adattatore gateway: verifica Card e delega solo all'endpoint locale fissato."""
 from uuid import uuid4
+import json
 from time import perf_counter
 import httpx
 from a2a.client import A2AClient
 from a2a.types import AgentCard, SendMessageRequest, MessageSendParams, Message, Role, Part, TextPart
 from .result_validation import parse_result
 from .a2a_egress import A2AEgressTransport, ROUTES
-from .agent_contracts import RateEvidence, MarketTask, MarketResult
+from .agent_contracts import RateEvidence, MarketTask, MarketResult, MarketEvidence, is_ecb_evidence
 
-from .market_evidence import verify_evidence
+from .market_evidence import verify_evidence, provenance_fields
 
 ENDPOINT = ROUTES['S-01'].endpoint
 
@@ -33,12 +34,13 @@ async def delegate(task: MarketTask) -> MarketResult:
             parts.extend(artifact.get('parts', []))
         for part in parts:
             if part.get('kind') == 'text':
-                parsed = parse_result(part['text'], task, MarketResult, RateEvidence, ('source_id','reference_date','unit','simulated'))
+                parsed = parse_result(part['text'], task, MarketResult, MarketEvidence, provenance_fields(json.loads(part['text']).get('evidence')))
                 if parsed.correlation_id != task.correlation_id:
                     raise ValueError('Correlazione del risultato non valida')
                 if parsed.evidence is not None:
                     _, digest = verify_evidence(parsed.evidence, task.view)
-                    parsed.measurements.update({'fixture_content_verified':1,'source_sha256':digest})
+                    parsed.measurements.update({'source_content_verified':1,'source_sha256':digest})
+                    if not is_ecb_evidence(parsed.evidence):parsed.measurements['fixture_content_verified']=1
                 parsed.measurements.update({'card_validation_ms':round(card_ms, 3), 'a2a_roundtrip_ms':round((perf_counter()-started)*1000, 3), 'a2a_requests':1, 'card_validated':1, 'result_validated':1, 'provenance_verified':int(parsed.status=='completed')})
                 return parsed
         raise ValueError('Risultato A2A privo di artefatto strutturato')

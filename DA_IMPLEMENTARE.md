@@ -8,7 +8,7 @@ La tesi, soprattutto capitoli 3–4, resta il riferimento. I precedenti P/S/R/E/
 
 Riferimenti: S-01/S-02, RF-04–RF-07, sezioni 4.2–4.3. **È parte della consegna, non un’estensione facoltativa.**
 
-Collegare i tool MCP a fonti istituzionali autorizzate per tassi e riferimenti fiscali, attraverso il proxy del gateway e HTTPS. Agenti e MCP non ottengono accesso diretto a Internet. Adeguare contratti, validatori e report oggi vincolati alle fixture, abilitando soltanto le destinazioni necessarie al proxy.
+Il primo collegamento mercati alla serie mensile BCE è implementato, con citazione e controllo della risposta; confermato anche nelle prove manuali C001/C006. Il suo indicatore aggregato non è utilizzabile come TAN. Completare il collegamento fiscale a fonti istituzionali autorizzate, attraverso il proxy del gateway e HTTPS. Agenti e MCP non ottengono accesso diretto a Internet. Estendere i contratti fiscali, validatori e report ancora vincolati alle fixture, abilitando soltanto le destinazioni necessarie al proxy.
 
 Ogni informazione deve avere fonte/URL, estratto citato, unità, definizione, periodo e momento del recupero. «Aggiornato» significa ultima pubblicazione disponibile: un indicatore statistico non è un’offerta personale; la norma va riferita all’anno d’imposta corretto. Un hash non certifica autorevolezza o verità. Fonte assente o dubbia: limite esplicito, senza sostituzioni inventate.
 

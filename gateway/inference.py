@@ -17,6 +17,8 @@ from . import runtime
 from .privacy import SensitiveContext, check, PRIVACY_VERSION, view_paths
 from .a2a_egress import authorized_task, EgressDenied
 from .market_evidence import verify_evidence as verify_market
+from .ecb_source import REAL_MARKET_PROMPT, public_prompt_data
+from .agent_contracts import is_ecb_evidence
 from .tax_evidence import verify_evidence as verify_tax
 
 OLLAMA_ENDPOINT = 'http://127.0.0.1:11434/api/chat'
@@ -50,8 +52,11 @@ class Grant:
     tool_used: bool = False
     source_token: str | None = None
     source_used: bool = False
+    source_evidence: dict | None = None
+    external_http_ms: float | None = None
+    external_http_requests: int = 0
     source_completed: bool = False
-    source_ms: float = 0.0
+    source_ms: float | None = None
     used: bool = False
     completed: bool = False
     bridge_roundtrip_ms: float | None = None
@@ -74,17 +79,27 @@ class InferenceBroker:
             self._grants[token] = grant
         try:
             result = await remote(checked)
+            from .tool_egress import MARKET_SOURCE
+            if checked.scenario=='S-01' and getattr(result,'status',None)=='completed' and (MARKET_SOURCE=='ecb' or is_ecb_evidence(result.evidence)):
+                if (not grant.source_completed or grant.source_evidence is None or result.evidence is None
+                        or result.evidence.model_dump(mode='json') != grant.source_evidence):
+                    raise EgressDenied('Risultato BCE difforme dalla ricevuta del gateway')
+            received_evidence=getattr(result,'evidence',None)
+            result.measurements['gateway_source_receipt_verified']=int(grant.source_completed and received_evidence is not None and received_evidence.model_dump(mode='json')==grant.source_evidence)
+            if grant.external_http_ms is not None:
+                result.measurements.update(external_http_ms=grant.external_http_ms,external_http_requests=grant.external_http_requests)
             result.measurements.update({'gateway_inference_authorized': int(grant.used),
                                         'gateway_inference_completed': int(grant.completed),
                                         'gateway_tool_authorized':int(grant.tool_used),
                                         'gateway_source_authorized':int(grant.source_used),
                                         'gateway_source_completed':int(grant.source_completed),
-                                        'gateway_source_ms':grant.source_ms,
                                         'privacy_version':PRIVACY_VERSION,
                                         'runtime_mode':runtime.MODE,
                                         'workload_identity_enforced':int(runtime.ISOLATED),
-                                        'tool_catalog_version':'0.1.0',
+                                        'tool_catalog_version':'0.2.0',
                                         'inference_catalog_version': INFERENCE_CATALOG_VERSION})
+            if grant.source_ms is not None:
+                result.measurements['gateway_source_ms']=grant.source_ms
             if grant.bridge_roundtrip_ms is not None:
                 result.measurements['gateway_bridge_roundtrip_ms']=grant.bridge_roundtrip_ms
             return result
@@ -112,18 +127,21 @@ class InferenceBroker:
                 evidence, _ = verify(request.evidence, task.view)
             except Exception:
                 raise EgressDenied('Evidenza inferenza non autorizzata') from None
-            inspected=evidence.model_dump(mode='json')
+            real = request.scenario=='S-01' and is_ecb_evidence(evidence)
+            if real and (not grant.source_completed or evidence.model_dump(mode='json') != grant.source_evidence):
+                raise EgressDenied('Evidenza BCE non recuperata dal gateway')
+            inspected=public_prompt_data(evidence) if real else evidence.model_dump(mode='json')
             # Solo dopo verifica esatta del catalogo: origine pubblica simulata,
             # anche se il numero/data coincide con un valore della sessione.
             check(self._privacy.get(grant.session_id,SensitiveContext()),inspected,
                   allowed_paths=view_paths(),
-                  public_paths=frozenset({('reference_date',),('annual_rate_percent',)}))
+                  public_paths=frozenset({('reference_date',),('annual_rate_percent',),('observation_period',),('series_key',)}))
             # Anche un timeout consuma l'autorizzazione: nessun retry implicito.
             grant.used = True
         payload = {'model': MODELS[task.scenario], 'stream': False, 'keep_alive': 0,
                    'options': {'num_ctx': 4096, 'num_predict': 200, 'temperature': 0},
-                   'messages': [{'role': 'system', 'content': PROMPTS[task.scenario]},
-                                {'role': 'user', 'content': json.dumps(evidence.model_dump(mode='json'))}]}
+                   'messages': [{'role': 'system', 'content': REAL_MARKET_PROMPT if real else PROMPTS[task.scenario]},
+                                {'role': 'user', 'content': json.dumps(inspected if real else evidence.model_dump(mode='json'))}]}
         if task.scenario == 'S-02':
             payload['think'] = False
         seconds = min(90, (task.deadline - datetime.now(timezone.utc)).total_seconds())

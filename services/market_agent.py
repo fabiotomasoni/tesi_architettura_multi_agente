@@ -39,11 +39,11 @@ class MarketsAgent(BaseAgent):
         yield Event(author=self.name, content=types.Content(role='model', parts=[types.Part(text=result.model_dump_json())]))
 
 
-card = AgentCard(name='markets_agent', description='Ricerca tassi simulati S-01', version='0.1.0',
+card = AgentCard(name='markets_agent', description='Contesto tassi da fonti autorizzate S-01', version='0.1.0',
     url=AGENT_ENDPOINTS['S-01'], capabilities=AgentCapabilities(streaming=False),
     default_input_modes=['text/plain'], default_output_modes=['text/plain'],
-    skills=[AgentSkill(id='market_rate_context', name='Tassi simulati', description='Fixture MCP sintetica, non quotazioni reali.', tags=['S-01'])])
-agent = MarketsAgent(name='markets_agent', description='Agente mercati locale con risultati simulati')
+    skills=[AgentSkill(id='market_rate_context', name='Riferimenti sui tassi', description='Fonte autorizzata dal gateway; fixture o statistica istituzionale esplicitamente distinte.', tags=['S-01'])])
+agent = MarketsAgent(name='markets_agent', description='Agente mercati locale con fonti autorizzate dal gateway')
 
 # Demo a richiesta singola: niente cronologia ADK o task A2A dopo la risposta.
 # Le continuazioni multi-turno e tasks/get non fanno parte di questo incremento.
