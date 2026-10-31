@@ -108,9 +108,28 @@ def render_report_document(report):
                 reference += ' — «' + str(quote) + '»'
             rows.append([LABELS.get(name, name), value(fact), fact.get('period', '—'), reference])
         table(['Informazione', 'Valore', 'Periodo', 'Documento e citazione'], rows)
+    contract = report.get('mortgage_contract_analysis')
+    if contract:
+        heading('3. Analisi locale del contratto e confronto orientativo')
+        if contract.get('status') == 'calculated':
+            paragraph('Modello teorico sui dati del contratto. Questo calcolo non utilizza il tasso BCE o un’offerta alternativa.')
+            current=contract.get('contract_rate_scenario', {})
+            table(['Indicatore', 'Modello al TAN documentale'], [
+                [label,number(current[key])+unit] for key,label,unit in (
+                    ('annual_rate_percent','TAN documentale',' %'),
+                    ('theoretical_monthly_payment','Rata mensile teorica',' €'),
+                    ('theoretical_total_interest','Interessi residui teorici',' €'),
+                    ('theoretical_total_payments','Totale pagamenti teorico',' €')) if key in current])
+            paragraph('Rata mensile documentata: '+number(contract['documented_monthly_payment'])+' €.')
+            gap=contract['documented_vs_model']
+            paragraph('Scostamento rata documentata − rata teorica: '+number(gap['difference_documented_minus_model'])+' €. '+gap['interpretation'])
+        else:
+            paragraph('Analisi locale non calcolata. '+REASONS.get(contract.get('reason'),'Dati o condizioni non sufficienti.'))
+        listing(contract.get('assumptions',[]))
+        listing(contract.get('limits',[]))
     mortgage = report.get('mortgage_comparison')
     if mortgage:
-        heading('3. Confronto orientativo del mutuo')
+        heading('Confronto con un tasso alternativo' if contract else '3. Confronto orientativo del mutuo')
         if mortgage.get('status') == 'calculated':
             paragraph('Scenari matematici a parità di capitale e durata residui. Il tasso alternativo è simulato; la differenza non è un risparmio garantito.')
             current = mortgage.get('contract_rate_scenario', {})
@@ -131,10 +150,12 @@ def render_report_document(report):
                 paragraph(differences.get('sign_convention', ''))
         else:
             paragraph('Confronto non calcolato. ' + REASONS.get(mortgage.get('reason'), 'Dati o condizioni non sufficienti; consultare gli esiti.'))
-            if 'documented_monthly_payment' in mortgage:
+            if not contract and 'documented_monthly_payment' in mortgage:
                 paragraph('Rata documentata, mantenuta distinta dal riferimento BCE: '+number(mortgage['documented_monthly_payment'])+' €.')
         listing(mortgage.get('assumptions', []))
         listing(mortgage.get('limits', []))
+        if mortgage.get('status')!='calculated':
+            paragraph('Per approfondire una rinegoziazione occorrono un’offerta riferita al caso, con TAN, durata e costi documentati e confrontabili. Il dato statistico non li sostituisce.')
     tax = report.get('tax_application')
     if tax:
         heading('4. Interessi e aspetti fiscali da approfondire')

@@ -2,7 +2,7 @@
 
 La tesi, soprattutto capitoli 3–4, resta il riferimento. I precedenti P/S/R/E/T/X sono riuniti qui: meno passaggi operativi, senza cancellare requisiti o aggiungere nuovi progetti.
 
-**Oggi:** gateway PDF, viste minimizzate, LangGraph, due agenti ADK/A2A, MCP, Ollama, controlli di provenienza, calcoli locali e isolamento verificati nel catalogo attuale. Esistono upload, report JSON e una prima presentazione leggibile/stampabile. **Le fonti sono ancora simulate**, il parser riconosce il template sintetico e il testo LLM non verificato è escluso dal documento.
+**Oggi:** gateway PDF, viste minimizzate, LangGraph, due agenti ADK/A2A, MCP, Ollama, controlli di provenienza, calcoli locali e isolamento verificati nel catalogo attuale. Esistono upload, report JSON e una prima presentazione leggibile/stampabile. **Sono disponibili fonti reali BCE e pubblicazioni annuali AdE, oltre alle fixture degli esperimenti**, il parser riconosce il template sintetico e il testo LLM non verificato è escluso dal documento.
 
 ## 1. Fonti reali e lavoro utile degli agenti
 
@@ -15,6 +15,8 @@ Ogni informazione deve avere fonte/URL, estratto citato, unità, definizione, pe
 Concordare il ruolo dei modelli nella ricerca e nella produzione di informazioni citate: oggi la loro prosa non contribuisce al report. Calcoli e autorizzazioni restano applicativi; non è obbligatorio un terzo LLM.
 
 **Verifica finale:** entrambi gli scenari consultano davvero fonti ammesse, con provenienza controllabile, nessun dato vietato trasmesso e risultato parziale corretto se una fonte manca.
+
+L’analisi locale del contratto è ora indipendente dal confronto esterno: rata e totali teorici documentali restano disponibili senza tasso alternativo. Verifica manuale completata su C001, C024 e C006, incluso ponte spento e successivo riavvio manuale. Per un confronto alternativo reale resta da definire un riferimento compatibile con ipotesi e costi documentati. Nessuna sostituzione automatica del TAN con la statistica BCE.
 
 ## 2. Demo e documento per l’utente
 
@@ -52,4 +54,4 @@ Scrivere i capitoli 5–6 sulle evidenze effettive, motivare Docker e ponte loca
 
 ## Regola di lavoro
 
-Prossimo incremento proposto: **punto 1, fonti reali**, concordando prima fonti e uso dei dati. Ridurre il residuo al superamento delle verifiche; nel diario lasciare modifica, evidenza e limite. Database dei profili, agenti remoti, OCR, operazioni bancarie, infrastrutture ulteriori e un’interfaccia per amministrare Docker non sono requisiti impliciti della consegna.
+Prossimo residuo: completare il contenuto utile degli scenari e preparare una baseline confrontabile; nuove fonti e ipotesi economiche richiedono un perimetro concordato. Ridurre il residuo al superamento delle verifiche; nel diario lasciare modifica, evidenza e limite. Database dei profili, agenti remoti, OCR, operazioni bancarie, infrastrutture ulteriori e un’interfaccia per amministrare Docker non sono requisiti impliciti della consegna.

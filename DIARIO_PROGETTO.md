@@ -120,6 +120,18 @@ Controllati report-locale-27.json (C021) e report-locale-28.json (C011). C021 co
 
 Con C001 già verificato, le prove manuali coprono entrambe le annualità, acquisto/ristrutturazione ed esito parziale. Chiuso il collegamento alle due edizioni AdE nel perimetro concordato. Non è una verifica fiscale personale o una copertura esaustiva della normativa; indisponibilità/alterazione/anno fuori catalogo restano coperti dai test automatici. Nessuna nuova conclusione su isolamento o cancellazione ricavata dai soli JSON esportati. Restano ruolo sostanziale dei modelli, demo e valutazione della tesi; S04 fermo.
 
+## Modifica 50 — S-01: modello documentale indipendente dalla fonte
+
+Report 0.11.0: aggiunta mortgage_contract_analysis, separata dal confronto alternativo. Con dati validati, periodi allineati e rate mensili, calcola rata e totali residui teorici al TAN documentale, conserva la rata del PDF e mostra lo scostamento senza correggerla o diagnosticare errori contrattuali. Variabile/misto: solo scenario a tasso congelato. Nessuna nuova offerta o ipotesi di tasso alternativo. BCE resta contesto; fonte mancante/non verificata non elimina il modello locale. Input insufficienti, unità/periodi errati, conflitti o periodicità non supportata impediscono il modello. Esito tecnico dell’agente invariato.
+
+Documento leggibile e check_mortgage.py aggiornati; controllo numerico indipendente anche per il nuovo blocco e comando diretto verificato. Test coprono fonte reale congelata, fixture, guasto/diniego/provenienza mancante, fisso/variabile, dati invalidi e manomissione dei risultati. Prova locale su C001/C024: modello calcolato, alternativa BCE non calcolata; C006: entrambi non calcolati. Suite completa: 434 passed, 106 warning. Si tratta di prove offline, non di nuovi recuperi Internet. Da completare la verifica manuale dopo ricostruzione dell’immagine. Il confronto con un’offerta reale compatibile resta aperto; S04 fermo.
+
+## Modifica 51 — Verifica manuale del modello locale S-01
+
+Controllati report-locale-29/30/31/32.json. Il primo C001 è failed con due timeout: l’utente ha confermato il ponte spento; il modello locale rimane corretto. Dopo riavvio del ponte C001 completed, con fonti BCE/AdE e rata teorica 1.604,32 EUR. C024 completed: rata teorica 867,11 EUR e limite esplicito di tasso congelato, senza previsione. Entrambi: 10 fatti documentali verificati, zero problemi; controlli modello, fonti e ripartizione positivi. Non sono disponibili tempi per fase nei JSON esportati e il riavvio manuale non dimostra recupero automatico nello stesso processo.
+
+C006 partial: capitale residuo mancante, agente mercati bloccato, modello contrattuale e confronto non calcolati senza stime; fiscalità completata con fonte AdE. Controlli pertinenti tutti positivi, 9 fatti verificati e zero problemi. Nessuna fonte mercati aggiunta. Chiuso l’incremento del modello locale indipendente, non l’intero confronto economico S-01: resta necessario un riferimento alternativo compatibile e documentato prima di un confronto reale. Nessuna nuova evidenza su isolamento o pulizia ricavata dai soli report. S04 fermo.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

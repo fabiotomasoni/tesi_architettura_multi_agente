@@ -195,3 +195,21 @@ Controllo del JSON esportato (su Windows usare `.\.venv\Scripts\python.exe`):
 ```
 
 I controlli rigiocano la verifica locale del catalogo e dei dati: non sono una nuova consultazione Internet o una verifica della spettanza.
+
+## Analisi locale del contratto
+
+Il report distingue il modello teorico del contratto dal confronto con un tasso alternativo. Se i dati sono sufficienti, mostra rata mensile teorica, interessi residui teorici e scostamento dalla rata documentata anche quando la fonte mercati non è disponibile o il dato BCE non è un TAN. Per un tasso variabile o misto si tratta soltanto di uno scenario con tasso mantenuto costante. La rata del documento non viene corretta e il risultato non dimostra convenienza o errori contrattuali.
+
+Per verificare il JSON esportato:
+
+```bash
+# macOS
+.venv/bin/python scripts/check_mortgage.py report.json
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/check_mortgage.py report.json
+```
+
+Il controllo ricalcola il modello con un metodo numerico indipendente e verifica gli scostamenti. La BCE resta contesto statistico; nessuna rata alternativa viene inventata.
