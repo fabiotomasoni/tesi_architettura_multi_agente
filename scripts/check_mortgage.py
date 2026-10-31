@@ -43,7 +43,7 @@ def verify_comparison(report):
 def verify_contract(report):
     local=report.get('mortgage_contract_analysis')
     if local is None:
-        return {'contract_analysis_present':False} if report.get('report_version')=='0.11.0' else {}
+        return {'contract_analysis_present':False} if report.get('report_version') in {'0.11.0','0.12.0'} else {}
     checks={'contract_no_recommendation':local['personalized_recommendation'] is False,
             'contract_no_alternative':not any(k in local for k in ('alternative_source','simulated_rate_scenario','difference_contract_minus_simulated'))}
     facts=next(d['facts'] for d in report['document_data'] if d['scenario']=='S-01')

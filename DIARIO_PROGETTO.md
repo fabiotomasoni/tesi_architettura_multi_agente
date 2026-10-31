@@ -132,6 +132,20 @@ Controllati report-locale-29/30/31/32.json. Il primo C001 è failed con due time
 
 C006 partial: capitale residuo mancante, agente mercati bloccato, modello contrattuale e confronto non calcolati senza stime; fiscalità completata con fonte AdE. Controlli pertinenti tutti positivi, 9 fatti verificati e zero problemi. Nessuna fonte mercati aggiunta. Chiuso l’incremento del modello locale indipendente, non l’intero confronto economico S-01: resta necessario un riferimento alternativo compatibile e documentato prima di un confronto reale. Nessuna nuova evidenza su isolamento o pulizia ricavata dai soli report. S04 fermo.
 
+## Modifica 52 — S-02: riepilogo fiscale e condizioni citate
+
+Report 0.12.0: aggiunto tax_review, separato dalla ripartizione ipotetica. Riporta dati e provenienza documentali, contesto candidato, condizioni da verificare e informazioni necessarie, con estratti e pagine delle edizioni AdE autorizzate. Acquisto, costruzione e ristrutturazione restano distinti; per quest’ultima sono separati caso storico 1997 e possibile percorso edilizio dell’abitazione principale. Nessun regime/codice, aliquota o spettanza attribuiti. Tutte le condizioni personali restano non valutate dai campi supportati: non si afferma che informazioni non estratte siano assenti dai PDF. Catalogo selettivo, non esaustivo, vincolato ai digest delle edizioni verificate.
+
+Fonte mancante/simulata, input invalido o conflitto: nessuna checklist normativa ufficiale inventata. La ricevuta del gateway resta obbligatoria. Nessuna modifica alle uscite, ai prompt o ai calcoli esistenti. Aggiornati documento leggibile, README e residui; nuovo check_tax_review.py per dati, citazioni, annualità, pertinenza e assenza di spettanza.
+
+**Verifiche:** 460 passed, 106 warning; 26 nuove regressioni per due annualità, finalità, errori, input incompleti, alterazioni, edizione cambiata, link non autorizzati e comando diretto. Riesaminate le pagine dei PDF ufficiali già fissati, con digest corrispondente; nessuna nuova edizione assunta. Prove offline su C001/C022: 6 condizioni; C006/C021: 8; C011: nessuna, input incompleto. Controlli tutti positivi. Da completare prova manuale della demo dopo ricostruzione immagine; nessun nuovo esperimento comparativo o S04 avviato.
+
+## Modifica 53 — Verifica manuale del riepilogo fiscale
+
+Controllati report-locale-33/34/35.json (versione 0.12.0). C001 completed: 6 condizioni candidate per acquisto, anno 2025 e istruzioni 730/2026; C021 completed: 8 condizioni candidate per ristrutturazione, anno 2024 e istruzioni 730/2025, con caso storico 1997 distinto e nessun regime assegnato. Tutti i controlli riepilogo, AdE, BCE, modello mutuo e ripartizione positivi; 10 fatti documentali verificati e zero problemi per ciascuno.
+
+C011 partial: mercati completati, fiscalità bloccata per annual_interest mancante. Profilo disponibile conservato senza inventare il dato assente, condizioni vuote, nessuna fonte fiscale o ripartizione. Controlli pertinenti positivi, 9 fatti verificati e zero problemi. Chiuso l’incremento selettivo S-02 nel perimetro concordato; non è una verifica esaustiva della normativa o della spettanza. Nessuna nuova evidenza di isolamento/pulizia dedotta dai soli report. S04 fermo.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

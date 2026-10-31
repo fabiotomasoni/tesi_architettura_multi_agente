@@ -173,6 +173,27 @@ def render_report_document(report):
         listing(tax.get('assumptions', []))
         listing(item.get('text', '') for item in tax.get('conditions_to_verify', []))
         listing(tax.get('limits', []))
+    review=report.get('tax_review')
+    if review:
+        heading('Approfondimenti fiscali e condizioni non accertate')
+        if review.get('status')=='conditions_identified':
+            paragraph(review.get('candidate_scope',''))
+            for condition in review.get('conditions',[]):
+                heading(condition['title'])
+                paragraph('Da verificare; applicabilità al caso non accertata. '+condition['question'])
+                listing(condition.get('needed_information',[]))
+                source=condition['source']
+                paragraph('Istruzioni 730/'+str(source['publication_year'])+', anno d’imposta '+str(source['tax_year'])+', pagina '+str(source['page'])+': «'+source['quote']+'»')
+                from .tax_publications import PUBLICATIONS
+                allowed={p['source_url'] for p in PUBLICATIONS.values()}
+                page=source.get('page')
+                url=source.get('source_url')
+                if url in allowed and type(page) is int and 1<=page<=175 and source.get('source_ref')==url+'#page='+str(page):
+                    parts.append('<p><a href="'+text(source['source_ref'])+'" target="_blank" rel="noopener noreferrer">Consulta la pagina della pubblicazione</a></p>')
+        else:
+            paragraph('Condizioni non valutate. '+REASONS.get(review.get('reason'),'Fonte istituzionale utilizzabile non disponibile per questo riepilogo.'))
+        paragraph(review['conclusion'])
+        listing(review.get('limits',[]))
     heading('5. Fonti consultate e contenuti verificati')
     sources = report.get('simulated_sources', []) + report.get('external_sources', [])
     if not sources:

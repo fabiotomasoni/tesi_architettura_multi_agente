@@ -18,6 +18,8 @@ Concordare il ruolo dei modelli nella ricerca e nella produzione di informazioni
 
 L’analisi locale del contratto è ora indipendente dal confronto esterno: rata e totali teorici documentali restano disponibili senza tasso alternativo. Verifica manuale completata su C001, C024 e C006, incluso ponte spento e successivo riavvio manuale. Per un confronto alternativo reale resta da definire un riferimento compatibile con ipotesi e costi documentati. Nessuna sostituzione automatica del TAN con la statistica BCE.
 
+S-02: riepilogo locale strutturato implementato con dati documentali, condizioni selettive da verificare, informazioni necessarie e citazioni annuali. Nessuna spettanza o codice assegnato. Test automatici e prove manuali completati con C001/C021/C011: acquisto/ristrutturazione, due annualità e input incompleto. Fonti simulate o mancanti non producono una checklist normativa reale.
+
 ## 2. Demo e documento per l’utente
 
 Riferimenti: RF-01/RF-02/RF-08/RF-09, RNF-07, sezione 4.2.

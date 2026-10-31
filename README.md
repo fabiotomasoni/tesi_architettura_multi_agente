@@ -213,3 +213,21 @@ Per verificare il JSON esportato:
 ```
 
 Il controllo ricalcola il modello con un metodo numerico indipendente e verifica gli scostamenti. La BCE resta contesto statistico; nessuna rata alternativa viene inventata.
+
+## Approfondimenti fiscali nel report
+
+Con una fonte AdE verificata, il report presenta i dati documentali e una selezione di condizioni da approfondire, ciascuna con anno, pagina ed estratto ufficiale. Acquisto, costruzione e finalità generica «ristrutturazione» restano distinti: nessun regime o codice è assegnato automaticamente. Le condizioni sono da verificare; le informazioni necessarie potrebbero essere nei PDF senza essere estratte dai campi supportati. Il riepilogo non è una checklist esaustiva e non determina la spettanza. La ripartizione interessi × quota resta separata e ipotetica. Senza fonte ufficiale utilizzabile, il report non inventa condizioni normative.
+
+Verifica del JSON esportato:
+
+```bash
+# macOS
+.venv/bin/python scripts/check_tax_review.py report.json
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/check_tax_review.py report.json
+```
+
+Il controllo verifica coerenza con i dati documentali, selezione delle condizioni, citazioni del catalogo e assenza di spettanza attribuita. Non effettua una nuova consultazione Internet né certifica il diritto fiscale.

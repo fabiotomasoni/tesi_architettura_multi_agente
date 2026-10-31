@@ -8,6 +8,7 @@ from .market_evidence import faithful_summary as market_summary
 import hashlib
 from .mortgage import compare_mortgage, analyze_contract
 from .tax_application import apply_tax_scenario
+from .tax_review import build_tax_review
 from .comparisons import evaluate, report_observations
 
 
@@ -100,8 +101,9 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
         limits.append('Conflitti non risolti: conservate entrambe le provenienze; nessuna conclusione personalizzata autorizzata.')
     contract=analyze_contract(profile,has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-01' in scenarios else None
     mortgage=compare_mortgage(profile,activities['S-01'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-01' in scenarios else None
+    tax_review=build_tax_review(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
     tax_application=apply_tax_scenario(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
-    return {'mortgage_contract_analysis':contract,'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.11.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
+    return {'tax_review':tax_review,'mortgage_contract_analysis':contract,'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.12.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
         'consistency':consistency,'analysis_status':'unresolved_conflict' if consistency['unresolved_conflicts'] else 'no_conflict_in_registered_observations','completeness':completeness,'status':status,'requested_scenarios':scenarios,'document_data':document_data,'simulated_sources':[s for s in sources if s['evidence'].get('simulated') is True],
         'external_sources':[s for s in sources if s['evidence'].get('simulated') is False],
         'faithful_summaries':faithful,'model_evaluation':evaluation,'unverified_summaries':summaries,'outcomes':outcomes,'limits':list(dict.fromkeys(limits))}
