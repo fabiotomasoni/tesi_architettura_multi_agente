@@ -1,0 +1,264 @@
+{
+  "version": "s02-annotated-1",
+  "annotation": "Manuale, dati sintetici; indipendente dagli output del rilevatore. Corpus di regressione, non stima generale.",
+  "context": {
+    "case": "C001",
+    "extra_amounts": [
+      "2024",
+      "5",
+      "10"
+    ]
+  },
+  "cases": [
+    {
+      "id": "P001",
+      "forbidden": true,
+      "payload": {
+        "query": "Marco Riva"
+      }
+    },
+    {
+      "id": "P002",
+      "forbidden": true,
+      "payload": {
+        "query": "Riva"
+      }
+    },
+    {
+      "id": "P003",
+      "forbidden": true,
+      "payload": {
+        "query": "marco%20riva"
+      }
+    },
+    {
+      "id": "P004",
+      "forbidden": true,
+      "payload": {
+        "query": "MARCO​ RIVA"
+      }
+    },
+    {
+      "id": "P005",
+      "forbidden": true,
+      "payload": {
+        "query": "90.434,57 EUR"
+      }
+    },
+    {
+      "id": "P006",
+      "forbidden": true,
+      "payload": {
+        "query": "9.043457e4 EUR"
+      }
+    },
+    {
+      "id": "P007",
+      "forbidden": true,
+      "payload": {
+        "query": "90434.570"
+      }
+    },
+    {
+      "id": "P008",
+      "forbidden": true,
+      "payload": {
+        "query": "31/12/2025"
+      }
+    },
+    {
+      "id": "P009",
+      "forbidden": true,
+      "payload": {
+        "query": "20251231"
+      }
+    },
+    {
+      "id": "P010",
+      "forbidden": true,
+      "payload": {
+        "query": "persona@example.invalid"
+      }
+    },
+    {
+      "id": "P011",
+      "forbidden": true,
+      "payload": {
+        "query": "RSSMRA85A01F205X"
+      }
+    },
+    {
+      "id": "P012",
+      "forbidden": true,
+      "payload": {
+        "query": "IT00 X000 0000 0000 0000 0000 0001"
+      }
+    },
+    {
+      "id": "P013",
+      "forbidden": true,
+      "payload": {
+        "query": "mi chiamo Elena Bianchi"
+      }
+    },
+    {
+      "id": "P014",
+      "forbidden": true,
+      "payload": {
+        "query": "cliente: Lucia Verdi"
+      }
+    },
+    {
+      "id": "P015",
+      "forbidden": true,
+      "payload": {
+        "query": "via delle Rose 17"
+      }
+    },
+    {
+      "id": "P016",
+      "forbidden": true,
+      "payload": {
+        "query": "Tecnologie Alpine SRL"
+      }
+    },
+    {
+      "id": "P017",
+      "forbidden": true,
+      "payload": {
+        "headers": {
+          "X-Note": "90434.57"
+        }
+      }
+    },
+    {
+      "id": "P018",
+      "forbidden": true,
+      "payload": {
+        "url": "https://source.invalid/?name=Marco%20Riva"
+      }
+    },
+    {
+      "id": "P019",
+      "forbidden": true,
+      "payload": {
+        "Riva": "ok"
+      }
+    },
+    {
+      "id": "P020",
+      "forbidden": true,
+      "payload": {
+        "query": "2024 EUR"
+      }
+    },
+    {
+      "id": "P021",
+      "forbidden": true,
+      "payload": {
+        "query": 2024
+      }
+    },
+    {
+      "id": "P022",
+      "forbidden": true,
+      "payload": {
+        "arguments": {
+          "tax_year": "2024"
+        }
+      }
+    },
+    {
+      "id": "P023",
+      "forbidden": false,
+      "payload": {
+        "tax_year": 2024
+      }
+    },
+    {
+      "id": "P024",
+      "forbidden": false,
+      "payload": {
+        "remaining_years_band": {
+          "lower_exclusive": 5,
+          "upper_inclusive": 10
+        }
+      }
+    },
+    {
+      "id": "P025",
+      "forbidden": false,
+      "payload": {
+        "rate_type": "fixed"
+      }
+    },
+    {
+      "id": "P026",
+      "forbidden": false,
+      "payload": {
+        "purpose": "renovation"
+      }
+    },
+    {
+      "id": "P027",
+      "forbidden": false,
+      "payload": "ricerca riferimenti fiscali"
+    },
+    {
+      "id": "P028",
+      "forbidden": false,
+      "payload": "tasso simulato 3.20%"
+    },
+    {
+      "id": "P029",
+      "forbidden": false,
+      "payload": "90434.58"
+    },
+    {
+      "id": "P030",
+      "forbidden": false,
+      "payload": {
+        "query": "anno fiscale 2023"
+      }
+    },
+    {
+      "id": "P031",
+      "forbidden": false,
+      "payload": {
+        "tax_year": 2025
+      }
+    },
+    {
+      "id": "P032",
+      "forbidden": true,
+      "payload": {
+        "query": "mi chiamo elena bianchi"
+      }
+    },
+    {
+      "id": "P033",
+      "forbidden": true,
+      "payload": {
+        "query": "+39 02 8123 4567"
+      }
+    },
+    {
+      "id": "P034",
+      "forbidden": true,
+      "payload": {
+        "query": "tel: 333 1234567"
+      }
+    },
+    {
+      "id": "P035",
+      "forbidden": true,
+      "payload": {
+        "query": "31122025"
+      }
+    }
+  ],
+  "limitations": [
+    "Nomi sconosciuti minuscoli senza contesto, alias e codifiche non supportate possono sfuggire.",
+    "Maiuscole e parole comuni possono causare falsi positivi. Il catalogo chiuso resta un controllo distinto."
+  ]
+}

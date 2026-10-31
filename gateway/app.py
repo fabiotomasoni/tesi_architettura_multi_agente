@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Request, Response, File, Form, Uploa
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 
+from .privacy import SensitiveContext, PRIVACY_VERSION, ENTITY_RECOGNIZER_VERSION
 from .inference import InferenceBroker, InferenceRequest
 from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request
 from .a2a_egress import EgressDenied
@@ -80,16 +81,21 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "policy_version": POLICY_VERSION}
+        return {"status": "ok", "policy_version": POLICY_VERSION,
+                "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
     @app.post("/sessions", status_code=201)
     def create_session(payload: SessionInput):
+        return register_session(payload, SensitiveContext.from_profile(payload.profile))
+
+    def register_session(payload, context):
         with lock:
             # Pulizia pigra anche in creazione; nessuna persistenza su disco.
             for key in [k for k, (_, end) in sessions.items() if end <= monotonic()]:
                 del sessions[key]
                 broker.revoke(key)
             sid = uuid4()
+            broker._privacy[sid]=context
             sessions[sid] = (deepcopy(payload), monotonic() + SESSION_TTL_SECONDS)
             return {"session_id": str(sid), "policy_version": POLICY_VERSION,
                     "scenarios": {s.value: {"ready": not issues(payload.profile, s), "issues": issues(payload.profile, s)} for s in set(payload.scenarios)}}
@@ -122,7 +128,12 @@ def create_app() -> FastAPI:
                 profile, documents = extract_profile(contents)
             except PDFInputError as exc:
                 raise HTTPException(400, str(exc)) from None
-            result = create_session(SessionInput(scenarios=scenarios, profile=profile))
+            context = SensitiveContext.from_profile(profile)
+            try:
+                context.add_documents(contents)
+            except Exception:
+                raise HTTPException(400, 'Impossibile completare il controllo privacy locale dei PDF.') from None
+            result = register_session(SessionInput(scenarios=scenarios, profile=profile), context)
             return {**result, "documents": documents, "rejected_documents": rejected_documents, "profile": profile.model_dump(mode="json")}
         finally:
             for file in files:

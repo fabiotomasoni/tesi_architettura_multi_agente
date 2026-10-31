@@ -12,6 +12,7 @@ import asyncio
 from datetime import datetime, timezone
 import httpx
 from .models import Contract
+from .privacy import SensitiveContext, check, view_paths
 from .a2a_egress import EgressDenied, authorized_task
 from .market_evidence import expected_evidence as market
 from .tax_evidence import expected_evidence as tax
@@ -80,6 +81,7 @@ def authorize_tool(broker, request, authorization):
             raise EgressDenied('Strumento non autorizzato')
         _, task = authorized_task(grant.task)
         route = TOOL_ROUTES[task.scenario]
+        check(broker._privacy.get(grant.session_id,SensitiveContext()),request.model_dump(mode='json',exclude={'correlation_id','scenario'}),allowed_paths=view_paths(('arguments',)))
         expected = task.view.model_dump(mode='json')
         # Confronto canonico: niente coercizioni che nascondano testo aggiuntivo.
         if request.tool != route.tool or json.dumps(request.arguments, sort_keys=True) != json.dumps(expected, sort_keys=True):
@@ -101,6 +103,7 @@ async def source_request(broker, request, authorization):
             raise EgressDenied('Fonte non autorizzata')
         _, task = authorized_task(grant.task)
         route = TOOL_ROUTES[task.scenario]
+        check(broker._privacy.get(grant.session_id,SensitiveContext()),request.model_dump(mode='json',exclude={'correlation_id','scenario'}),allowed_paths=view_paths(('arguments',)))
         expected = task.view.model_dump(mode='json')
         if (request.server_module is not None or request.tool != route.tool or request.destination != route.destination or request.method != 'POST'
                 or request.headers != {} or json.dumps(request.arguments, sort_keys=True) != json.dumps(expected, sort_keys=True)):

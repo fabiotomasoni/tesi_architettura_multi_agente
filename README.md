@@ -97,6 +97,8 @@ Il report distingue valori trasformati, dati mancanti o non specificati e mostra
 
 Per provare un caso incompleto usare `C006_*`: manca il capitale del mutuo, quindi l'attività mercati viene bloccata e quella fiscale può proseguire. Conto e busta paga sono riconosciuti, ma non aggiungono ancora dati ai due scenari.
 
+Prima delle chiamate, il gateway applica anche un filtro locale per identificativi, entità e valori sensibili conosciuti della sessione. Il filtro può commettere errori e affianca le viste ridotte e i destinatari autorizzati; non garantisce anonimato assoluto.
+
 Il report esportato contiene importi esatti. La demo non conserva uno storico dei profili e non salva automaticamente i report sul server. Il prototipo non ha ancora tutti i controlli di sicurezza previsti dalla tesi: usare il dataset sintetico e mantenere i servizi accessibili solo localmente.
 
 ## Documentazione del progetto

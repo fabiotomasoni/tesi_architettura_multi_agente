@@ -836,3 +836,84 @@ S01 completato e rimosso dai residui per i due scenari e il catalogo locale attu
 Restano S02 (rilevazione generale di PII/valori vietati, normalizzazione e misure privacy/utilità), S03 (identità dei processi e isolamento di rete/host), S04 (ulteriori attacchi), R01/R03 e campagna sperimentale. I processi non sono ancora impediti a livello host dal tentare connessioni dirette: S01 non dimostra non aggirabilità, anonimato o soddisfacimento completo dei requisiti di sicurezza della tesi. Le fonti reali X01 restano disabilitate fino ai controlli previsti. Nessun commit creato.
 
 I servizi della demo dell’utente, rimasti aperti durante queste prove su porte diverse, devono essere riavviati per caricare il codice aggiornato. Non è necessario ripetere adesso le stesse prove per chiudere S01: la verifica integrata reale conclusiva è già acquisita e letta. Una conferma visiva nella demo resta possibile, distinta dalle evidenze sopra. Prossimo lavoro S02.
+
+## Step 40 — S02: filtro locale dei dati vietati e pilota indipendente
+
+### Perimetro autorizzato e collegamento alla tesi
+
+L’utente ha confermato di completare S02 dopo la review di S01 e del primo abbozzo privacy. RF-03 e la sezione 4.5 richiedono regole per identificativi, riconoscimento locale di entità e confronto con i valori sensibili della sessione, insieme alla misura degli errori del rilevatore. Implementato il filtro per i due scenari e il catalogo chiuso attuale. Nessuna fonte reale, modello remoto, dipendenza NER esterna o modifica dei calcoli aggiunta. Il report resta 0.8.0 e la policy delle viste 0.3.0; il filtro ha versione 0.2.0 e il riconoscitore `it-context-rules-0.1.0`.
+
+### Contesto e controlli
+
+`gateway/privacy.py` raccoglie in memoria importi e periodi del profilo e, dai soli PDF accettati, valori associati alle etichette del template, date, importi ed entità riconosciute. Per i nomi degli intestatari conserva anche le componenti significative per riconoscere riferimenti parziali. Non conserva una seconda copia dei PDF. Il contesto è associato alla sessione, rimosso insieme alle autorizzazioni alla chiusura, alla scadenza pigra e allo shutdown ordinario. Non è un database dei profili e non garantisce azzeramento fisico di RAM o swap.
+
+Il filtro combina candidati email, IBAN, codice fiscale e telefoni con riconoscimento euristico locale di persone, indirizzi e organizzazioni. Il riconoscitore usa indizi contestuali e maiuscole, senza chiamare servizi esterni. Non è un modello NER generale: nomi sconosciuti minuscoli senza contesto possono sfuggire, parole comuni e maiuscole possono causare falsi positivi. Questo limite è documentato e coperto da una prova che dimostra il mancato riconoscimento di un nome sconosciuto e il successivo rifiuto da parte del catalogo chiuso. Non si confonde quindi il rilevamento con la non divulgazione effettiva.
+
+Normalizzazione: Unicode NFKC, casefold, rimozione dei caratteri di formato, spazi, decodifica URL/HTML limitata; confronto degli importi con Decimal, varianti dei separatori e notazione scientifica; confronto delle date nelle forme ISO, giorno/mese/anno, giorno.mese.anno e compatte anno-mese-giorno/giorno-mese-anno. Non sono supportate tutte le possibili codifiche, abbreviazioni, alias o trasformazioni indirette.
+
+Scansione della vista prima della delega, delle richieste di autorizzazione MCP e delle richieste fonte (chiavi, argomenti, destinazione e intestazioni applicative), dell’evidenza autorizzata prima dell’inferenza. Il catalogo continua a ricostruire le richieste da contratti chiusi; i campi di controllo, le credenziali e gli identificativi opachi sono governati separatamente, non trattati come testo libero. I messaggi di errore contengono categorie, senza riportare i valori individuati. `/health` espone le versioni effettivamente caricate del filtro e del riconoscitore; le misure delle deleghe includono `privacy_version`.
+
+### Problemi trovati e risolti
+
+Il primo filtro confrontava ogni numero con gli importi documentali: un importo coincidente con un anno fiscale o un estremo di fascia bloccava la vista legittima. Le eccezioni sono ora limitate ai percorsi numerici autorizzati dei contratti (anno e fascia), con valori interi; non si applicano a stringhe, chiavi, intestazioni, campi aggiuntivi o testo libero. Il confronto esatto degli argomenti con la vista dell’incarico resta obbligatorio. Non esiste un’opzione del chiamante per disattivare la scansione.
+
+Una coincidenza tra un importo privato e il tasso pubblico simulato o tra una data documentale e la data della fixture non rende privata la provenienza della fixture: esclusioni mirate dei soli confronti sui valori noti si applicano a quei campi solo dopo verifica esatta contro il catalogo fidato. Il contenuto è comunque sottoposto alle regole per identificativi ed entità. Non sono autorizzate eccezioni generiche per nuove fonti.
+
+Nelle prove il riconoscitore iniziale univa parole su righe diverse e includeva etichette del PDF nei nomi; questo causava blocchi di richieste fiscali legittime. Corretti i confini di riga dei nomi, aggiunta una regressione specifica e ripetuti corpus e viste del dataset. Nessuna annotazione legittima è stata cambiata per nascondere il falso positivo.
+
+La costruzione del contesto PDF precede ora la registrazione della sessione: un errore di estrazione privacy non pubblica uno stato parziale/orfano e restituisce un messaggio locale senza il testo dell’eccezione.
+
+### Verifiche automatiche ed evidenze
+
+Suite completa finale: **290 passed, 106 warning**, 10.09 secondi. Gli avvisi rimangono visibili e riguardano i percorsi di libreria già monitorati; non sono stati soppressi. `pip check`: nessuna dipendenza incompatibile; `git diff --check` superato. Nessuna nuova dipendenza da installare.
+
+Il corpus `tests/fixtures/privacy_cases.json` contiene 35 sonde sintetiche annotate manualmente e versionate, senza generarle dall’elenco di valori trovato dal rilevatore. Include dati noti e parziali, entità nuove, codifiche, rappresentazioni numeriche/date, intestazioni, URL, chiavi e collisioni legittime. È una regressione pilota, non una valutazione indipendente finale su un corpus mai usato nello sviluppo. Le annotazioni appartengono al verificatore e non entrano nel gateway, nei prompt o negli strumenti.
+
+Eseguito `scripts/check_privacy.py --output runs/s02_privacy.json` e letto direttamente il JSON prodotto:
+
+- 26 sonde vietate rilevate, 0 mancate nel corpus annotato;
+- 9 sonde legittime accettate, 0 falsi blocchi nel corpus annotato;
+- 35 viste utilizzabili dei 25 fascicoli accettate, 0 blocchi;
+- `regression_passed: true`.
+
+Il report di prova conserva versioni, conteggi, ID ed esiti, senza includere payload, valori estratti o citazioni. Un errore di regressione produce un codice di uscita non zero. `runs/` rimane esclusa da Git. I conteggi rappresentano decisioni del rilevatore e non sono una misura generale di anonimizzazione o una campagna di divulgazioni reali.
+
+Le prove aggiunte verificano inoltre: collisioni di anno/fasce/tasso/data lungo broker → autorizzazione MCP → fonte → inferenza simulata; diniego di una richiesta con intestazione vietata prima dell’apertura del trasporto e prima di fonte/inferenza; mancato riflesso del dato negli errori; mantenimento dei vincoli del catalogo quando il riconoscitore non identifica un’entità; pulizia del contesto su cancellazione esplicita, scadenza e shutdown; nessuna sessione pubblicata dopo un errore nella costruzione del contesto. Le prove dell’intero stack A2A/ADK/MCP già presenti passano anche con il filtro attivo; Ollama è simulato nella suite ordinaria. Non è stata eseguita una nuova prova reale con Ollama in questo step.
+
+### Riproduzione e conferma manuale
+
+Dalla cartella della repository, terminale libero, macOS:
+
+1. `.venv/bin/python -m pytest -q` — attesi 290 test superati, salvo nuovi cambiamenti.
+2. `.venv/bin/python scripts/check_privacy.py --output runs/s02_privacy_manual.json` — attesi i conteggi sopra e `regression_passed: true`.
+3. Lasciare Ollama aperto; fermare con Ctrl+C e riavviare i tre servizi nominali con i comandi del README, un terminale per servizio. Rimuovere eventuale profilo MCP negativo prima di avviare il gateway.
+4. `.venv/bin/python scripts/run_multi_pilot.py --cases C001 C006 --repetitions 1 --output runs/s02_multi_manual.jsonl` — attesi C001 completed, C006 partial, `passed: True` e pulizia vera per entrambi. Nel file controllare anche versioni, errori, fasi e contatori; per C006 solo il ramo fiscale deve essere delegato.
+5. Per una conferma del report, caricare C001 dal browser, esportare il nuovo file e applicare i tre verificatori di provenienza, mutuo e riepilogo fiscale al nome effettivamente salvato. Non riutilizzare un report vecchio per verificare il nuovo codice.
+
+In Windows PowerShell sostituire `.venv/bin/python` con `.\.venv\Scripts\python.exe`; avvii completi nel README. Le nuove prove manuali dell’utente non sono ancora acquisite: non vengono dichiarate come eseguite. Le evidenze automatiche sopra sono già state eseguite e lette.
+
+### Chiusura e residui
+
+S02 completato per implementazione e pilota del catalogo locale attuale, rimosso dalle attività residue. La chiusura non estende il risultato a PDF generici, fonti remote o anonimato assoluto. Nuovi layout, lingue, categorie o adattatori richiedono nuove annotazioni, valutazione degli errori e controllo delle eccezioni. La conferma manuale del percorso con Ollama resta distinta dalle prove automatiche e potrà essere acquisita nel prossimo controllo.
+
+Restano S03 (isolamento e identità), S04 (attacchi ulteriori), R03 (tracciamento completo dei costi e degli esiti di scansione), E03–E06 (annotazioni e campagna finale privacy/utilità con dieci ripetizioni e vincolo assoluto di zero divulgazioni vietate). I risultati perfetti del piccolo corpus non soddisfano da soli la valutazione finale della tesi. Nessun servizio reale abilitato, nessun commit creato. Il prossimo incremento architetturale proposto è S03, da concordare nel suo perimetro prima di introdurre container e regole di rete.
+
+### Conferma manuale dei primi due controlli S02
+
+Acquisito e letto l’output della suite eseguita dall’utente: **290 passed, 106 warnings**, 9.90 secondi. Letto direttamente anche `runs/s02_privacy_manual.json`: filtro 0.2.0, riconoscitore it-context-rules-0.1.0, corpus s02-annotated-1; 26 veri positivi, 9 veri negativi, zero falsi positivi e falsi negativi nelle sonde annotate; 35 viste legittime e zero blocchi sul dataset; regression_passed vero. Esiti corrispondenti alla verifica automatica dello step. Nessuna nuova garanzia generale di anonimato ricavata da questi conteggi. Restano da acquisire il pilota manuale con i servizi riavviati e Ollama reale e l’eventuale nuovo report esportato; non ancora dichiarati come eseguiti.
+
+### Conferma manuale del percorso integrato S02
+
+Letti entrambi i record effettivi di `runs/s02_multi_manual.jsonl` dopo il riavvio dei servizi nominali eseguito dall’utente. C001 completed: entrambi i rami attraversano request_view, delegate_a2a e verify_result con esito completed e senza error_code; verifica Card, provenienza e fixture positiva, una chiamata MCP e una chiamata Ollama per ramo. I contatori del gateway per autorizzazione strumento, autorizzazione/completamento fonte e autorizzazione/completamento inferenza sono tutti a 1. `privacy_version` è 0.2.0 in entrambi i rami, policy 0.3.0, cataloghi strumenti/inferenza 0.1.0.
+
+C006 partial: S-01 blocked/input_not_ready già in request_view, senza fasi di delega e senza misure di chiamata; S-02 completed, senza errore, con filtro 0.2.0 e gli stessi controlli e contatori positivi del percorso nominale. Il ramo fiscale mantiene lo stesso agent_boot_id tra i due fascicoli. Entrambi i record hanno report_present, automatic_session_closed, cleanup_verified e passed veri.
+
+Acquisita la conferma manuale nominale con Ollama locale dopo S02; le fonti restano simulate. Il JSONL conferma il percorso strumentato e la pulizia gateway verificata dal runner; non dimostra da solo cancellazione fisica della memoria, pulizia degli store agenti o isolamento di rete. Non contiene il corpo del report: fedeltà dei contenuti del nuovo report esportato non ancora verificata in questa prova. Nessun problema emerso e nessuna correzione al codice richiesta. Un eventuale export C001 e i tre verificatori restano una conferma aggiuntiva del report; S03 rimane il prossimo incremento da concordare.
+
+### Conferma del report esportato dopo S02
+
+Letto direttamente `report-locale (1).json` fornito dall’utente: report 0.8.0, policy 0.3.0, C001, entrambi gli scenari completed senza errore. Eseguiti sul file effettivo i tre verificatori: dieci fatti documentali verificati con zero problemi; tutti i sei controlli mutuo e tutti i nove controlli fiscali veri.
+
+Esaminate anche completezza, fonti e sintesi: tipologia mutuo non specificata senza categoria inventata, nessun campo obbligatorio mancante, citazioni documentali presenti; fonti dichiarate simulate e non verificate nel mondo reale; sintesi deterministiche con riferimenti e prosa LLM esclusa. Tasso contrattuale e benchmark restano grandezze diverse; confronto economico solo ipotetico, quota fiscale usata sotto ipotesi esplicita, nessuna detrazione, spettanza o raccomandazione attestata. Non copiati importi o citazioni documentali nel diario.
+
+Acquisita anche la conferma del contenuto del nuovo report prevista dopo il pilota manuale: nessuna correzione richiesta. Il report da solo non certifica l’esecuzione del filtro o la pulizia; per queste proprietà rimangono distinte le evidenze JSONL e i test dello step. Chiusura S02 confermata nel perimetro documentato; prossimo incremento proposto S03, previa definizione del perimetro di isolamento e identità.

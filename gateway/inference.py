@@ -13,6 +13,7 @@ from uuid import UUID
 import httpx
 from pydantic import Field
 from .models import Contract
+from .privacy import SensitiveContext, check, PRIVACY_VERSION, view_paths
 from .a2a_egress import authorized_task, EgressDenied
 from .market_evidence import verify_evidence as verify_market
 from .tax_evidence import verify_evidence as verify_tax
@@ -57,10 +58,12 @@ class Grant:
 class InferenceBroker:
     def __init__(self):
         self._grants = {}
+        self._privacy = {}
         self._lock = RLock()
 
     async def delegate(self, session_id, task, remote):
         _, checked = authorized_task(task)
+        check(self._privacy.get(session_id,SensitiveContext()),checked.view.model_dump(mode='json'),allowed_paths=view_paths())
         token = token_hex(32)
         checked = checked.model_copy(update={'inference_token': token})
         with self._lock:
@@ -74,6 +77,7 @@ class InferenceBroker:
                                         'gateway_source_authorized':int(grant.source_used),
                                         'gateway_source_completed':int(grant.source_completed),
                                         'gateway_source_ms':grant.source_ms,
+                                        'privacy_version':PRIVACY_VERSION,
                                         'tool_catalog_version':'0.1.0',
                                         'inference_catalog_version': INFERENCE_CATALOG_VERSION})
             return result
@@ -83,6 +87,8 @@ class InferenceBroker:
 
     def revoke(self, session_id=None):
         with self._lock:
+            if session_id is None:self._privacy.clear()
+            else:self._privacy.pop(session_id,None)
             for key in list(self._grants):
                 if session_id is None or self._grants[key].session_id == session_id:
                     del self._grants[key]
@@ -99,6 +105,12 @@ class InferenceBroker:
                 evidence, _ = verify(request.evidence, task.view)
             except Exception:
                 raise EgressDenied('Evidenza inferenza non autorizzata') from None
+            inspected=evidence.model_dump(mode='json')
+            # Solo dopo verifica esatta del catalogo: origine pubblica simulata,
+            # anche se il numero/data coincide con un valore della sessione.
+            check(self._privacy.get(grant.session_id,SensitiveContext()),inspected,
+                  allowed_paths=view_paths(),
+                  public_paths=frozenset({('reference_date',),('annual_rate_percent',)}))
             # Anche un timeout consuma l'autorizzazione: nessun retry implicito.
             grant.used = True
         payload = {'model': MODELS[task.scenario], 'stream': False, 'keep_alive': 0,
