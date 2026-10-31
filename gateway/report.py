@@ -2,6 +2,7 @@
 from .policy import REQUIRED, OPTIONAL, POLICY_VERSION, make_view, issues
 from .models import Scenario
 from .agent_contracts import TaxView, MarketView, is_ecb_evidence
+from .ade_source import is_ade
 from .tax_evidence import faithful_summary
 from .market_evidence import faithful_summary as market_summary
 import hashlib
@@ -56,10 +57,16 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
             if scenario=='S-02':
                 # Il contesto atteso viene dal profilo locale, non dalla risposta dell'agente.
                 view=TaxView(tax_year=int(str(profile.tax_year.value)),purpose=profile.purpose.value)
+                real=is_ade(result['evidence'])
+                if real and result.get('measurements',{}).get('gateway_source_receipt_verified')!=1:
+                    raise ValueError('Ricevuta AdE del gateway assente')
                 checked=faithful_summary(result['evidence'],view)
                 faithful.append(checked)
                 limits.append(checked['limit'])
-                sources[-1]['verification']='authorized_fixture_content_checked'
+                sources[-1]['verification']='gateway_retrieval_and_publication_checked' if real else 'authorized_fixture_content_checked'
+                if real:
+                    sources[-1].pop('real_world_verified',None)
+                    sources[-1]['institutional_retrieval_verified']=True
                 sources[-1]['source_sha256']=checked['source_sha256']
                 evaluation.append({'scenario':scenario,'model':result['model'],
                     'free_text_included':False,'reason':'Prosa del modello non verificata; esclusa dalla sintesi fiscale.',
@@ -93,7 +100,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
         limits.append('Conflitti non risolti: conservate entrambe le provenienze; nessuna conclusione personalizzata autorizzata.')
     mortgage=compare_mortgage(profile,activities['S-01'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-01' in scenarios else None
     tax_application=apply_tax_scenario(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
-    return {'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.9.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
+    return {'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.10.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
         'consistency':consistency,'analysis_status':'unresolved_conflict' if consistency['unresolved_conflicts'] else 'no_conflict_in_registered_observations','completeness':completeness,'status':status,'requested_scenarios':scenarios,'document_data':document_data,'simulated_sources':[s for s in sources if s['evidence'].get('simulated') is True],
         'external_sources':[s for s in sources if s['evidence'].get('simulated') is False],
         'faithful_summaries':faithful,'model_evaluation':evaluation,'unverified_summaries':summaries,'outcomes':outcomes,'limits':list(dict.fromkeys(limits))}

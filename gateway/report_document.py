@@ -84,7 +84,7 @@ def render_report_document(report):
         parts.append('</tbody></table>')
     paragraph('Esito dell’analisi: ' + STATUSES.get(report.get('status'), str(report.get('status', 'Non disponibile'))))
     if report.get('external_sources'):
-        paragraph('Documenti del dataset sintetico. Il contesto mercati include una statistica istituzionale reale; i riferimenti fiscali, se presenti, restano simulati. Nessuna offerta personale o normativa fiscale reale verificata.')
+        paragraph('Documenti del dataset sintetico. Le fonti istituzionali recuperate e le eventuali fonti simulate sono distinte nelle citazioni. Nessuna offerta personale o spettanza fiscale attestata.')
     else:
         paragraph('Dati del dataset sintetico. Le fonti di questa versione sono simulate o non disponibili: questo documento non verifica offerte di mercato o normative reali.')
     heading('1. Attività e risultati disponibili')
@@ -158,7 +158,14 @@ def render_report_document(report):
         paragraph('Nessuna fonte utilizzabile disponibile per gli scenari richiesti.')
     for source in sources:
         evidence = source.get('evidence') or {}
-        if evidence.get('simulated') is False:
+        if evidence.get('source_id')=='ade-annual-mortgage-v1':
+            paragraph('Agenzia delle Entrate — istruzioni 730/'+str(evidence.get('publication_year'))+' per anno d’imposta '+str(evidence.get('tax_year'))+'. Edizione verificata, non valutazione della spettanza personale.')
+            paragraph('Recuperato: '+str(evidence.get('retrieved_at','')))
+            from .tax_publications import PUBLICATIONS
+            url=evidence.get('source_url','')
+            if url in {p['source_url'] for p in PUBLICATIONS.values()}:
+                parts.append('<p>Pubblicazione: <a href="'+text(url)+'" target="_blank" rel="noopener noreferrer">'+text(url)+'</a></p>')
+        elif evidence.get('simulated') is False:
             paragraph('BCE / Eurosistema — statistica istituzionale recuperata via HTTPS e controllata dal gateway. Non è un’offerta personalizzata.')
             paragraph('Serie: '+str(evidence.get('series_key','')))
             paragraph('Valore: '+number(evidence.get('annual_rate_percent',''))+' % annuo AAR/NDER; mese osservato: '+str(evidence.get('observation_period','')))

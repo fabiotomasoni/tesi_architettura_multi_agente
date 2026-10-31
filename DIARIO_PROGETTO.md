@@ -94,6 +94,32 @@ La verifica manuale dei report C001 e C006 conferma rispettivamente esito comple
 
 Aggiunte dieci regressioni su input mancanti, conflitti, periodicità non supportata, errori, evidenze assenti e parametri non supportati; esteso il controllo BCE. Suite completa: 383 passed, 106 warning; quattro test inizialmente impediti dal blocco delle connessioni locali sono passati dopo l’abilitazione. Il primo collegamento mercati reale è chiuso nel suo perimetro: statistica aggregata, non ricerca di offerte personali. Fiscalità reale e ruolo sostanziale dei modelli restano da completare; S04 fermo.
 
+## Modifica 46 — Verifica preliminare delle pubblicazioni fiscali
+
+Controllati i 25 PDF interessi: anni d’imposta 2024 (5) e 2025 (20); acquisto abitazione principale (17) e ristrutturazione (8). Recuperate direttamente via HTTPS due pubblicazioni ufficiali, entrambe HTTP 200 application/pdf: [730/2025](https://infoprecompilata.agenziaentrate.gov.it/portale/documents/10180/208302/730_2025_istruzioni.pdf), 168 pagine, per il 2024; [730/2026](https://infoprecompilata.agenziaentrate.gov.it/portale/documents/d/guest/730_istruzioni_2026.pdf), 175 pagine, per il 2025. Il secondo URL è collegato dalla pagina ufficiale del Quadro E. Verificati sezioni interessi, rigo E7, costruzione/ristrutturazione e appendici: pagine PDF 58–61 e 130–131 nel primo; 61–64 e 137–138 nel secondo (sezioni da acquisire integralmente).
+
+L’anno della dichiarazione non coincide con quello d’imposta; anche la data di stipula e gli eventuali subentri/rinegoziazioni incidono sui riferimenti. «Ristrutturazione» generica non prova i requisiti del mutuo per ristrutturazione edilizia dell’abitazione principale. Il prossimo incremento recupererà la pubblicazione annuale ammessa e citerà condizioni pertinenti senza attribuire automaticamente codici, detrazioni o spettanza. Anni non catalogati e fonte indisponibile dovranno produrre un limite esplicito, senza fallback simulato. Questa verifica non ha ancora collegato l’agente fiscale a Internet: configurazione e codice applicativo invariati.
+
+## Modifica 47 — Collegamento fiscale alle due pubblicazioni annuali
+
+Aggiunta modalità AdE esplicita: MCP richiede la fonte al gateway e il ponte recupera via HTTPS soltanto il PDF annuale autorizzato, senza dati del fascicolo. Anni 2024/2025 associati alle istruzioni 730/2025 e 730/2026; controllati formato, dimensione, URL senza redirect e digest delle edizioni già esaminate. Un PDF aggiornato richiede revisione del catalogo, non viene interpretato automaticamente. Estratti selezionati per contesto con pagine, anno e recupero; non sono una checklist esaustiva. Report 0.10.0 distingue fonti reali/simulate e mantiene la ripartizione ipotetica senza detrazione, codice assegnato o spettanza personale. Fonte assente, anno non supportato o ponte non abilitato: nessun fallback simulato.
+
+Il primo pilota ha evidenziato falsi blocchi privacy: numeri di pagina coincidenti con dati documentali e sottostringhe di nomi sintetici nel testo pubblico (Riva/rivalutazione). Corretto il trattamento delle citazioni immutabili, già confrontate esattamente con catalogo e ricevuta; invariato il rilevatore per i campi variabili. Regressioni includono collisioni e tentativi di alterare evidenza/ricevuta.
+
+**Verifiche:** 410 passed, 106 warning; 27 nuovi test fiscali, sintassi pagina controllata. Ripetizione reale Docker/A2A/MCP/gateway/ponte/AdE/Ollama: C001, C021 e C022 completed; C006 e C011 partial per input mancanti. Tutti i controlli fonte, aritmetica e cancellazione positivi; entrambe le annualità e finalità coperte. Evidenze locali in runs/ade_recovery_validation.jsonl e runs/ade_report_C*.json; il primo pilota fallito resta distinto in runs/ade_validation.jsonl. Da completare la prova manuale dell’utente. README e residui aggiornati; nessuna campagna finale o S04 avviata.
+
+## Modifica 48 — Verifica manuale C001 con entrambe le fonti reali
+
+Controllato report-locale-26.json esportato dall’utente: entrambi gli scenari completed, nessuna fixture, BCE coerente e AdE 730/2026 per anno d’imposta 2025 con citazioni alle pagine 61–62. Tutti i 9 controlli AdE e 13 BCE positivi; 10 fatti documentali verificati, zero problemi. Ripartizione soltanto ipotetica, nessuna detrazione/spettanza o convenienza attestata. Il JSON non dimostra da solo isolamento e pulizia, coperti dai test dedicati.
+
+La verifica ha scoperto un difetto nell’avvio diretto di check_tax_application.py: import del supporto valido come modulo ma non come script. Corretto per entrambe le modalità e aggiunta regressione in sottoprocesso con report reale di test. Controllo sul file utente ora interamente positivo; 39 test pertinenti superati, 13 warning. Nessuna modifica al report o ricostruzione dei container necessaria. Restano le prove manuali dell’altra annualità/finalità e degli esiti parziali.
+
+## Modifica 49 — Chiusura delle prove manuali del collegamento fiscale
+
+Controllati report-locale-27.json (C021) e report-locale-28.json (C011). C021 completed: anno d’imposta 2024, istruzioni 730/2025, citazioni per ristrutturazione con applicabilità non accertata; tutti i controlli AdE, BCE e aritmetici positivi, 10 fatti documentali verificati e zero problemi. C011 partial: mercati completati con BCE, fiscalità bloccata per annual_interest mancante; nessuna fonte/sintesi fiscale, ripartizione o ipotesi applicata inventata. Controlli BCE e fiscali positivi, 9 fatti verificati e zero problemi.
+
+Con C001 già verificato, le prove manuali coprono entrambe le annualità, acquisto/ristrutturazione ed esito parziale. Chiuso il collegamento alle due edizioni AdE nel perimetro concordato. Non è una verifica fiscale personale o una copertura esaustiva della normativa; indisponibilità/alterazione/anno fuori catalogo restano coperti dai test automatici. Nessuna nuova conclusione su isolamento o cancellazione ricavata dai soli JSON esportati. Restano ruolo sostanziale dei modelli, demo e valutazione della tesi; S04 fermo.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

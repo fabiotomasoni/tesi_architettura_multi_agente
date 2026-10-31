@@ -13,6 +13,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from gateway.agent_contracts import TaxTask, TaxResult, TaxEvidence
 
+from gateway.ade_source import is_ade
 from gateway.tax_evidence import verify_evidence
 
 MODEL = MODELS['S-02']
@@ -47,7 +48,7 @@ async def perform(task: TaxTask, *, mcp_module: str | None = None, budget_second
         summary = inference.summary
         return TaxResult(correlation_id=task.correlation_id, status='completed', evidence=evidence,
             summary=summary, model=MODEL, measurements={
-                'fixture_content_verified':1, 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1,
+                'source_content_verified':1, **({} if is_ade(evidence) else {'fixture_content_verified':1}), 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1,
                 'ollama_ms':inference.ollama_ms, 'inference_gateway_roundtrip_ms':round((perf_counter()-ollama_started)*1000, 3), 'ollama_calls':1, 'inference_via_gateway':1,
                 'prompt_tokens':inference.prompt_tokens, 'output_tokens':inference.output_tokens,
-                'model_load_ms':inference.model_load_ms}, limits=['Riferimenti fiscali inventati per test; nessuna normativa reale.', 'Sintesi generata dal modello e non verificata.', 'Nessun confronto economico personalizzato eseguito.'])
+                'model_load_ms':inference.model_load_ms}, limits=[('Pubblicazione AdE verificata; nessuna spettanza personale accertata.' if is_ade(evidence) else 'Riferimenti fiscali inventati per test; nessuna normativa reale.'), 'Sintesi generata dal modello e non verificata.', 'Nessun confronto economico personalizzato eseguito.'])

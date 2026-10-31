@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 from .models import Contract
 from .ecb_source import EcbRateEvidence
+from .ade_source import AdeEvidence
 
 
 class DurationBand(Contract):
@@ -101,7 +102,7 @@ class TaxEvidence(Contract):
 
 
 class TaxResult(MarketResult):
-    evidence: TaxEvidence | None = None
+    evidence: TaxEvidence | AdeEvidence | None = None
 
 
 class MarketEvidence:

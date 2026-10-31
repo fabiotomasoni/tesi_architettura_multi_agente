@@ -4,6 +4,7 @@ from .models import Scenario
 from .policy import issues, make_view
 from .agent_contracts import TaxView
 from .tax_evidence import verify_evidence
+from .ade_source import is_ade, LIMIT
 
 
 def apply_tax_scenario(profile, activity, *, has_conflicts=False):
@@ -27,6 +28,9 @@ def apply_tax_scenario(profile, activity, *, has_conflicts=False):
     if activity['status']!='completed' or not activity.get('result',{}).get('evidence'):
         return not_calculated('tax_evidence_unavailable')
     evidence,digest=verify_evidence(activity['result']['evidence'],TaxView.model_validate(make_view(profile,Scenario.TAX)))
+    real=is_ade(evidence)
+    if real:
+        base['limits']=[x for x in base['limits'] if 'Fonte simulata' not in x and 'fonti reali' not in x]+[LIMIT]
     interest=Decimal(str(profile.annual_interest.value));share=Decimal(str(profile.ownership_share.value))
     with localcontext() as ctx:
         ctx.prec=50
@@ -39,5 +43,5 @@ def apply_tax_scenario(profile, activity, *, has_conflicts=False):
             'hypothetical_allocation':{'formula':'annual_interest * ownership_share','amount_EUR':money(product),
                 'rounding':'ROUND_HALF_UP to 0.01 EUR after multiplication',
                 'origin':'derived_under_explicit_unverified_assumption','documented_as_personal_amount':False},
-            'source':{'source_id':evidence.source_id,'source_sha256':digest,'simulated':True,'reference':evidence.reference},
-            'conditions_to_verify':[{'text':text,'source_ref':f'{evidence.source_id}#conditions/{i}','real_world_verified':False} for i,text in enumerate(evidence.conditions)]}
+            'source':{'source_id':evidence.source_id,'source_sha256':digest,'simulated':evidence.simulated,**({'source_url':evidence.source_url,'publication_year':evidence.publication_year} if real else {'reference':evidence.reference})},
+            'conditions_to_verify':([{'text':LIMIT,'origin':'local_scope_limit','source_ref':None,'personal_requirements_verified':False}] if real else [{'text':text,'source_ref':f'{evidence.source_id}#conditions/{i}','real_world_verified':False} for i,text in enumerate(evidence.conditions)])}

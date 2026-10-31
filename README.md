@@ -161,3 +161,37 @@ Per controllare il JSON esportato nella modalità BCE:
 ```
 
 Il controllo verifica la coerenza con la risposta pubblica salvata nel report; non effettua una nuova consultazione Internet.
+
+## Pubblicazioni fiscali ufficiali
+
+È disponibile la consultazione delle istruzioni 730/2025 per l’anno d’imposta 2024 e 730/2026 per il 2025. Il gateway seleziona l’edizione annuale e controlla il PDF recuperato. Il report cita estratti e pagine, senza attribuire automaticamente un codice fiscale o una detrazione. La dicitura generica «ristrutturazione» non basta a stabilire i requisiti. Gli estratti non sono una checklist esaustiva; le condizioni personali restano da verificare.
+
+Fermare il ponte precedente con Ctrl+C, ricostruire l’immagine e avviare entrambe le fonti reali:
+
+```bash
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+docker compose -f compose.isolated.yaml -f compose.ecb.yaml -f compose.ade.yaml --profile verification up -d --no-build
+```
+
+Nel terminale separato, avviare un solo ponte:
+
+```bash
+# macOS
+.venv/bin/python scripts/run_ollama_bridge.py --enable-ecb --enable-ade
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/run_ollama_bridge.py --enable-ecb --enable-ade
+```
+
+Usare la stessa pagina locale. Se il documento ufficiale cambia, non è disponibile o l’anno non è supportato, l’attività fiscale fallisce esplicitamente senza sostituzioni simulate. Una nuova edizione richiede revisione del catalogo: «fonte ufficiale» non significa applicabilità personale verificata. La ripartizione interessi × quota resta un’ipotesi aritmetica. Per tornare alle fixture usare soltanto il file Compose base e il ponte senza flag.
+
+Controllo del JSON esportato (su Windows usare `.\.venv\Scripts\python.exe`):
+
+```bash
+.venv/bin/python scripts/check_ade_report.py report.json
+.venv/bin/python scripts/check_tax_application.py report.json
+```
+
+I controlli rigiocano la verifica locale del catalogo e dei dati: non sono una nuova consultazione Internet o una verifica della spettanza.

@@ -17,7 +17,7 @@ from .identity import HEADER, load_identity, matching_key, SCENARIO_ROLES
 from .ollama_bridge import OllamaBridge
 from .privacy import SensitiveContext, PRIVACY_VERSION, ENTITY_RECOGNIZER_VERSION
 from .inference import InferenceBroker, InferenceRequest
-from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request, MARKET_SOURCE
+from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request, MARKET_SOURCE, TAX_SOURCE
 from .a2a_egress import EgressDenied
 from .models import SessionInput, ViewRequest, Scenario
 from .pdf_input import extract_profile, PDFInputError
@@ -116,7 +116,7 @@ def create_app() -> FastAPI:
             kind=broker.bridge.kind(job_id)
             if kind is None:
                 return JSONResponse(status_code=409,content={'detail':'Incarico del ponte assente o terminato.'})
-            field='source_ms' if kind=='ecb_market_source' else 'ollama_ms'
+            field='source_ms' if kind in {'ecb_market_source','ade_tax_source'} else 'ollama_ms'
             ms=result.get(field)
             if result['error'] is None and (type(ms) not in (int,float) or not math.isfinite(ms) or ms < 0):
                 raise ValueError()
@@ -176,7 +176,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "policy_version": POLICY_VERSION,
-                "runtime_mode": runtime.MODE, "market_source": MARKET_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
+                "runtime_mode": runtime.MODE, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
     @app.post("/sessions", status_code=201)

@@ -39,11 +39,11 @@ class TaxAgent(BaseAgent):
         yield Event(author=self.name, content=types.Content(role='model', parts=[types.Part(text=result.model_dump_json())]))
 
 
-card = AgentCard(name='tax_agent', description='Ricerca fiscale simulata S-02', version='0.1.0',
+card = AgentCard(name='tax_agent', description='Contesto fiscale autorizzato S-02', version='0.1.0',
     url=AGENT_ENDPOINTS['S-02'], capabilities=AgentCapabilities(streaming=False),
     default_input_modes=['text/plain'], default_output_modes=['text/plain'],
-    skills=[AgentSkill(id='tax_context', name='Fiscalità simulata', description='Fixture inventata, non normativa fiscale.', tags=['S-02'])])
-agent = TaxAgent(name='tax_agent', description='Agente mercati locale con risultati simulati')
+    skills=[AgentSkill(id='tax_context', name='Riferimenti fiscali', description='Fonti fiscali autorizzate dal gateway; nessuna spettanza automatica.', tags=['S-02'])])
+agent = TaxAgent(name='tax_agent', description='Agente fiscale locale con fonti autorizzate')
 
 # Demo a richiesta singola: niente cronologia ADK o task A2A dopo la risposta.
 # Le continuazioni multi-turno e tasks/get non fanno parte di questo incremento.

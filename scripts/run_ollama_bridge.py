@@ -13,6 +13,7 @@ from gateway.agent_contracts import MarketView, TaxView
 from gateway.ecb_source import (BRIDGE_JOB, REAL_MARKET_PROMPT, PublicObservation, fetch_ecb)
 from gateway.market_evidence import verify_evidence as market
 from gateway.tax_evidence import verify_evidence as tax
+from gateway.ade_source import REAL_TAX_PROMPT, fetch_ade, source_job, publication, selected_quotes
 
 BASE='http://127.0.0.1:8080'
 OLLAMA='http://127.0.0.1:11434/api/chat'
@@ -27,7 +28,12 @@ def validate_payload(payload):
     messages=payload['messages']
     evidence=json.loads(messages[1]['content'])
     real=scenario=='S-01' and messages[0].get('content')==REAL_MARKET_PROMPT
-    if real:
+    real_tax=scenario=='S-02' and messages[0].get('content')==REAL_TAX_PROMPT
+    if real_tax:
+        p=publication(evidence.get('tax_year'))
+        if not any(evidence=={'source_id':'ade-annual-mortgage-v1','simulated':False,'tax_year':p['tax_year'],'publication_year':p['publication_year'],'quotes':selected_quotes(p['tax_year'],purpose)} for purpose in ('primary_home_purchase','renovation','other')):
+            raise ValueError('Proiezione AdE difforme')
+    elif real:
         parsed=PublicObservation.model_validate(evidence)
         if evidence!=parsed.model_dump(mode='json'):raise ValueError('Proiezione BCE non canonica')
     elif scenario=='S-01':
@@ -40,7 +46,7 @@ def validate_payload(payload):
         tax(evidence,view)
     expected={'model':MODELS[scenario],'stream':False,'keep_alive':0,
               'options':{'num_ctx':4096,'num_predict':200,'temperature':0},
-              'messages':[{'role':'system','content':REAL_MARKET_PROMPT if real else PROMPTS[scenario]},
+              'messages':[{'role':'system','content':REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[scenario]},
                           {'role':'user','content':messages[1]['content']}]}
     if scenario=='S-02':expected['think']=False
     if payload!=expected:
@@ -48,7 +54,12 @@ def validate_payload(payload):
     return payload
 
 
-async def execute_payload(payload, model, enable_ecb=False):
+async def execute_payload(payload, model, enable_ecb=False, enable_ade=False):
+    if payload.get('kind')=='ade_tax_source':
+        if not enable_ade or payload!=source_job(payload.get('tax_year')):
+            raise ValueError('Richiesta AdE non autorizzata')
+        body,source_ms=await fetch_ade(payload['tax_year'])
+        return body,None,source_ms
     if payload.get('kind')=='ecb_market_source':
         if not enable_ecb or payload!=BRIDGE_JOB:
             raise ValueError('Fonte BCE non abilitata o richiesta difforme')
@@ -62,7 +73,7 @@ async def execute_payload(payload, model, enable_ecb=False):
     return response.json(),round((perf_counter()-started)*1000,3),None
 
 
-async def worker(key, enable_ecb=False):
+async def worker(key, enable_ecb=False, enable_ade=False):
     async with httpx.AsyncClient(trust_env=False,follow_redirects=False,timeout=25,headers={'x-tesi-service-key':key}) as gateway:
         async with httpx.AsyncClient(trust_env=False,follow_redirects=False,timeout=90) as model:
             while True:
@@ -77,7 +88,7 @@ async def worker(key, enable_ecb=False):
                     continue
                 body=None;error=None;ollama_ms=None;source_ms=None
                 try:
-                    body,ollama_ms,source_ms=await execute_payload(job['payload'],model,enable_ecb)
+                    body,ollama_ms,source_ms=await execute_payload(job['payload'],model,enable_ecb,enable_ade)
                 except (TimeoutError,httpx.TimeoutException):error='timeout'
                 except Exception:error='unavailable'
                 try:
@@ -88,19 +99,21 @@ async def worker(key, enable_ecb=False):
                     print('Risultato non consegnato; nessun retry dell’inferenza.',flush=True)
 
 
-async def main(enable_ecb=False):
+async def main(enable_ecb=False, enable_ade=False):
     identity=json.loads((ROOT/'.local/s03/bridge.json').read_text())
     if identity['role']!='bridge':raise RuntimeError('Identità ponte non valida')
     key=identity['keys']['bridge']
     from gateway.runtime import ISOLATED
     if ISOLATED:raise RuntimeError('Il ponte deve essere eseguito sull’host, fuori dai container')
     print('Ponte locale attivo; fonte BCE '+('abilitata' if enable_ecb else 'disabilitata')+'. Nessun contenuto degli incarichi viene stampato.',flush=True)
-    await asyncio.gather(worker(key,enable_ecb),worker(key,enable_ecb))
+    print('Fonte AdE '+('abilitata' if enable_ade else 'disabilitata')+'.',flush=True)
+    await asyncio.gather(worker(key,enable_ecb,enable_ade),worker(key,enable_ecb,enable_ade))
 
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--enable-ecb',action='store_true',help='Abilita soltanto la richiesta pubblica BCE del catalogo.')
+    parser.add_argument('--enable-ade',action='store_true',help='Abilita solo le due pubblicazioni fiscali annuali del catalogo.')
     args=parser.parse_args()
-    try:asyncio.run(main(args.enable_ecb))
+    try:asyncio.run(main(args.enable_ecb,args.enable_ade))
     except KeyboardInterrupt:pass

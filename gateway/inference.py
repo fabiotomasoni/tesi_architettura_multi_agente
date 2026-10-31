@@ -20,6 +20,7 @@ from .market_evidence import verify_evidence as verify_market
 from .ecb_source import REAL_MARKET_PROMPT, public_prompt_data
 from .agent_contracts import is_ecb_evidence
 from .tax_evidence import verify_evidence as verify_tax
+from .ade_source import is_ade, REAL_TAX_PROMPT, prompt_data as tax_prompt_data
 
 OLLAMA_ENDPOINT = 'http://127.0.0.1:11434/api/chat'
 INFERENCE_CATALOG_VERSION = '0.1.0'
@@ -79,8 +80,8 @@ class InferenceBroker:
             self._grants[token] = grant
         try:
             result = await remote(checked)
-            from .tool_egress import MARKET_SOURCE
-            if checked.scenario=='S-01' and getattr(result,'status',None)=='completed' and (MARKET_SOURCE=='ecb' or is_ecb_evidence(result.evidence)):
+            from .tool_egress import MARKET_SOURCE, TAX_SOURCE
+            if getattr(result,'status',None)=='completed' and ((checked.scenario=='S-01' and (MARKET_SOURCE=='ecb' or is_ecb_evidence(getattr(result,'evidence',None)))) or (checked.scenario=='S-02' and (TAX_SOURCE=='ade' or is_ade(getattr(result,'evidence',None))))):
                 if (not grant.source_completed or grant.source_evidence is None or result.evidence is None
                         or result.evidence.model_dump(mode='json') != grant.source_evidence):
                     raise EgressDenied('Risultato BCE difforme dalla ricevuta del gateway')
@@ -96,7 +97,7 @@ class InferenceBroker:
                                         'privacy_version':PRIVACY_VERSION,
                                         'runtime_mode':runtime.MODE,
                                         'workload_identity_enforced':int(runtime.ISOLATED),
-                                        'tool_catalog_version':'0.2.0',
+                                        'tool_catalog_version':'0.3.0',
                                         'inference_catalog_version': INFERENCE_CATALOG_VERSION})
             if grant.source_ms is not None:
                 result.measurements['gateway_source_ms']=grant.source_ms
@@ -127,21 +128,25 @@ class InferenceBroker:
                 evidence, _ = verify(request.evidence, task.view)
             except Exception:
                 raise EgressDenied('Evidenza inferenza non autorizzata') from None
+            real_tax=request.scenario=='S-02' and is_ade(evidence)
             real = request.scenario=='S-01' and is_ecb_evidence(evidence)
-            if real and (not grant.source_completed or evidence.model_dump(mode='json') != grant.source_evidence):
+            if (real or real_tax) and (not grant.source_completed or evidence.model_dump(mode='json') != grant.source_evidence):
                 raise EgressDenied('Evidenza BCE non recuperata dal gateway')
-            inspected=public_prompt_data(evidence) if real else evidence.model_dump(mode='json')
+            inspected=tax_prompt_data(evidence) if real_tax else public_prompt_data(evidence) if real else evidence.model_dump(mode='json')
             # Solo dopo verifica esatta del catalogo: origine pubblica simulata,
             # anche se il numero/data coincide con un valore della sessione.
-            check(self._privacy.get(grant.session_id,SensitiveContext()),inspected,
+            # Gli estratti pubblici sono già confrontati esattamente con catalogo e ricevuta.
+            # Non sono testo del fascicolo: sottostringhe come Riva/rivalutazione non sono divulgazioni.
+            privacy_payload={k:v for k,v in inspected.items() if k!='quotes'} if real_tax else inspected
+            check(self._privacy.get(grant.session_id,SensitiveContext()),privacy_payload,
                   allowed_paths=view_paths(),
-                  public_paths=frozenset({('reference_date',),('annual_rate_percent',),('observation_period',),('series_key',)}))
+                  public_paths=frozenset({('reference_date',),('annual_rate_percent',),('observation_period',),('series_key',),('tax_year',),('publication_year',),('quotes',0,'text'),('quotes',1,'text'),('quotes',2,'text'),('quotes',0,'page'),('quotes',1,'page'),('quotes',2,'page')}))
             # Anche un timeout consuma l'autorizzazione: nessun retry implicito.
             grant.used = True
         payload = {'model': MODELS[task.scenario], 'stream': False, 'keep_alive': 0,
                    'options': {'num_ctx': 4096, 'num_predict': 200, 'temperature': 0},
-                   'messages': [{'role': 'system', 'content': REAL_MARKET_PROMPT if real else PROMPTS[task.scenario]},
-                                {'role': 'user', 'content': json.dumps(inspected if real else evidence.model_dump(mode='json'))}]}
+                   'messages': [{'role': 'system', 'content': REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[task.scenario]},
+                                {'role': 'user', 'content': json.dumps(inspected)}]}
         if task.scenario == 'S-02':
             payload['think'] = False
         seconds = min(90, (task.deadline - datetime.now(timezone.utc)).total_seconds())

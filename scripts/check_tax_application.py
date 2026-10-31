@@ -22,7 +22,14 @@ def verify(report):
     checks['context_preserved']=context['tax_year']==int(facts['tax_year']['value']) and context['purpose']==facts['purpose']['value']
     checks['hypothetical_product']=Fraction(application['hypothetical_allocation']['amount_EUR'])*100==rounded
     checks['not_documented_personal_amount']=application['hypothetical_allocation']['documented_as_personal_amount'] is False
-    checks['simulated_source']=application['source']['simulated'] is True
+    if application['source']['simulated'] is False:
+        if __package__ in (None, ''):
+            from check_ade_report import verify as verify_source
+        else:
+            from .check_ade_report import verify as verify_source
+        checks['official_source_checked']=all(verify_source(report).values())
+    else:
+        checks['simulated_source']=application['source']['simulated'] is True
     checks['assumptions_present']=bool(application['assumptions']) and bool(application['limits'])
     return checks
 

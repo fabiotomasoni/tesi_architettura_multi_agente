@@ -20,7 +20,11 @@ from .a2a_egress import EgressDenied, authorized_task
 from .market_evidence import expected_evidence as market
 from .tax_evidence import expected_evidence as tax
 
-TOOL_CATALOG_VERSION = '0.2.0'
+from .ade_source import DESTINATION as ADE_DESTINATION, source_job, publication, AdeEvidence, verify_ade, selected_quotes
+TAX_SOURCE=os.environ.get('TESI_TAX_SOURCE','simulated')
+if TAX_SOURCE not in {'simulated','ade'} or TAX_SOURCE=='ade' and not runtime.ISOLATED:
+    raise RuntimeError('Fonte fiscale non autorizzata per questa modalità')
+TOOL_CATALOG_VERSION = '0.3.0'
 MARKET_SOURCE = os.environ.get('TESI_MARKET_SOURCE','simulated')
 if MARKET_SOURCE not in {'simulated','ecb'}:
     raise RuntimeError('Fonte mercati non riconosciuta')
@@ -38,14 +42,14 @@ class ToolRoute:
 
 TOOL_ROUTES = MappingProxyType({
     'S-01': ToolRoute('services.rates_mcp', 'lookup_rates', ECB_DESTINATION if MARKET_SOURCE=='ecb' else 'fixture://simulated-rates-v1'),
-    'S-02': ToolRoute('services.tax_mcp', 'lookup_tax', 'fixture://simulated-tax-v1'),
+    'S-02': ToolRoute('services.tax_mcp', 'lookup_tax', ADE_DESTINATION if TAX_SOURCE=='ade' else 'fixture://simulated-tax-v1'),
 })
 
 
 # Selezione esplicita all'avvio del gateway delle fixture negative già presenti.
 # Non proviene da Card, richieste HTTP o output del modello.
 _profile = os.environ.get('TESI_MCP_PROFILE', 'nominal')
-if MARKET_SOURCE=='ecb' and _profile!='nominal':
+if (MARKET_SOURCE=='ecb' or TAX_SOURCE=='ade') and _profile!='nominal':
     raise RuntimeError('Fixture negative non ammesse insieme alla fonte reale')
 if _profile != 'nominal':
     _profiles = {
@@ -125,6 +129,20 @@ async def source_request(broker, request, authorization):
         if route.destination != expected_destination:
             raise EgressDenied('Fixture non configurata')
         evidence = (market if task.scenario == 'S-01' else tax)(task.view).model_dump(mode='json')
+    elif route.destination == ADE_DESTINATION:
+        if task.scenario!='S-02' or not runtime.ISOLATED or broker.bridge is None:
+            raise EgressDenied('Percorso AdE non autorizzato')
+        p=publication(task.view.tax_year)
+        wire={'method':'GET','url':p['source_url'],'headers':{'accept':'application/pdf','accept-encoding':'identity'}}
+        check(broker._privacy.get(grant.session_id,SensitiveContext()),wire,public_paths=frozenset({('url',),('headers','accept'),('headers','accept-encoding')}))
+        seconds=min(30,(task.deadline-datetime.now(timezone.utc)).total_seconds())
+        reply=await broker.bridge.infer(source_job(task.view.tax_year),seconds)
+        body=reply['body']
+        if set(body)!=set(p)|{'retrieved_at'} or any(body[k]!=v for k,v in p.items()):
+            raise EgressDenied('Ricevuta pubblicazione AdE difforme')
+        parsed,_=verify_ade({'source_id':'ade-annual-mortgage-v1','simulated':False,**body,'quotes':selected_quotes(task.view.tax_year,task.view.purpose),'purpose':task.view.purpose},task.view)
+        evidence=parsed.model_dump(mode='json')
+        grant.external_http_ms=reply['source_ms'];grant.external_http_requests=1
     elif route.destination == ECB_DESTINATION:
         if task.scenario!='S-01' or not runtime.ISOLATED or broker.bridge is None:
             raise EgressDenied('Percorso BCE non autorizzato')
