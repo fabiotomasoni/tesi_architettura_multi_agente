@@ -46,7 +46,7 @@ Per V-05/V-10 bastano attacchi rappresentativi e controlli positivi, non interi 
 
 Riferimenti: RNF-08, RQ1–RQ3, sezioni 3.5/4.6, capitoli 5–6.
 
-Preparare baseline equivalente e S+P, M+P, S−P, M−P, mantenendo ingresso, instradamento, isolamento e budget confrontabili. Fissare ruolo/pesi dei modelli, versioni, annotazioni, rubriche umane, tolleranze e soglie prima della campagna. Il vecchio endpoint del solo agente mercati non è la baseline.
+Implementati i primi profili pilota S+P/M+P: un servizio ADK generalista con un incarico A2A contro due specialisti, stesso modello llama3.2:3b, fixture, policy attiva, budget di sessione 120 secondi e attività sequenziali in entrambi. Identità e configurazione demo separate; risultati per scenario e report invariati. Verifica manuale dei due profili completata sui cinque casi pilota (una ripetizione ciascuno), con esiti e risultati strutturati coincidenti. Restano S−P/M−P, la copertura finale dei casi e le condizioni complete di confronto. Fissare ruolo/pesi dei modelli, versioni, annotazioni, rubriche umane, tolleranze e soglie prima della campagna. Il vecchio endpoint del solo agente mercati non è la baseline.
 
 Eseguire le **dieci sessioni indipendenti per caso e configurazione** previste dalla tesi. Nel confronto principale tutte le configurazioni usano gli stessi dati sintetici, modelli locali e risposte locali/simulate fissate. Le prove Internet della demo restano separate; senza minimizzazione nessun servizio reale è raggiungibile. Misurare privacy/utilità, qualità, tempi/token/costi, media e varianza campionaria, conteggi/tassi e zero divulgazioni vietate come vincolo assoluto. Distinguere stime e spese osservate.
 

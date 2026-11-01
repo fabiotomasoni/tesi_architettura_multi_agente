@@ -11,7 +11,7 @@ from secrets import compare_digest
 from . import runtime
 
 HEADER = 'x-tesi-service-key'
-SCENARIO_ROLES = {'S-01': 'markets', 'S-02': 'tax'}
+SCENARIO_ROLES = ({'S-01':'generalist','S-02':'generalist','BATCH':'generalist'} if runtime.SINGLE else {'S-01': 'markets', 'S-02': 'tax'})
 
 
 def load_identity():
@@ -20,11 +20,13 @@ def load_identity():
         raise RuntimeError('Identità del componente non configurata')
     try:
         data = json.loads(Path(path).read_text())
-        if data['role'] not in {'gateway', 'markets', 'tax', 'bridge'}:
+        if data['role'] not in {'gateway', 'markets', 'tax', 'bridge','generalist'}:
             raise ValueError()
         expected = {'gateway': {'gateway_to_markets','gateway_to_tax','markets_to_gateway','tax_to_gateway','bridge'},
                     'markets': {'gateway_to_markets','markets_to_gateway'},
                     'tax': {'gateway_to_tax','tax_to_gateway'}, 'bridge': {'bridge'}}
+        expected['generalist']={'gateway_to_generalist','generalist_to_gateway'}
+        if runtime.SINGLE:expected['gateway']={'gateway_to_generalist','generalist_to_gateway','bridge'}
         if set(data['keys']) != expected[data['role']]:
             raise ValueError()
         if not data['keys'] or any(not re.fullmatch(r'[0-9a-f]{64}', key) for key in data['keys'].values()):

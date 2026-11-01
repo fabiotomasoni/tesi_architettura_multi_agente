@@ -146,6 +146,22 @@ Controllati report-locale-33/34/35.json (versione 0.12.0). C001 completed: 6 con
 
 C011 partial: mercati completati, fiscalità bloccata per annual_interest mancante. Profilo disponibile conservato senza inventare il dato assente, condizioni vuote, nessuna fonte fiscale o ripartizione. Controlli pertinenti positivi, 9 fatti verificati e zero problemi. Chiuso l’incremento selettivo S-02 nel perimetro concordato; non è una verifica esaustiva della normativa o della spettanza. Nessuna nuova evidenza di isolamento/pulizia dedotta dai soli report. S04 fermo.
 
+## Modifica 54 — Baseline S+P e profilo comparabile M+P
+
+Seguendo 3.5/4.6, aggiunto un solo agente ADK generalista per S-01/S-02: un incarico A2A aggregato con capability separate per attività, accesso diretto agli stessi MCP e risultati distinti. Riutilizzati gateway, estrazione, policy, validatori, calcoli e report. Identità generalista/gateway/ponte separate da quelle della demo; container non privilegiato nello slot di rete già previsto, specialista fiscale non avviato nella configurazione singola. Nessuna nuova uscita di rete.
+
+Profili sperimentali espliciti single/multi: fixture nominali fissate, llama3.2:3b per entrambe le attività, parametri invariati e keep_alive=0. Attività sequenziali e scadenza comune di sessione a 120 secondi in entrambi; il profilo demo conserva modelli e concorrenza. Fonti Internet e avvio del gateway sperimentale senza isolamento rifiutati. La prosa LLM resta esclusa: il pilota misura soprattutto coordinamento/costi/robustezza, senza presumere un vantaggio qualitativo.
+
+**Verifiche:** 473 passed, 106 warning; 13 nuove regressioni su profili, contratti, identità, ponte, esiti parziali e comparatore. Prove reali Docker/A2A/MCP/Ollama, una ripetizione per configurazione: C001/C024 completed; C006/C011/C016 partial, controlli e pulizia positivi. Pesi con digest uguale e risultati strutturati coincidenti sui cinque casi. Nei casi completi: singolo = una delega e stesso boot ID; multi = due deleghe e due boot ID; entrambi due MCP/due inferenze. La delega comune è contata dal coordinatore, non duplicata per risultato. Artefatti locali runs/baseline_single_validation.jsonl e runs/baseline_multi_validation.jsonl, check_baseline_pilot positivo. Ripristinata demo BCE/AdE su 8080 e fermati solo i ponti di verifica temporanei.
+
+README e residui aggiornati; script pilota conserva soltanto metadati, digest e controlli, senza prosa o dati documentali. Da completare prova manuale guidata. Non sono implementati S−P/M−P, campagna finale, rubriche/soglie o dieci ripetizioni; i tempi pilota non dimostrano superiorità. S04 fermo.
+
+## Modifica 55 — Confronto manuale dei piloti S+P/M+P
+
+Verificati runs/baseline_single_manual.jsonl e runs/baseline_multi_manual.jsonl: cinque righe ciascuno, senza duplicati; stessi casi, pesi del modello, impostazioni e risultati strutturati. C001/C024 completed, C006/C011/C016 partial in entrambi; controlli, finalizzazione e cancellazione positivi. check_baseline_pilot.py: passed True. Nei casi completi una delega A2A e un’identità di agente nel singolo, due deleghe e identità distinte nel multi; due chiamate MCP e due inferenze in entrambi. Nei parziali una sola attività eseguibile: una delega, un MCP e un’inferenza.
+
+Chiusa la verifica manuale dei primi profili S+P/M+P. Una ripetizione per caso e configurazione è un pilota, non la campagna della tesi; i tempi osservati non dimostrano superiorità. Prosa LLM esclusa dal report e nessuna valutazione umana della qualità ancora eseguita. Restano S−P/M−P, copertura delle verifiche, annotazioni/rubriche/soglie e dieci ripetizioni finali. S04 fermo.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

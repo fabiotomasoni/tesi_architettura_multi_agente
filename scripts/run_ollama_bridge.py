@@ -20,11 +20,19 @@ OLLAMA='http://127.0.0.1:11434/api/chat'
 ROOT=Path(__file__).resolve().parents[1]
 
 
+def messages_prompt(payload):
+    return payload.get('messages',[{}])[0].get('content')
+
+
 def validate_payload(payload):
     # Controllo aggiuntivo del ponte: non è un proxy HTTP generico né una API Ollama.
     if not isinstance(payload,dict) or payload.get('model') not in MODELS.values():
         raise ValueError('Modello non autorizzato')
-    scenario=next(k for k,v in MODELS.items() if v==payload['model'])
+    from gateway import runtime
+    if runtime.EXPERIMENT!='off':
+        scenario=next((s for s in MODELS if messages_prompt(payload)==PROMPTS[s]),None)
+        if scenario is None or payload['model']!=MODELS[scenario]:raise ValueError('Prompt sperimentale fuori catalogo')
+    else:scenario=next(k for k,v in MODELS.items() if v==payload['model'])
     messages=payload['messages']
     evidence=json.loads(messages[1]['content'])
     real=scenario=='S-01' and messages[0].get('content')==REAL_MARKET_PROMPT
@@ -48,13 +56,16 @@ def validate_payload(payload):
               'options':{'num_ctx':4096,'num_predict':200,'temperature':0},
               'messages':[{'role':'system','content':REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[scenario]},
                           {'role':'user','content':messages[1]['content']}]}
-    if scenario=='S-02':expected['think']=False
+    if scenario=='S-02' and runtime.EXPERIMENT=='off':expected['think']=False
     if payload!=expected:
         raise ValueError('Payload non autorizzato')
     return payload
 
 
 async def execute_payload(payload, model, enable_ecb=False, enable_ade=False):
+    from gateway import runtime
+    if runtime.EXPERIMENT!='off' and payload.get('kind') in {'ade_tax_source','ecb_market_source'}:
+        raise ValueError('Fonti reali vietate nella sperimentazione')
     if payload.get('kind')=='ade_tax_source':
         if not enable_ade or payload!=source_job(payload.get('tax_year')):
             raise ValueError('Richiesta AdE non autorizzata')
@@ -100,7 +111,9 @@ async def worker(key, enable_ecb=False, enable_ade=False):
 
 
 async def main(enable_ecb=False, enable_ade=False):
-    identity=json.loads((ROOT/'.local/s03/bridge.json').read_text())
+    from gateway import runtime
+    if runtime.EXPERIMENT!='off' and (enable_ecb or enable_ade):raise RuntimeError('Nessuna fonte reale nel profilo comparativo')
+    identity=json.loads((ROOT/('.local/baseline' if runtime.SINGLE else '.local/s03')/'bridge.json').read_text())
     if identity['role']!='bridge':raise RuntimeError('Identità ponte non valida')
     key=identity['keys']['bridge']
     from gateway.runtime import ISOLATED

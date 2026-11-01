@@ -26,6 +26,8 @@ if TAX_SOURCE not in {'simulated','ade'} or TAX_SOURCE=='ade' and not runtime.IS
     raise RuntimeError('Fonte fiscale non autorizzata per questa modalità')
 TOOL_CATALOG_VERSION = '0.3.0'
 MARKET_SOURCE = os.environ.get('TESI_MARKET_SOURCE','simulated')
+if runtime.EXPERIMENT!='off' and (MARKET_SOURCE!='simulated' or TAX_SOURCE!='simulated' or os.environ.get('TESI_MCP_PROFILE','nominal')!='nominal'):
+    raise RuntimeError('Il profilo comparativo ammette soltanto fixture nominali fissate')
 if MARKET_SOURCE not in {'simulated','ecb'}:
     raise RuntimeError('Fonte mercati non riconosciuta')
 if MARKET_SOURCE=='ecb' and not runtime.ISOLATED:

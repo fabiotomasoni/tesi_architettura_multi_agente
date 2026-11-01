@@ -24,7 +24,7 @@ from .ade_source import is_ade, REAL_TAX_PROMPT, prompt_data as tax_prompt_data
 
 OLLAMA_ENDPOINT = 'http://127.0.0.1:11434/api/chat'
 INFERENCE_CATALOG_VERSION = '0.1.0'
-MODELS = MappingProxyType({'S-01': 'llama3.2:3b', 'S-02': 'qwen3:1.7b'})
+MODELS = MappingProxyType({'S-01': 'llama3.2:3b', 'S-02': 'llama3.2:3b' if runtime.EXPERIMENT!='off' else 'qwen3:1.7b'})
 PROMPTS = {
     'S-01': 'Scrivi in italiano due frasi che descrivono la fixture simulata. Non dare consigli, non dichiarare convenienza e non inventare informazioni. Specifica che non sono dati di mercato reali.',
     'S-02': 'Scrivi in italiano due frasi che descrivono la fixture simulata. Non dare consigli, non dichiarare convenienza e non inventare informazioni. Specifica che sono riferimenti fiscali inventati per test, non normativa reale. Non dichiarare diritti a detrazioni. /no_think',
@@ -147,7 +147,7 @@ class InferenceBroker:
                    'options': {'num_ctx': 4096, 'num_predict': 200, 'temperature': 0},
                    'messages': [{'role': 'system', 'content': REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[task.scenario]},
                                 {'role': 'user', 'content': json.dumps(inspected)}]}
-        if task.scenario == 'S-02':
+        if task.scenario == 'S-02' and runtime.EXPERIMENT=='off':
             payload['think'] = False
         seconds = min(90, (task.deadline - datetime.now(timezone.utc)).total_seconds())
         started = perf_counter()

@@ -231,3 +231,63 @@ Verifica del JSON esportato:
 ```
 
 Il controllo verifica coerenza con i dati documentali, selezione delle condizioni, citazioni del catalogo e assenza di spettanza attribuita. Non effettua una nuova consultazione Internet né certifica il diritto fiscale.
+
+## Pilota a singolo agente e multi-agente
+
+La baseline usa un agente generalista per S-01 e S-02. Il confronto preliminare usa gli stessi PDF, gateway, controlli, calcoli e report; fonti simulate fissate e `llama3.2:3b` per tutte le attività. Entrambe le organizzazioni eseguono le attività in sequenza, con budget totale di sessione di 120 secondi. Non è la campagna finale e non include la modalità senza minimizzazione.
+
+Prima di cambiare configurazione, attendere la fine delle analisi, fermare il ponte con Ctrl+C e arrestare i container della demo:
+
+```bash
+docker compose -f compose.isolated.yaml --profile verification down
+```
+
+Preparare una volta le identità della baseline (le identità della demo restano separate):
+
+```bash
+# macOS
+.venv/bin/python scripts/setup_baseline.py
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/setup_baseline.py
+```
+
+Dopo aver costruito l’immagine come per la demo, avviare **una sola configurazione**:
+
+```bash
+# Singolo agente
+docker compose -f compose.isolated.yaml -f compose.experiment-single.yaml up -d --no-build
+```
+
+Nel terminale separato, mantenendo Ollama aperto:
+
+```bash
+.venv/bin/python scripts/run_experiment_bridge.py --organization single
+```
+
+Nel terminale dei test:
+
+```bash
+.venv/bin/python scripts/run_baseline_pilot.py --organization single --output runs/baseline_single_manual.jsonl
+```
+
+Per passare al multi-agente, fermare il ponte, arrestare prima la configurazione singola e poi avviare quella multi:
+
+```bash
+docker compose -f compose.isolated.yaml -f compose.experiment-single.yaml down
+docker compose -f compose.isolated.yaml -f compose.experiment-multi.yaml up -d --no-build
+```
+
+Avviare il ponte con `--organization multi`, quindi eseguire il pilota con `--organization multi --output runs/baseline_multi_manual.jsonl`. Su Windows sostituire `.venv/bin/python` con `.\.venv\Scripts\python.exe` in tutti i comandi Python. Usare nomi nuovi per nuove prove: lo script aggiunge righe ai file esistenti.
+
+Confrontare infine:
+
+```bash
+.venv/bin/python scripts/check_baseline_pilot.py runs/baseline_single_manual.jsonl runs/baseline_multi_manual.jsonl
+```
+
+I cinque casi previsti sono C001/C024 completi e C006/C011/C016 parziali. Il controllo verifica esiti, pulizia, pesi del modello, impostazioni, risultati strutturati e conteggi delle chiamate. La prosa LLM resta esclusa dal report: questo pilota confronta funzionamento e coordinamento, non dimostra un vantaggio qualitativo dei modelli. I tempi delle fasi possono essere annidati e non vanno sommati indiscriminatamente.
+
+Per tornare alla demo, fermare il ponte sperimentale, eseguire `down` con il file sperimentale usato, poi ripetere l’avvio BCE/AdE e del relativo ponte descritto sopra. Le fonti reali sono rifiutate dai profili sperimentali.

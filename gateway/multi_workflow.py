@@ -7,19 +7,26 @@ from .agent_contracts import TaxTask, TaxView, TaxResult
 
 
 async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=None):
+    from . import runtime
+    from datetime import datetime,timedelta,timezone
+    shared_deadline=datetime.now(timezone.utc)+timedelta(seconds=120) if runtime.EXPERIMENT!='off' else None
     started=perf_counter()
     async def branch(scenario):
         options={} if scenario=='S-01' else {'task_type':TaxTask,'view_type':TaxView,'result_type':TaxResult,'scope':'tax_context'}
-        result=await run_workflow(lambda:request_view(scenario),delegates[scenario],lambda:None,**options)
+        result=await run_workflow(lambda:request_view(scenario),delegates[scenario],lambda:None,deadline=shared_deadline,**options)
         # I subgrafi non possiedono la sessione: solo il coordinatore la chiude.
         result.pop('session_closed',None)
         result['phases']=[p for p in result['phases'] if p['phase']!='cleanup']
         return result
     try:
         with tracing_context(enabled=False):
-            async with asyncio.TaskGroup() as group:
-                running=[group.create_task(branch(s)) for s in scenarios]
-            results=[task.result() for task in running]
+            from . import runtime
+            if runtime.EXPERIMENT=='multi':
+                results=[await branch(s) for s in scenarios]
+            else:
+                async with asyncio.TaskGroup() as group:
+                    running=[group.create_task(branch(s)) for s in scenarios]
+                results=[task.result() for task in running]
         tasks=dict(zip(scenarios,results))
         completed=sum(r['status']=='completed' for r in results)
         status='completed' if completed==len(results) else 'partial' if completed else 'blocked' if all(r['status']=='blocked' for r in results) else 'unverified' if any(r['status']=='unverified' for r in results) else 'failed'

@@ -1,0 +1,13 @@
+# Solo S+P. Il generalista riusa il namespace di rete del primo slot agente,
+# con identità propria e senza avviare lo specialista fiscale.
+services:
+  gateway:
+    environment: {TESI_EXPERIMENT: single, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}
+  markets:
+    environment: {TESI_EXPERIMENT: single, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}
+    command: ['python','-m','uvicorn','services.generalist_agent:app','--host','0.0.0.0','--port','8001','--no-access-log','--no-proxy-headers']
+  tax:
+    profiles: [specialists-not-used-in-single]
+secrets:
+  gateway_identity: {file: ./.local/baseline/gateway.json}
+  markets_identity: {file: ./.local/baseline/generalist.json}

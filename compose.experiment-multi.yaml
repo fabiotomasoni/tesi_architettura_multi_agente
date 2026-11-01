@@ -1,0 +1,8 @@
+# Solo M+P, sequenziale, stesso modello e fixture del generalista.
+services:
+  gateway:
+    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}
+  markets:
+    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}
+  tax:
+    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}

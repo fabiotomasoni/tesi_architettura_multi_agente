@@ -28,6 +28,8 @@ SESSION_SWEEP_SECONDS = 30
 
 
 def create_app() -> FastAPI:
+    if runtime.EXPERIMENT!='off' and not runtime.ISOLATED:
+        raise RuntimeError('La sperimentazione richiede i container isolati')
     sessions = {}
     broker = InferenceBroker()
     if runtime.ISOLATED:
@@ -72,9 +74,9 @@ def create_app() -> FastAPI:
             values = request.headers.getlist(HEADER)
             received = values[0] if len(values) == 1 else None
             if path.startswith('/internal/'):
-                principal = next((role for role in ('markets', 'tax')
+                principal = next((role for role in set(SCENARIO_ROLES.values())
                                   if matching_key(received, role + '_to_gateway')), None)
-                if principal is None or runtime.PEER_SCENARIOS.get(peer) not in (None, 'S-01' if principal == 'markets' else 'S-02'):
+                if principal is None or (peer in runtime.PEER_SCENARIOS and SCENARIO_ROLES[runtime.PEER_SCENARIOS[peer]]!=principal):
                     return JSONResponse(status_code=403, content={'detail':'Identità del chiamante non autorizzata.'})
                 request.state.principal = principal
             elif path.startswith('/_bridge/'):
@@ -176,7 +178,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "policy_version": POLICY_VERSION,
-                "runtime_mode": runtime.MODE, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
+                "runtime_mode": runtime.MODE, "experiment": runtime.EXPERIMENT, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
     @app.post("/sessions", status_code=201)
@@ -295,12 +297,21 @@ def create_app() -> FastAPI:
             with lock:
                 sessions.pop(session_id, None)
                 broker.revoke(session_id)
+        batch=None
+        if runtime.SINGLE:
+            from .baseline_client import BatchDelegate
+            batch=BatchDelegate([s for s in scenarios if not issues(session.profile,Scenario(s))])
+            markets=tax=batch.submit
         async def authorized_markets(task):
             return await broker.delegate(session_id, task, markets)
         async def authorized_tax(task):
             return await broker.delegate(session_id, task, tax)
         result = await run_analysis(scenarios, request_view, {"S-01":authorized_markets,"S-02":authorized_tax}, cleanup,
                                     lambda activities,status:build_report(session.profile,scenarios,activities,status))
+        if runtime.EXPERIMENT!='off':
+            result['workflow']=('single' if runtime.SINGLE else 'multi')+'-experiment-v1'
+            result['experiment']={'organization':runtime.EXPERIMENT,'policy':'active','sources':'fixed_local_fixtures','model':'llama3.2:3b','schedule':'sequential','session_budget_seconds':120,'model_calls_max':len(scenarios),'num_ctx':4096,'num_predict':200,'temperature':0,'keep_alive':0}
+            if batch is not None:result['coordination_measurements']=batch.measurements
         # Presentazione ricavata dallo stesso JSON, senza inferenze e senza storico.
         # Un guasto di impaginazione non deve perdere il risultato strutturato valido.
         from .report_document import render_report_document

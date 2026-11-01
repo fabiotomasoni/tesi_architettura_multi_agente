@@ -116,3 +116,18 @@ class MarketEvidence:
 def is_ecb_evidence(data):
     return isinstance(data,EcbRateEvidence) or (isinstance(data,dict) and
         (data.get('source_id')=='ecb-mir-it-house-purchase-v1' or data.get('simulated') is False or 'series_key' in data))
+
+
+class BatchTask(Contract):
+    correlation_id: UUID
+    scenario: Literal['BATCH']='BATCH'
+    purpose: Literal['financial_analysis']='financial_analysis'
+    policy_version: Literal['0.3.0']='0.3.0'
+    deadline: datetime
+    tasks: list[MarketTask | TaxTask] = Field(min_length=1,max_length=2)
+
+    @model_validator(mode='after')
+    def unique_tasks(self):
+        if self.deadline.tzinfo is None or len({t.scenario for t in self.tasks})!=len(self.tasks) or len({t.correlation_id for t in self.tasks})!=len(self.tasks):
+            raise ValueError('Incarico aggregato incoerente')
+        return self

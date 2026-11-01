@@ -21,7 +21,7 @@ class State(TypedDict, total=False):
     phases: list[dict]
 
 
-async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask, view_type=MarketView, result_type=MarketResult, scope="market_rate_context"):
+async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask, view_type=MarketView, result_type=MarketResult, scope="market_rate_context", deadline=None):
     """Callback locali gateway; lo stato non contiene profilo esatto né PDF."""
     started = perf_counter()
     phases = []
@@ -34,8 +34,12 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
         began = perf_counter()
         try:
             permitted = request_view()
-            task = task_type(purpose=scope,correlation_id=uuid4(),deadline=datetime.now(timezone.utc)+timedelta(seconds=120),
+            if deadline is not None and deadline<=datetime.now(timezone.utc):raise TimeoutError()
+            task = task_type(purpose=scope,correlation_id=uuid4(),deadline=deadline or datetime.now(timezone.utc)+timedelta(seconds=120),
                               view=view_type.model_validate(permitted['data']))
+        except TimeoutError:
+            phase('request_view',began,'failed')
+            return {'status':'failed','error_code':'timeout'}
         except HTTPException as exc:
             status = 'blocked' if exc.status_code in {403,409} else 'failed'
             phase('request_view',began,status)
@@ -47,7 +51,7 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
         began=perf_counter()
         try:
             # Limite globale: include Card e delega, non solo la fase del modello.
-            async with asyncio.timeout(125):
+            async with asyncio.timeout(125 if deadline is None else min(125,max(0,(state['task'].deadline-datetime.now(timezone.utc)).total_seconds()))):
                 result=await delegate(state['task'])
         except EgressDenied:
             phase('delegate_a2a',began,'blocked')

@@ -10,8 +10,8 @@ from types import MappingProxyType
 from uuid import UUID
 
 import httpx
-from .agent_contracts import MarketTask, TaxTask
-from .runtime import AGENT_ENDPOINTS
+from .agent_contracts import MarketTask, TaxTask, BatchTask
+from .runtime import AGENT_ENDPOINTS, SINGLE
 from .identity import a2a_headers
 
 
@@ -33,12 +33,18 @@ ROUTES = MappingProxyType({
     'S-02': Route(AGENT_ENDPOINTS['S-02'], TaxTask, 'tax_agent', 'tax_context'),
 })
 
+if SINGLE:
+    ROUTES=MappingProxyType({**ROUTES,'BATCH':Route(AGENT_ENDPOINTS['BATCH'],BatchTask,'generalist_agent','financial_analysis')})
+
 
 def authorized_task(task):
     try:
         route = ROUTES[task.scenario]
         # Rivalidare anche oggetti costruiti senza validazione o modificati.
         checked = route.task_type.model_validate(task.model_dump(mode='json'))
+        if isinstance(checked,BatchTask):
+            if not SINGLE:raise ValueError()
+            for item in checked.tasks:authorized_task(item)
         if checked.policy_version != '0.3.0' or checked.deadline <= datetime.now(timezone.utc):
             raise ValueError()
     except Exception:
@@ -54,6 +60,7 @@ class A2AEgressTransport(httpx.AsyncBaseTransport):
     """
     def __init__(self, task, *, inner=None):
         self.route, self.task = authorized_task(task)
+        self.message_sends=0
         self.inner = inner if inner is not None else httpx.AsyncHTTPTransport(retries=0)
 
     async def handle_async_request(self, request):
@@ -101,6 +108,7 @@ class A2AEgressTransport(httpx.AsyncBaseTransport):
         outbound.headers.update(a2a_headers(task.scenario))
         # Timeout locali fissati dal gateway; nessuna estensione arbitraria inoltrata.
         outbound.extensions = {'timeout': {'connect': 5.0, 'read': 125.0, 'write': 5.0, 'pool': 5.0}}
+        if request.method=='POST':self.message_sends+=1
         response = await self.inner.handle_async_request(outbound)
         if 300 <= response.status_code < 400:
             await response.aclose()

@@ -29,4 +29,5 @@ def server_environment(task, permit):
     if runtime.ISOLATED:
         import os
         environment.update(TESI_RUNTIME='isolated', TESI_IDENTITY_FILE=os.environ['TESI_IDENTITY_FILE'])
+        if runtime.EXPERIMENT!='off':environment['TESI_EXPERIMENT']=runtime.EXPERIMENT
     return environment
