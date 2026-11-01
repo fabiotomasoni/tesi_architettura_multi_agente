@@ -52,18 +52,8 @@ from google.adk.a2a.utils.agent_to_a2a import to_a2a
 from a2a.server.tasks import InMemoryTaskStore
 session_service=InMemorySessionService();task_store=InMemoryTaskStore()
 runner=Runner(agent=agent,app_name='baseline',session_service=session_service)
-inner_app=to_a2a(agent,host='127.0.0.1',port=8001,agent_card=card,runner=runner,task_store=task_store)
+from .request_lifecycle import SingleRequestApp, RequestExecutor
+inner_app=to_a2a(agent,host='127.0.0.1',port=8001,agent_card=card,runner=runner,task_store=task_store, agent_executor_factory=lambda runner: RequestExecutor(runner=runner))
 
 
-class SingleRequestApp:
-    def __init__(self,inner):self.inner=inner;self.lock=asyncio.Lock()
-    async def __call__(self,scope,receive,send):
-        if scope['type']!='http' or scope['method']!='POST':return await self.inner(scope,receive,send)
-        async with self.lock:
-            try:await self.inner(scope,receive,send)
-            finally:
-                sessions=await session_service.list_sessions(app_name='baseline')
-                for s in sessions.sessions:await session_service.delete_session(app_name='baseline',user_id=s.user_id,session_id=s.id)
-                async with task_store.lock:task_store.tasks.clear()
-
-app=AgentIdentityApp(SingleRequestApp(inner_app),'BATCH')
+app=AgentIdentityApp(SingleRequestApp(inner_app, session_service, task_store, "baseline"),'BATCH')

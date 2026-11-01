@@ -76,7 +76,9 @@ def test_denied_before_ollama(monkeypatch,fault):
         with pytest.raises(EgressDenied):await broker.infer(r,header)
         from types import SimpleNamespace
         return SimpleNamespace(measurements={})
-    asyncio.run(broker.delegate(sid,t,delegate))
+    if fault=='revoked':
+        with pytest.raises(EgressDenied):asyncio.run(broker.delegate(sid,t,delegate))
+    else:asyncio.run(broker.delegate(sid,t,delegate))
     assert not sent and not broker._grants
 
 
@@ -179,8 +181,7 @@ def test_revoked_inflight_result_is_not_delivered(monkeypatch):
             with pytest.raises(EgressDenied):await running
             from types import SimpleNamespace
             return SimpleNamespace(measurements={})
-        result=await broker.delegate(sid,task(),delegate)
-        assert result.measurements['gateway_inference_completed']==0
+        with pytest.raises(EgressDenied):await broker.delegate(sid,task(),delegate)
     asyncio.run(run())
     assert not broker._grants
 

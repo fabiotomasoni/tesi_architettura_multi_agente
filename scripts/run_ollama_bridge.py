@@ -105,7 +105,10 @@ async def worker(key, enable_ecb=False, enable_ade=False):
                     continue
                 body=None;error=None;ollama_ms=None;source_ms=None
                 try:
-                    body,ollama_ms,source_ms=await execute_payload(job['payload'],model,enable_ecb,enable_ade)
+                    result=await execute_live_job(job,gateway,model,enable_ecb,enable_ade)
+                    if result is None:
+                        continue
+                    body,ollama_ms,source_ms=result
                 except (TimeoutError,httpx.TimeoutException):error='timeout'
                 except Exception:error='unavailable'
                 try:
@@ -114,6 +117,37 @@ async def worker(key, enable_ecb=False, enable_ade=False):
                         print('Risultato non consegnato; nessun retry dell’inferenza.',flush=True)
                 except httpx.HTTPError:
                     print('Risultato non consegnato; nessun retry dell’inferenza.',flush=True)
+
+
+async def execute_live_job(job, gateway, model, enable_ecb=False, enable_ade=False):
+    """Una revoca chiude la richiesta locale; non certifica lo stop interno di Ollama."""
+    url=BASE+'/_bridge/status/'+job['job_id']
+    async def live():
+        try:
+            response=await gateway.get(url,timeout=3)
+            return response.status_code==204
+        except httpx.HTTPError:
+            return False
+    # Nessuna nuova elaborazione se il job è già stato revocato o il gateway è perso.
+    if not await live():
+        return None
+    async def revoked():
+        while True:
+            await asyncio.sleep(0.25)
+            if not await live():
+                return
+    working=asyncio.create_task(execute_payload(job['payload'],model,enable_ecb,enable_ade))
+    watcher=asyncio.create_task(revoked())
+    try:
+        done,_=await asyncio.wait({working,watcher},return_when=asyncio.FIRST_COMPLETED)
+        if watcher in done:
+            return None
+        return await working
+    finally:
+        watcher.cancel()
+        if not working.done():
+            working.cancel()
+        await asyncio.gather(watcher,working,return_exceptions=True)
 
 
 async def main(enable_ecb=False, enable_ade=False):

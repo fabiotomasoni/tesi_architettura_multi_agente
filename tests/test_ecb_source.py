@@ -100,7 +100,8 @@ def test_http_exact_request_and_fail_closed(monkeypatch,fault):
 
 class FakeBridge:
     def __init__(self):self.model_calls=0
-    async def infer(self,payload,seconds):
+    def revoke(self,owner):pass
+    async def infer(self,payload,seconds,*,owner=None):
         if payload==BRIDGE_JOB:return {'body':evidence().model_dump(mode='json'),'ollama_ms':None,'source_ms':1}
         self.model_calls+=1
         assert payload['messages'][0]['content']==REAL_MARKET_PROMPT

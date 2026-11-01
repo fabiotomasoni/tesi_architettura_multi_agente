@@ -52,7 +52,8 @@ p,_=extract_profile([Path(f'dataset/Documents/C001_{k}.pdf').read_bytes() for k 
 view=FullFinancialView.model_validate(full_view(p));sid=uuid4()
 broker=InferenceBroker();broker._lab_profiles[sid]=view.model_dump(mode='json')
 class Bridge:
- async def infer(self,payload,seconds):
+ def revoke(self,owner):pass
+ async def infer(self,payload,seconds,*,owner=None):
   validate_payload(payload)
   body=json.loads(payload['messages'][1]['content'])
   assert body['context']['financial_profile']['remaining_principal']['value']=='90434.57'

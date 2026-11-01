@@ -119,6 +119,10 @@ Prima delle chiamate, il gateway applica anche un filtro locale per identificati
 
 Il report esportato contiene importi esatti. La demo non conserva uno storico dei profili e non salva automaticamente i report sul server. Il prototipo non ha ancora tutti i controlli di sicurezza previsti dalla tesi: usare il dataset sintetico e mantenere i servizi accessibili solo localmente.
 
+Durante l’elaborazione puoi premere **Annulla analisi e cancella sessione**. Il gateway interrompe l’analisi, revoca gli accessi temporanei e rifiuta risultati tardivi; puoi poi caricare un nuovo fascicolo. Anche la chiusura della connessione interrompe la richiesta. Il ponte aggiornato chiude la richiesta locale a Ollama quando l’incarico viene revocato: questo non certifica l’arresto immediato del calcolo interno al modello. Dopo questo aggiornamento ricostruire l’immagine dell’applicazione e riavviare il ponte.
+
+Se la consegna del report fallisce, il gateway non lo conserva per un successivo recupero. Dopo un arresto del gateway, caricare nuovamente i PDF per una nuova analisi: la sessione interrotta non riprende automaticamente. Le prove guidate di questi percorsi sono descritte nel [protocollo di valutazione](PROTOCOLLO_VALUTAZIONE.md).
+
 ## Documentazione del progetto
 
 - [Diario di progetto](DIARIO_PROGETTO.md): sintesi delle modifiche e delle verifiche.
@@ -327,3 +331,37 @@ Confronto finale dei quattro piloti:
 ```
 
 Le nuove metriche riportano byte canonici e categorie delle viste autorizzate, senza valori. Non sono conteggi completi dei pacchetti di rete o prova di consegna di una chiamata fallita. Nei casi completati misurano il contesto autorizzato ai confini A2A, MCP e modello. Non si misura divulgazione reale a Internet: i quattro profili restano locali. Il report deterministico può rimanere uguale pur condividendo più dati; ciò non dimostra un miglioramento di utilità o qualità. Rubriche, soglie e campagna finale restano da completare.
+
+## Preparazione della valutazione finale
+
+Il pilota non sostituisce la valutazione della tesi. La bozza è in [PROTOCOLLO_VALUTAZIONE.md](PROTOCOLLO_VALUTAZIONE.md): criteri e soglie approvati, rubrica con un valutatore e verifiche ancora necessarie. Le annotazioni e la scheda vuota sono in `evaluation/`; sono materiale del valutatore, escluso dal runtime e dalle immagini Docker, non input per gli agenti. Nessun giudizio umano è già compilato.
+
+Controllare la coerenza della bozza:
+
+```bash
+# macOS
+.venv/bin/python scripts/check_evaluation_protocol.py
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/check_evaluation_protocol.py
+```
+
+Un esito senza problemi verifica la preparazione dei file, **non approva soglie o campagna finale**. Soglie, rubrica e trattamento dei tempi sono stati approvati dall’utente. Le annotazioni dei 25 fascicoli sono state confermate dall’utente; non sono punteggi di qualità dei report. Mancano ancora prove e strumenti finali, quindi il protocollo non è congelato. Non è necessario riavviare Docker per questo incremento.
+
+La revisione del riferimento è completata per tutti i 25 fascicoli. Per consultare nuovamente il confronto con i PDF, è possibile generare una scheda; l’esempio seleziona i primi cinque casi rappresentativi:
+
+```bash
+# macOS
+.venv/bin/python scripts/prepare_annotation_review.py
+open runs/annotation_review_first5.html
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/prepare_annotation_review.py
+Start-Process .\runs\annotation_review_first5.html
+```
+
+La scheda affianca valori attesi ed estratti, con collegamenti ai PDF da leggere. Controllare tutti i campi e segnalare le discordanze: nessuna conferma viene salvata automaticamente. Docker e Ollama non servono per questa revisione. Per gli altri casi usare `--cases C002 C003` oppure `--all`, con `--output runs/annotation_review_all.html`. Se il file esiste già, aprirlo oppure scegliere un nuovo nome; la generazione non sovrascrive le schede.

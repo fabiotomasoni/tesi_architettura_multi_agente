@@ -191,7 +191,16 @@ def test_source_role_and_inference_with_bridge_and_capabilities(isolated,monkeyp
             assert response.status_code==200 and (await request).status_code==200
             assert (await client.post('/internal/inference',headers=header,json=body)).status_code==403
         return SimpleNamespace(measurements={})
-    result=asyncio.run(broker.delegate(uuid4(),task,remote))
+    async def exercise():
+        from pathlib import Path
+        from uuid import UUID
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app),base_url='http://test') as client:
+            session=await client.post('/sessions',json=json.loads(Path('examples/session_complete.json').read_text()))
+            session.raise_for_status()
+            result=await broker.delegate(UUID(session.json()['session_id']),task,remote)
+            await client.delete('/sessions/'+session.json()['session_id'])
+            return result
+    result=asyncio.run(exercise())
     assert result.measurements['gateway_inference_completed']==1
     assert result.measurements['workload_identity_enforced']==1
     assert not broker._grants and not broker.bridge.pending

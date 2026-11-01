@@ -24,6 +24,54 @@ def test_experimental_gateway_refuses_unisolated_execution():
     r=run('import gateway.app');assert r.returncode!=0 and 'container isolati' in r.stderr
 
 
+def test_generalist_disconnect_stops_sequence_cleans_and_recovers_same_process():
+    r=run('''
+import asyncio,json
+from uuid import uuid4
+from datetime import datetime,timezone,timedelta
+from gateway.agent_contracts import MarketTask,TaxTask,BatchTask,MarketResult,TaxResult
+from gateway.market_evidence import expected_evidence as markets
+from gateway.tax_evidence import expected_evidence as taxes
+from services import generalist_agent as agent
+async def test():
+ entered=asyncio.Event();stopped=asyncio.Event();calls=[]
+ async def work(task):
+  calls.append(task.scenario)
+  if len(calls)==1:
+   entered.set()
+   try:await asyncio.Event().wait()
+   finally:stopped.set()
+  return (MarketResult if task.scenario=='S-01' else TaxResult)(correlation_id=task.correlation_id,status='completed',evidence=(markets if task.scenario=='S-01' else taxes)(task.view),summary='Fixture',limits=[],model='llama3.2:3b')
+ agent.market_work=agent.tax_work=work
+ def body():
+  deadline=datetime.now(timezone.utc)+timedelta(seconds=30)
+  tasks=[MarketTask(correlation_id=uuid4(),deadline=deadline,view={'mortgage_type':'other','rate_type':'fixed','remaining_years_band':{'lower_exclusive':5,'upper_inclusive':10}}),TaxTask(correlation_id=uuid4(),deadline=deadline,view={'tax_year':2025,'purpose':'renovation'})]
+  batch=BatchTask(correlation_id=uuid4(),deadline=deadline,tasks=tasks)
+  return json.dumps({'jsonrpc':'2.0','id':uuid4().hex,'method':'message/send','params':{'message':{'messageId':uuid4().hex,'role':'user','parts':[{'kind':'text','text':batch.model_dump_json()}]}}}).encode()
+ scope={'type':'http','asgi':{'version':'3.0'},'http_version':'1.1','method':'POST','scheme':'http','path':'/','raw_path':b'/','query_string':b'','root_path':'','headers':[(b'content-type',b'application/json')],'client':('127.0.0.1',1),'server':('127.0.0.1',8001)}
+ async with agent.inner_app.router.lifespan_context(agent.inner_app):
+  incoming=asyncio.Queue();incoming.put_nowait({'type':'http.request','body':body(),'more_body':False})
+  sent=[]
+  async def send(message):sent.append(message)
+  running=asyncio.create_task(agent.app(scope,incoming.get,send))
+  await asyncio.wait_for(entered.wait(),3)
+  incoming.put_nowait({'type':'http.disconnect'})
+  await asyncio.wait_for(running,3)
+  assert stopped.is_set() and calls==['S-01']
+  assert not agent.task_store.tasks
+  assert not (await agent.session_service.list_sessions(app_name='baseline')).sessions
+  incoming=asyncio.Queue();incoming.put_nowait({'type':'http.request','body':body(),'more_body':False});sent=[]
+  await asyncio.wait_for(agent.app(scope,incoming.get,send),3)
+  result=json.loads(b''.join(m.get('body',b'') for m in sent if m['type']=='http.response.body'))['result']
+  parts=result.get('parts',[])+[p for a in result.get('artifacts',[]) for p in a.get('parts',[])]
+  results=json.loads(next(p['text'] for p in parts if p['kind']=='text'))['results']
+  assert all(r['status']=='completed' and r['measurements']['agent_boot_id']==agent.BOOT_ID for r in results.values())
+  assert calls==['S-01','S-01','S-02'] and not agent.task_store.tasks
+asyncio.run(test())
+''')
+    assert r.returncode==0,r.stderr
+
+
 def test_single_batch_schema_transport_and_parser():
     r=run('''
 import asyncio,json

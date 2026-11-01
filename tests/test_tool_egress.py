@@ -88,7 +88,9 @@ def test_source_denied_before_transport(monkeypatch,fault):
         if fault=='revoked':broker.revoke(sid)
         with pytest.raises(EgressDenied):await tools.source_request(broker,r,auth)
         return SimpleNamespace(measurements={})
-    asyncio.run(broker.delegate(sid,task(),delegate))
+    if fault=='revoked':
+        with pytest.raises(EgressDenied):asyncio.run(broker.delegate(sid,task(),delegate))
+    else:asyncio.run(broker.delegate(sid,task(),delegate))
     assert not broker._grants
 
 

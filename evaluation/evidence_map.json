@@ -1,0 +1,104 @@
+{
+  "version": "evidence-map-draft-v1",
+  "meaning": "Existing references, not final campaign pass evidence",
+  "cases": {
+    "V-01": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_pdf_input.py::test_all_dataset_cases",
+        "tests/test_multi_workflow.py::test_requested_activities_and_partial",
+        "scripts/check_factorial_pilot.py"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-02": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_workflow.py::test_workflow_cancellation_finalizes",
+        "tests/test_isolation.py::test_peer_cannot_reach_public_api_or_spoof_other_role",
+        "scripts/check_isolation.py",
+        "scripts/check_privacy.py",
+        "tests/test_cancellation.py::test_delete_revokes_every_boundary_blocks_late_result_and_allows_recovery",
+        "tests/test_cancellation.py::test_real_http_disconnect_cleans_gateway_and_next_session_works",
+        "tests/test_cancellation.py::test_a2a_disconnect_cancels_actual_mcp_process_cleans_adk_and_recovers",
+        "tests/test_cancellation.py::test_host_bridge_cancels_local_request_when_gateway_revokes",
+        "tests/test_baseline.py::test_generalist_disconnect_stops_sequence_cleans_and_recovers_same_process",
+        "scripts/check_cancellation.py",
+        "tests/test_cancellation.py::test_direct_delivery_write_error_still_removes_profile_grants_jobs_and_recovers",
+        "tests/test_cancellation.py::test_delivery_checker_actually_truncates_downstream_after_complete_upstream",
+        "tests/test_cancellation.py::test_fresh_gateway_rejects_previously_valid_capabilities_and_bridge_results",
+        "tests/test_gateway_restart.py::test_actual_sigkill_discards_sessions_jobs_and_open_upload_spool_then_recovers",
+        "tests/test_gateway_restart.py::test_docker_crash_preflight_refuses_unexpected_storage_without_killing",
+        "scripts/check_finalization.py"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-03": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_pdf_input.py::test_invalid_mixed_duplicate_and_unknown_pdf",
+        "tests/test_document_provenance.py::test_missing_and_ambiguous_are_visible_without_fabricated_values"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-04": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_market_agent.py::test_same_process_recovers_after_timeout",
+        "tests/test_tool_egress.py::test_whole_stack_real_a2a_mcp_gateway"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-05": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_inference_gateway.py::test_denied_before_ollama",
+        "tests/test_tool_egress.py::test_tool_denials"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-06": {
+      "status": "supporting_code_only_positive_substitution_missing",
+      "references": [
+        "gateway/agent_contracts.py",
+        "gateway/a2a_egress.py",
+        "gateway/tool_egress.py"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-07": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_evaluation_protocol.py::test_utility_keeps_local_values_out_of_agent_denominator",
+        "tests/test_unminimized.py::test_factorial_checker_validates_financial_disclosure_contrast",
+        "scripts/check_factorial_pilot.py"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-08": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_missing_provenance.py::test_real_mcp_missing_source_stops_before_ollama",
+        "tests/test_missing_provenance.py::test_api_unverified_only_report_and_cleanup"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-09": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_comparisons.py::test_agent_agent_conflict",
+        "tests/test_comparisons.py::test_conflict_retains_both_sources_and_values",
+        "scripts/check_comparisons.py"
+      ],
+      "final_campaign_complete": false
+    },
+    "V-10": {
+      "status": "partial_evidence_final_instances_pending",
+      "references": [
+        "tests/test_delegation_controls.py::test_card_and_result_rejection",
+        "tests/test_isolation.py::test_agent_card_requires_correct_directional_key"
+      ],
+      "final_campaign_complete": false
+    }
+  }
+}

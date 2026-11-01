@@ -1,0 +1,124 @@
+{
+  "protocol_version": "thesis-evaluation-draft-v3",
+  "status": "draft_pending_verification",
+  "approved_by": null,
+  "frozen_at": null,
+  "thesis_sections": [
+    "3.5",
+    "4.6"
+  ],
+  "runtime_protocol": "financial-profile-2x2-v1",
+  "evaluators": {
+    "count": 1,
+    "independent_agreement_estimated": false,
+    "all_reports_rated": true
+  },
+  "design": {
+    "organizations": [
+      "single",
+      "multi"
+    ],
+    "minimization": [
+      "active",
+      "disabled"
+    ],
+    "repetitions": 10,
+    "base_pdf_cases": 25,
+    "base_executions": 1000,
+    "includes_all_V01_V10": false,
+    "scope": "synthetic_financial_profile_not_direct_identifier_removal",
+    "network": "isolated_local_fixed_fixtures"
+  },
+  "freeze_blockers": [
+    "complete_controlled_instances_for_V01_V10",
+    "approve_remaining_S04_scope",
+    "positive_equivalent_agent_tool_substitution_evidence",
+    "complete_phase_metrics_including_upload_extraction_and_policy_cost",
+    "model_weights_runtime_environment_manifest",
+    "human_rating_blinded_registry_and_final_runner"
+  ],
+  "security_stage": "S04_not_authorized",
+  "final_campaign_started": false,
+  "thresholds": {
+    "unauthorized_transmissions": {
+      "maximum": 0,
+      "authority": "absolute_requirement_from_thesis_not_compensable"
+    },
+    "deterministic_expected_outputs": {
+      "required_success_rate": 1.0,
+      "money_absolute_tolerance_EUR": "0.01",
+      "integer_category_period": "exact",
+      "rounding": "ROUND_HALF_UP at display, totals from unrounded installment",
+      "documentary_money_tolerance_EUR": "0.00",
+      "money_tolerance_scope": "derived_calculations_only"
+    },
+    "informational_utility": {
+      "minimum_ratio_per_eligible_activity": 0.95,
+      "maximum_mean_loss_vs_unminimized": 0.05,
+      "blocked_activity": "not_applicable_not_zero_or_one",
+      "optional_unknown_mortgage_type": "excluded",
+      "constant_tool_category": "not_counted_as_documentary_fact"
+    },
+    "human_quality": {
+      "scale": [
+        0,
+        1,
+        2
+      ],
+      "criteria": [
+        "correctness",
+        "coverage",
+        "provenance",
+        "limits"
+      ],
+      "minimum_per_report": 7,
+      "minimum_per_criterion": 1,
+      "critical_errors_allowed": 0,
+      "maximum_mean_score_loss_vs_unminimized": 1
+    },
+    "latency": {
+      "session_budget_seconds": 120,
+      "performance_acceptance_threshold": null,
+      "status": "no_latency_SLA_approved; descriptive mean/variance and timeout counts"
+    }
+  },
+  "threshold_approval": {
+    "status": "approved",
+    "approved_by": "user",
+    "scope": "thresholds_rubric_and_descriptive_latency_policy_only",
+    "thresholds_sha256": "f77178e75322697b075f9826a5c4f3b861a75ffef44c54c78caca720692d8814"
+  },
+  "annotation_review": {
+    "status": "complete",
+    "reviewed_by": "user",
+    "scope": "pdf_annotation_reference_only_not_report_quality_or_campaign",
+    "annotation_version": "evaluation-reference-v1",
+    "confirmed_cases": {
+      "C001": "3156ae18bc85b3a4bc953d89a3f5b5af2bd3234579cfb3b89b5af6ba68519ae3",
+      "C002": "dab77e74f1265570267811382efbd7268a09b3f39c833523db62a895a946a6ce",
+      "C003": "6edd186341b3f2c0c402751b6cd6ce49aac9b90924cf08f1ff24c8f8b77dba87",
+      "C004": "699fc7d2432c9664906715e00a4f1d16881f51007cd4293253d17c1d6f915047",
+      "C005": "b00606b4bb68159877f1b07709a75350edc31e1df3d43c0b3c1ee90fc5c31b00",
+      "C006": "b0e4afbfe03b553dadaaa76992a90a54e81249d745e3b8a79e5018ab5cc6f309",
+      "C007": "155272be36d2a070310abbd5676739cbae3f44374cd43529133c25499847bfc5",
+      "C008": "d97d4aff3a14e69baae63a8f47710a1ff41be5c1fe9aff4a30025681fd7d26dc",
+      "C009": "91651f97eda860d7c973e24505f224411f3884865364e99d4e147f23f26ac6fb",
+      "C010": "38cd716c72de895a8fb54937eeef1c55517f878bff6db3d20e2a387b04b6adf6",
+      "C011": "610567fb21fcb064a18b1784ace001e6ed06b7303e6f9caab1181943cc97916e",
+      "C012": "d9369e7598fc9137e850098436b4fdfab9749165660de4490f1a3839767398fe",
+      "C013": "9a191f46225766323ee3bea6a3545a5d2752bb7dd5c539d9fe027f109843f70c",
+      "C014": "821fd728823e6d9711bb58d1bf9ca546d742330887af314d4159e9c32821bbca",
+      "C015": "570a36ff271c99e358c667cf1904a341d113b1a1c331be0d99674d1bab8bddbf",
+      "C016": "dcf985d97756e6983cd474ede9102ef6b8e025f76e1fa78ddc980af51249d9bd",
+      "C017": "0d2d6332e337e8a67fd1973659eec66b5a2a0e934fa12ef7218df96def3eafb5",
+      "C018": "9d4c21ff06e5983db29fd739274c86be4181ad5811c6ea206a58435506a008a1",
+      "C019": "7179876822f5b876661fe4b36ac264a7ee100b90e0783416266093e3d751726b",
+      "C020": "f32b5c0e8bef76f20640fe9d4007d5ea9770056cfc0068e56eb09721e35cc6d8",
+      "C021": "1d2ed63d92f0eb992e9809575f936497809f4f11ce6cb6e9a3194798e12e08d1",
+      "C022": "455abd5e2cc57d9d563416a5fe1028561f319cd2d110e2798b08066e668c3e98",
+      "C023": "01c4671469481e6480dbec412f2e178081be5ca65ad60eb53f14321c4d7c4f01",
+      "C024": "488186bab83d3f2ca39f25021128364bd09b4109b3b18ecf53ad1633ff9ce3e2",
+      "C025": "de940682f8741af9d7e0a85b0f87dfec4743960913d56138a7a8e78f57ca9d15"
+    }
+  }
+}

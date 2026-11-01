@@ -70,6 +70,7 @@ class InferenceBroker:
         self._privacy = {}
         self._lab_profiles = {}
         self._lock = RLock()
+        self.require_session = False
 
     async def delegate(self, session_id, task, remote):
         _, checked = authorized_task(task)
@@ -81,10 +82,15 @@ class InferenceBroker:
         token = token_hex(32)
         checked = checked.model_copy(update={'inference_token': token})
         with self._lock:
+            if self.require_session and session_id not in self._privacy:
+                raise EgressDenied('Sessione già chiusa; nessuna nuova delega autorizzata')
             grant = Grant(session_id, checked)
             self._grants[token] = grant
         try:
             result = await remote(checked)
+            with self._lock:
+                if self._grants.get(token) is not grant:
+                    raise EgressDenied('Delega revocata; risultato tardivo escluso')
             from .tool_egress import MARKET_SOURCE, TAX_SOURCE
             if getattr(result,'status',None)=='completed' and ((checked.scenario=='S-01' and (MARKET_SOURCE=='ecb' or is_ecb_evidence(getattr(result,'evidence',None)))) or (checked.scenario=='S-02' and (TAX_SOURCE=='ade' or is_ade(getattr(result,'evidence',None))))):
                 if (not grant.source_completed or grant.source_evidence is None or result.evidence is None
@@ -118,6 +124,8 @@ class InferenceBroker:
         finally:
             with self._lock:
                 self._grants.pop(token, None)
+                if self.bridge is not None:
+                    self.bridge.revoke(token)
 
     def revoke(self, session_id=None):
         with self._lock:
@@ -130,6 +138,8 @@ class InferenceBroker:
             for key in list(self._grants):
                 if session_id is None or self._grants[key].session_id == session_id:
                     del self._grants[key]
+                    if self.bridge is not None:
+                        self.bridge.revoke(key)
 
     async def infer(self, request, authorization):
         token = authorization.removeprefix('Bearer ') if authorization and authorization.startswith('Bearer ') else None
@@ -170,7 +180,7 @@ class InferenceBroker:
         if runtime.ISOLATED:
             if self.bridge is None:
                 raise RuntimeError('Ponte inferenza obbligatorio non configurato')
-            reply = await self.bridge.infer(payload, seconds)
+            reply = await self.bridge.infer(payload, seconds, owner=token)
             grant.bridge_roundtrip_ms = round((perf_counter() - started)*1000,3)
             body = reply['body']
         else:

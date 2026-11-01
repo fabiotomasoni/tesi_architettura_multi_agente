@@ -25,24 +25,89 @@ from .policy import POLICY_VERSION, issues, make_view
 
 SESSION_TTL_SECONDS = 1800
 SESSION_SWEEP_SECONDS = 30
+CANCELLATION_GRACE_SECONDS = 5
 
 
 def create_app() -> FastAPI:
     if runtime.EXPERIMENT!='off' and not runtime.ISOLATED:
         raise RuntimeError('La sperimentazione richiede i container isolati')
     sessions = {}
+    gateway_boot_id = uuid4().hex
     broker = InferenceBroker()
+    broker.require_session = True
     if runtime.ISOLATED:
         if load_identity()['role'] != 'gateway':
             raise RuntimeError('Identità gateway obbligatoria')
         broker.bridge = OllamaBridge()
     lock = RLock()
+    active = {}
+
+    def finish_session(session_id):
+        with lock:
+            sessions.pop(session_id, None)
+            broker.revoke(session_id)
+
+    def stop_session(session_id, reason):
+        with lock:
+            finish_session(session_id)
+            operation = active.get(session_id)
+            if operation is not None and operation['reason'] is None:
+                operation['reason'] = reason
+                task = operation['task']
+                # Anche il controllo TTL può arrivare da un endpoint sincrono.
+                task.get_loop().call_soon_threadsafe(task.cancel)
+            return operation
+
+    async def run_operation(session_id, request, execute, *, close_on_finish=True):
+        with lock:
+            get_session(session_id)
+            if session_id in active:
+                raise HTTPException(409, {'error_code':'analysis_already_running', 'message':'Un’attività è già in corso per questa sessione.'})
+            operation = {'task':asyncio.create_task(execute()), 'reason':None}
+            active[session_id] = operation
+
+        async def disconnected():
+            try:
+                while True:
+                    message = await request.receive()
+                    if message['type'] == 'http.disconnect':
+                        break
+            except Exception:
+                pass  # Errore del canale di ingresso: il lavoro non resta orfano.
+            stop_session(session_id, 'client_disconnected')
+
+        watcher = asyncio.create_task(disconnected())
+        def cancelled_response():
+            return JSONResponse(status_code=409, content={
+                'status':'cancelled', 'error_code':'analysis_cancelled',
+                'session_closed':True, 'reason':operation['reason'],
+                'message':'Analisi annullata; nessun report consegnato.'})
+        try:
+            result = await operation['task']
+            return cancelled_response() if operation['reason'] is not None else result
+        except asyncio.CancelledError:
+            if operation['reason'] is None:
+                stop_session(session_id, 'request_cancelled')
+                raise
+            return cancelled_response()
+        except Exception:
+            if operation['reason'] is not None:
+                return cancelled_response()
+            raise
+        finally:
+            watcher.cancel()
+            with suppress(asyncio.CancelledError):
+                await watcher
+            with lock:
+                if close_on_finish or operation['reason'] is not None:
+                    finish_session(session_id)
+                if active.get(session_id) is operation:
+                    active.pop(session_id)
 
     def expire_sessions():
         with lock:
             for key in [key for key, (_, deadline) in sessions.items() if deadline <= monotonic()]:
-                del sessions[key]
-                broker.revoke(key)
+                stop_session(key, 'session_expired')
 
     async def sweep_sessions():
         while True:
@@ -58,6 +123,14 @@ def create_app() -> FastAPI:
             sweeper.cancel()
             with suppress(asyncio.CancelledError):
                 await sweeper
+            pending = []
+            with lock:
+                for sid in list(active):
+                    operation = stop_session(sid, 'shutdown')
+                    if operation is not None:
+                        pending.append(operation['task'])
+            if pending:
+                await asyncio.wait(pending, timeout=CANCELLATION_GRACE_SECONDS)
             with lock:
                 sessions.clear()
                 broker.revoke()
@@ -96,6 +169,14 @@ def create_app() -> FastAPI:
             raise HTTPException(404, 'Ponte non attivo.')
         job = await broker.bridge.poll()
         return JSONResponse(job) if job else Response(status_code=204)
+
+    @app.get('/_bridge/status/{job_id}', include_in_schema=False)
+    async def bridge_status(job_id: str):
+        if broker.bridge is None:
+            raise HTTPException(404, 'Ponte non attivo.')
+        if not broker.bridge.is_active(job_id):
+            raise HTTPException(409, 'Incarico del ponte assente o terminato.')
+        return Response(status_code=204)
 
     @app.post('/_bridge/result/{job_id}', include_in_schema=False)
     async def bridge_result(job_id: str, request: Request):
@@ -178,6 +259,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "policy_version": POLICY_VERSION,
+                "gateway_boot_id": gateway_boot_id,
                 "runtime_mode": runtime.MODE, "experiment": runtime.EXPERIMENT, "minimization": runtime.MINIMIZATION, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
@@ -259,7 +341,10 @@ def create_app() -> FastAPI:
                     "policy_version": POLICY_VERSION, "data": make_view(session.profile, request.scenario)}
 
     @app.post("/sessions/{session_id}/markets")
-    async def run_markets(session_id: UUID):
+    async def run_markets(session_id: UUID, request: Request):
+        return await run_operation(session_id, request, lambda: execute_markets(session_id), close_on_finish=False)
+
+    async def execute_markets(session_id):
         if runtime.EXPERIMENT!='off':raise HTTPException(409,'Nel laboratorio usare il percorso analysis con budget di sessione comune.')
         from datetime import datetime, timedelta, timezone
         from .agent_contracts import MarketTask, MarketView
@@ -280,7 +365,7 @@ def create_app() -> FastAPI:
         return result.model_dump(mode="json")
 
     @app.post("/sessions/{session_id}/workflow")
-    async def workflow(session_id: UUID):
+    async def workflow(session_id: UUID, request: Request):
         if runtime.EXPERIMENT!='off':raise HTTPException(409,'Nel laboratorio usare il percorso analysis con budget di sessione comune.')
         from .workflow import run_workflow
         from .market_client import delegate
@@ -289,15 +374,16 @@ def create_app() -> FastAPI:
         def request_view():
             return view(session_id, ViewRequest(scenario=Scenario.MORTGAGE, recipient="markets"))
         def cleanup():
-            with lock:
-                sessions.pop(session_id, None)
-                broker.revoke(session_id)
+            finish_session(session_id)
         async def authorized_delegate(task):
             return await broker.delegate(session_id, task, delegate)
-        return await run_workflow(request_view, authorized_delegate, cleanup)
+        return await run_operation(session_id, request, lambda: run_workflow(request_view, authorized_delegate, cleanup))
 
     @app.post("/sessions/{session_id}/analysis")
-    async def analysis(session_id: UUID):
+    async def analysis(session_id: UUID, request: Request):
+        return await run_operation(session_id, request, lambda: execute_analysis(session_id))
+
+    async def execute_analysis(session_id):
         from .multi_workflow import run_analysis
         from .report import build_report
         from .market_client import delegate as markets
@@ -308,9 +394,7 @@ def create_app() -> FastAPI:
         def request_view(scenario):
             return view(session_id, ViewRequest(scenario=Scenario(scenario), recipient="markets" if scenario=="S-01" else "tax"))
         def cleanup():
-            with lock:
-                sessions.pop(session_id, None)
-                broker.revoke(session_id)
+            finish_session(session_id)
         batch=None
         if runtime.SINGLE:
             from .baseline_client import BatchDelegate
@@ -337,11 +421,15 @@ def create_app() -> FastAPI:
         return result
 
     @app.delete("/sessions/{session_id}", status_code=204)
-    def close_session(session_id: UUID):
+    async def close_session(session_id: UUID):
         with lock:
             get_session(session_id)
-            del sessions[session_id]
-            broker.revoke(session_id)
+            operation = stop_session(session_id, 'user_cancelled')
+        if operation is not None:
+            done, _ = await asyncio.wait({operation['task']}, timeout=CANCELLATION_GRACE_SECONDS)
+            if not done:
+                raise HTTPException(503, {'error_code':'cancellation_pending', 'session_closed':True,
+                                          'message':'Accessi revocati; arresto dell’attività ancora in corso.'})
         return Response(status_code=204)
 
     return app

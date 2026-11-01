@@ -106,7 +106,8 @@ def test_gateway_attests_publication_receipt(monkeypatch,fault):
     monkeypatch.setattr(tools,'TOOL_ROUTES',routes)
     class Bridge:
         model_calls=0
-        async def infer(self,payload,seconds):
+        def revoke(self,owner):pass
+        async def infer(self,payload,seconds,*,owner=None):
             if payload.get('kind')=='ade_tax_source':
                 return {'body':{**ade.publication(2025),'retrieved_at':datetime.now(timezone.utc).isoformat()},'source_ms':1}
             self.model_calls+=1

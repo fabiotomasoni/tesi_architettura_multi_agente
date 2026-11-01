@@ -180,6 +180,66 @@ La riduzione del contesto finanziario è confermata nei controlli A2A/MCP/modell
 
 Chiuso il pilota manuale 2x2 nel perimetro concordato, con una ripetizione per caso/cella. Non è la campagna finale: nessuna conclusione statistica su prestazioni o superiorità, nessuna verifica umana della qualità ancora eseguita. Il report deterministico resta invariato; non si assume un vantaggio d’utilità dai dati aggiuntivi. Restano rubriche, soglie, annotazioni, verifiche mancanti e dieci ripetizioni finali; S04 fermo.
 
+## Modifica 58 — Bozza del protocollo di valutazione finale
+
+Preparati PROTOCOLLO_VALUTAZIONE.md e file evaluation/: disegno 2x2, annotazioni preliminari per 25 fascicoli, rubrica 0–8, scheda umana vuota, soglie proposte e mappa puntuale V-01–V-10. Scelta dell’utente: un solo valutatore, senza accordo inter-valutatore stimato. Le 1.000 esecuzioni di base non coprono automaticamente le istanze aggiuntive di guasto/sicurezza. Campagna finale e S04 non avviati.
+
+Riferimento costruito dal ground truth del generatore controllando i PDF per digest, valori, unità e periodi, senza usare l’output applicativo come verità. Esclusi identità e valori latenti omessi/ambigui. Calcoli attesi con riferimento numerico indipendente; materiale riservato al valutatore, fuori da runtime/immagini. Necessaria revisione umana delle annotazioni. Distinte utilità locale e dell’agente; attività non eleggibili N/A, durata più precisa ammessa, nessun premio per campi superflui. La fixture mercati usa soltanto il tipo di tasso: la durata è necessaria al contratto del compito ma non causalmente alla fixture; limite esplicito.
+
+Proposte, non approvate: calcoli derivati entro 0,01 EUR (importi documentali esatti), U≥0,95, qualità≥7/8 senza criteri a zero o errori critici, perdita media di U≤0,05 e qualità≤1 punto. Zero trasmissioni non autorizzate è già vincolo della tesi. Nessuna SLA di latenza inventata; restano manifest, registro cieco, runner finale e residui V-01–V-10. Nessun punteggio umano compilato dal sistema.
+
+**Verifiche:** suite completa 508 passed, 106 warning; 15 test del valutatore, ripetuti dopo completamento della mappa. check_evaluation_protocol: 951 controlli, zero problemi, stato draft_pending_user_approval e campagna non autorizzata. Le verifiche della bozza non provano conformità finale o approvazione. README e residui aggiornati; nessuna modifica a servizi, modelli o container.
+
+## Modifica 59 — Approvazione dei criteri, non della campagna
+
+L’utente ha approvato rubrica e soglie presentate: zero trasmissioni non autorizzate, dati documentali esatti, calcoli derivati entro 0,01 EUR, utilità almeno 0,95, qualità almeno 7/8 senza criteri a zero o errori critici, perdita media massima 0,05 di utilità e 1 punto di qualità; tempi descrittivi con budget tecnico 120 secondi, nessuna SLA aggiuntiva. Registrata approvazione separata con digest delle soglie nel protocollo v2. Nessun giudizio umano assegnato.
+
+Stato draft_pending_annotation_review_and_verification: annotazioni ancora da rivedere, requisiti mancanti da verificare e protocollo non congelato. Campagna finale e S04 restano non avviati. Audit: 952 controlli, zero problemi; 16 test pertinenti superati, 13 warning. Regressione verifica che modificare le soglie invalida l’approvazione registrata e non abilita la campagna. Documentazione e residui allineati.
+
+## Modifica 60 — Schede per la revisione delle annotazioni
+
+Preparato uno strumento locale per confrontare il riferimento con i PDF: valori, unità, periodi, estratti con pagina, assenze/ambiguità, esiti, calcoli teorici, utilità e limiti. Primo gruppo C001/C006/C011/C016/C021; disponibili selezione degli altri casi e corpus intero. Digest controllati prima della generazione, nessuna chiamata a modelli o servizi, nessuna identità copiata negli estratti selezionati. Le schede sono in runs, fuori da Git; annotazioni e punteggi non vengono modificati o approvati automaticamente.
+
+Verifiche: 25 test pertinenti superati, 13 warning di dipendenza; incluse regressioni su PDF modificato, TAN ambiguo, dati mancanti, periodi distinti, selezioni errate, escape HTML e mancata sovrascrittura. Revisione umana ancora da effettuare per tutti i 25 casi; campagna finale e S04 non avviati. Nessuna modifica al runtime o ricostruzione Docker necessaria.
+
+## Modifica 61 — Conferma dei primi cinque riferimenti
+
+Registrata la conferma esplicita dell’utente per C001/C006/C011/C016/C021: 5/25 annotazioni riviste contro i PDF. Ogni conferma è legata al digest del caso; modificare dati, stati, calcoli o impronte dei documenti la invalida. Nessun punteggio umano dei report assegnato. Preparata la scheda dei venti casi restanti; protocollo non congelato, campagna finale e S04 fermi.
+
+Audit: 960 controlli, zero problemi; 27 test pertinenti superati, 13 warning di dipendenza. Annotata per l’interfaccia finale l’evidenziazione dei problemi con colore e testo: rosso per impedimenti e conflitti effettivi, avviso distinto per limiti non bloccanti; periodi contrattuali e fiscali diversi non sono da soli una discordanza.
+
+## Modifica 62 — Revisione del riferimento completata
+
+L’utente ha confermato i venti fascicoli restanti: revisione delle annotazioni completa, 25/25, con digest per ciascun caso. Stato del riferimento human_reviewed; protocollo v3 draft_pending_verification. Rimosso soltanto il residuo della revisione umana delle annotazioni: nessun punteggio dei report assegnato, nessun congelamento o avvio della campagna finale; S04 fermo. Schede e documentazione distinguono ora generazione del confronto e conferme già registrate.
+
+Audit: 982 controlli, zero problemi; 29 test pertinenti superati, 13 warning di dipendenza. Verificati copertura completa, invalidazione dopo modifica del riferimento e mantenimento degli altri vincoli della campagna. Prossimo lavoro: annullamento completo e pulizia degli incarichi, poi verifiche residue e tracciamento.
+
+## Modifica 63 — Annullamento, revoca e recupero
+
+Rif. tesi §4.4, finalizzazione comune e V-02. Colmata la lacuna fra cancellare il profilo e fermare il lavoro: un’operazione attiva per sessione, annullamento del grafo su DELETE/disconnessione/TTL, revoca delle capability e rimozione degli incarichi del ponte, risultati tardivi esclusi. Il ponte verifica la validità del job e chiude la richiesta locale revocata. Gli agenti legano le esecuzioni SDK alla richiesta e puliscono ADK/A2A/MCP; lo stesso responsabile della sessione gestisce la finalizzazione. Interfaccia: annullamento disponibile durante l’analisi, nessuna visualizzazione della risposta tardiva.
+
+Verifiche: suite completa 534 passed, 120 warning delle dipendenze; test con HTTP reale, veri sottoprocessi MCP terminati, accessi precedenti rifiutati e nuova sessione riuscita; generalista interrompe la sequenza e riparte nello stesso processo. Controllato anche il caso di risposta tardiva nella pagina. Audit del protocollo: 988 controlli, zero problemi, annotazioni confermate 25/25.
+
+Preparato check_cancellation.py per la prova manuale della demo isolata: C001 prima, annullamento con due job trattenuti, rifiuto tardivo e C001 dopo, stessi avvii degli agenti. Risposte modello controllate e dichiarate, nessuna inferenza Ollama reale o misura finale; nessun payload finanziario nei risultati della prova. **Prova manuale sui container ancora da eseguire.** Nessuna promessa di arresto immediato del calcolo interno a Ollama o azzeramento fisico della RAM. Restano consegna fallita/crash, sostituzione e tracciamento; campagna finale e S04 fermi.
+
+## Modifica 64 — Prova manuale di annullamento confermata
+
+Controllato runs/cancellation_manual.json dopo la ricostruzione dell’immagine e l’avvio della demo isolata base: C001, 14 controlli True e passed True. Analisi iniziale completa e ripulita; seconda analisi annullata con entrambi i job trattenuti, duplicato rifiutato, nessun report consegnato, job e risultati tardivi rifiutati, profilo chiuso non accessibile. Nuova analisi completa e ripulita con gli stessi ID di avvio dei due agenti, senza riavviarli. Risposte del modello simulate e dichiarate: prova del coordinamento e del recupero, non di qualità o prestazioni Ollama. Annullamento confermato nel perimetro del pilota; restano consegna fallita/crash, sostituzione e tracciamento. Campagna finale e S04 fermi.
+
+## Modifica 65 — Consegna fallita e recupero dopo arresto
+
+Rif. tesi §4.4 e V-02. Verificati errore di invio ASGI e consegna interrotta a valle dopo report completo: sessione/accessi rimossi e nuova analisi riuscita. Prova automatica con vero SIGKILL di un gateway temporaneo, deleghe controllate e upload parziale con spool aperto ma già senza nome; al nuovo avvio stato precedente rifiutato, risorse temporanee non recuperabili dal percorso e analisi nuovamente riuscita. Aggiunto solo un identificativo opaco di avvio a health, senza archivio o ripresa automatica dei profili.
+
+Suite completa: 542 passed, 120 warning; audit 994 controlli, zero problemi. Preparato check_finalization.py per due prove manuali: consegna troncata via relay loopback; SIGKILL/start del solo gateway Docker con controllo positivo di tmpfs. Risposte modello simulate e dichiarate; nessuna prova di blackout dell’host o azzeramento fisico della RAM. **Prove manuali Docker ancora da eseguire.** I container dell’utente non sono stati interrotti durante lo sviluppo. Restano conferme manuali, sostituzione equivalente, tracciamento e campagna finale; S04 fermo.
+
+## Modifica 66 — Consegna fallita confermata sui container
+
+Controllato runs/delivery_manual.json: C001, 20 controlli True e passed True. Report completo al relay, nessun byte del corpo applicativo consegnato al client e guasto di protocollo effettivamente osservato. Sessione/viste/job precedenti assenti, risultati tardivi rifiutati e nuova analisi completa con gli stessi avvii di gateway e agenti. È una consegna fallita a valle del gateway; l’errore di scrittura diretta ASGI ha evidenza automatica separata. Risposte modello simulate, nessuna misura Ollama reale. Resta la prova manuale di crash; campagna finale e S04 fermi.
+
+## Modifica 67 — Crash del gateway confermato sui container
+
+Controllato runs/crash_manual.json: C001, 22 controlli True e passed True. Verificati storage volatile e marcatore tmpfs, due job attivi prima del SIGKILL, uscita 137 e interruzione HTTP; il ponte annulla le richieste alla perdita del gateway. Al nuovo avvio il marcatore è assente e vecchie sessioni/viste/job e risposte tardive sono rifiutati. Nuova analisi completa e ripulita con gli stessi avvii degli agenti: è una nuova elaborazione dopo ricaricamento, non ripresa della sessione interrotta. Piloti di annullamento, consegna fallita e crash conclusi nel perimetro controllato, con risposte modello simulate; nessuna prova di blackout o cancellazione fisica della memoria. Residui aggiornati: sostituzione equivalente, tracciamento e istanze/ripetizioni finali. Campagna finale e S04 fermi.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

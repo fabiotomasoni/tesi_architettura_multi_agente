@@ -119,7 +119,7 @@ def authorize_tool(broker, request, authorization):
 async def source_request(broker, request, authorization):
     token = authorization[7:] if authorization and authorization.startswith('Bearer ') else None
     with broker._lock:
-        grant = next((g for g in broker._grants.values() if g.source_token and g.source_token == token), None)
+        grant_token, grant = next(((k,g) for k,g in broker._grants.items() if g.source_token and g.source_token == token), (None,None))
         if grant is None or grant.source_used or grant.task.correlation_id != request.correlation_id or grant.task.scenario != request.scenario:
             raise EgressDenied('Fonte non autorizzata')
         _, task = authorized_task(grant.task)
@@ -148,7 +148,7 @@ async def source_request(broker, request, authorization):
         wire={'method':'GET','url':p['source_url'],'headers':{'accept':'application/pdf','accept-encoding':'identity'}}
         check(broker._privacy.get(grant.session_id,SensitiveContext()),wire,public_paths=frozenset({('url',),('headers','accept'),('headers','accept-encoding')}))
         seconds=min(30,(task.deadline-datetime.now(timezone.utc)).total_seconds())
-        reply=await broker.bridge.infer(source_job(task.view.tax_year),seconds)
+        reply=await broker.bridge.infer(source_job(task.view.tax_year),seconds,owner=grant_token)
         body=reply['body']
         if set(body)!=set(p)|{'retrieved_at'} or any(body[k]!=v for k,v in p.items()):
             raise EgressDenied('Ricevuta pubblicazione AdE difforme')
@@ -162,7 +162,7 @@ async def source_request(broker, request, authorization):
         context=broker._privacy.get(grant.session_id,SensitiveContext())
         check(context,WIRE_REQUEST,public_paths=frozenset({('url',),('headers','accept'),('headers','accept-encoding')}))
         seconds=min(30,(task.deadline-datetime.now(timezone.utc)).total_seconds())
-        reply=await broker.bridge.infer(BRIDGE_JOB,seconds)
+        reply=await broker.bridge.infer(BRIDGE_JOB,seconds,owner=grant_token)
         parsed,_=verify_ecb(reply['body'])
         evidence=parsed.model_dump(mode='json')
         grant.external_http_ms=reply['source_ms']
