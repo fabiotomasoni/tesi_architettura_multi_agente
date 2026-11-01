@@ -1,7 +1,7 @@
 """Applicazione aritmetica locale, senza interpretazione normativa o spettanza."""
 from decimal import Decimal, ROUND_HALF_UP, localcontext
 from .models import Scenario
-from .policy import issues, make_view
+from .policy import issues, domain_view
 from .agent_contracts import TaxView
 from .tax_evidence import verify_evidence
 from .ade_source import is_ade, LIMIT
@@ -27,7 +27,7 @@ def apply_tax_scenario(profile, activity, *, has_conflicts=False):
     if issues(profile,Scenario.TAX):return not_calculated('input_not_ready')
     if activity['status']!='completed' or not activity.get('result',{}).get('evidence'):
         return not_calculated('tax_evidence_unavailable')
-    evidence,digest=verify_evidence(activity['result']['evidence'],TaxView.model_validate(make_view(profile,Scenario.TAX)))
+    evidence,digest=verify_evidence(activity['result']['evidence'],TaxView.model_validate(domain_view(profile,Scenario.TAX)))
     real=is_ade(evidence)
     if real:
         base['limits']=[x for x in base['limits'] if 'Fonte simulata' not in x and 'fonti reali' not in x]+[LIMIT]

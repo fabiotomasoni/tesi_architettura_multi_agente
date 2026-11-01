@@ -22,7 +22,7 @@ class State(TypedDict, total=False):
 
 
 async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask, view_type=MarketView, result_type=MarketResult, scope="market_rate_context", deadline=None):
-    """Callback locali gateway; lo stato non contiene profilo esatto né PDF."""
+    """Callback gateway: viste autorizzate, anche esatte nel laboratorio; mai PDF."""
     started = perf_counter()
     phases = []
     outcome = {'status':'failed', 'error_code':'workflow_error'}
@@ -35,8 +35,13 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
         try:
             permitted = request_view()
             if deadline is not None and deadline<=datetime.now(timezone.utc):raise TimeoutError()
+            from . import runtime
+            if runtime.UNMINIMIZED:
+                from .lab_profile import FullFinancialView
+                selected_view=FullFinancialView
+            else:selected_view=view_type
             task = task_type(purpose=scope,correlation_id=uuid4(),deadline=deadline or datetime.now(timezone.utc)+timedelta(seconds=120),
-                              view=view_type.model_validate(permitted['data']))
+                              view=selected_view.model_validate(permitted['data']))
         except TimeoutError:
             phase('request_view',began,'failed')
             return {'status':'failed','error_code':'timeout'}

@@ -178,11 +178,12 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "policy_version": POLICY_VERSION,
-                "runtime_mode": runtime.MODE, "experiment": runtime.EXPERIMENT, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
+                "runtime_mode": runtime.MODE, "experiment": runtime.EXPERIMENT, "minimization": runtime.MINIMIZATION, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
     @app.post("/sessions", status_code=201)
     def create_session(payload: SessionInput):
+        if runtime.EXPERIMENT!='off':raise HTTPException(403,'Nel laboratorio usare solo i PDF del corpus sintetico fissato.')
         return register_session(payload, SensitiveContext.from_profile(payload.profile))
 
     def register_session(payload, context):
@@ -190,6 +191,9 @@ def create_app() -> FastAPI:
             expire_sessions()
             sid = uuid4()
             broker._privacy[sid]=context
+            if runtime.UNMINIMIZED:
+                from .lab_profile import full_view
+                broker._lab_profiles[sid]=full_view(payload.profile)
             sessions[sid] = (deepcopy(payload), monotonic() + SESSION_TTL_SECONDS)
             return {"session_id": str(sid), "policy_version": POLICY_VERSION,
                     "scenarios": {s.value: {"ready": not issues(payload.profile, s), "issues": issues(payload.profile, s)} for s in set(payload.scenarios)}}
@@ -204,11 +208,19 @@ def create_app() -> FastAPI:
             if not 1 <= len(files) <= 4:
                 raise HTTPException(400, "Caricare da uno a quattro PDF dello stesso fascicolo.")
             contents = []
+            lab_cases=set()
             rejected_documents = []
             for index, file in enumerate(files, 1):
                 content = await file.read(5 * 1024 * 1024 + 1)
                 if len(content) > 5 * 1024 * 1024:
                     raise HTTPException(413, "Ogni PDF deve essere inferiore a 5 MiB.")
+                if runtime.EXPERIMENT!='off':
+                    import hashlib
+                    from .lab_corpus import PDF_CASES
+                    case=PDF_CASES.get(hashlib.sha256(content).hexdigest())
+                    if case is None:raise HTTPException(403,'PDF fuori dal corpus sintetico autorizzato per il laboratorio.')
+                    lab_cases.add(case)
+                    if len(lab_cases)>1:raise HTTPException(400,'Nel laboratorio caricare un solo fascicolo per sessione.')
                 try:
                     # Prevalidazione separata: un file rifiutato non entra nell'aggregazione.
                     extract_profile([content])
@@ -248,6 +260,7 @@ def create_app() -> FastAPI:
 
     @app.post("/sessions/{session_id}/markets")
     async def run_markets(session_id: UUID):
+        if runtime.EXPERIMENT!='off':raise HTTPException(409,'Nel laboratorio usare il percorso analysis con budget di sessione comune.')
         from datetime import datetime, timedelta, timezone
         from .agent_contracts import MarketTask, MarketView
         from .market_client import delegate
@@ -268,6 +281,7 @@ def create_app() -> FastAPI:
 
     @app.post("/sessions/{session_id}/workflow")
     async def workflow(session_id: UUID):
+        if runtime.EXPERIMENT!='off':raise HTTPException(409,'Nel laboratorio usare il percorso analysis con budget di sessione comune.')
         from .workflow import run_workflow
         from .market_client import delegate
         with lock:
@@ -310,7 +324,7 @@ def create_app() -> FastAPI:
                                     lambda activities,status:build_report(session.profile,scenarios,activities,status))
         if runtime.EXPERIMENT!='off':
             result['workflow']=('single' if runtime.SINGLE else 'multi')+'-experiment-v1'
-            result['experiment']={'organization':runtime.EXPERIMENT,'policy':'active','sources':'fixed_local_fixtures','model':'llama3.2:3b','schedule':'sequential','session_budget_seconds':120,'model_calls_max':len(scenarios),'num_ctx':4096,'num_predict':200,'temperature':0,'keep_alive':0}
+            result['experiment']={'protocol':'financial-profile-2x2-v1','organization':runtime.EXPERIMENT,'policy':runtime.MINIMIZATION,'sources':'fixed_local_fixtures','model':'llama3.2:3b','schedule':'sequential','session_budget_seconds':120,'model_calls_max':len(scenarios),'num_ctx':4096,'num_predict':200,'temperature':0,'keep_alive':0,'corpus':'synthetic-financial-v1'}
             if batch is not None:result['coordination_measurements']=batch.measurements
         # Presentazione ricavata dallo stesso JSON, senza inferenze e senza storico.
         # Un guasto di impaginazione non deve perdere il risultato strutturato valido.

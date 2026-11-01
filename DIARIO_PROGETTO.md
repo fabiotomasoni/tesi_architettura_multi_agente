@@ -162,6 +162,24 @@ Verificati runs/baseline_single_manual.jsonl e runs/baseline_multi_manual.jsonl:
 
 Chiusa la verifica manuale dei primi profili S+P/M+P. Una ripetizione per caso e configurazione è un pilota, non la campagna della tesi; i tempi osservati non dimostrano superiorità. Prosa LLM esclusa dal report e nessuna valutazione umana della qualità ancora eseguita. Restano S−P/M−P, copertura delle verifiche, annotazioni/rubriche/soglie e dieci ripetizioni finali. S04 fermo.
 
+## Modifica 56 — S−P/M−P nel laboratorio finanziario sintetico
+
+Perimetro confermato dall’utente: profilo finanziario completo con valori esatti, unità, periodi e stati, senza selezione per specialista né durata in fasce. Originali, testo grezzo, citazioni dei PDF e identificativi restano esclusi in tutte le celle: questa è l’operazionalizzazione della minimizzazione finanziaria, non un confronto sulla rimozione di nomi/IBAN. Nuovo profilo di avvio esplicito; non selezionabile nei messaggi. Conservati instradamento, autenticazione, schemi, destinazioni, budget e validazione dei dati locali. Il profilo completo deve coincidere con quello autorizzato per la sessione e viene revocato con essa.
+
+Tutte le celle sperimentali ammettono solo PDF del corpus sintetico fissato per digest, senza montare il dataset; ingresso JSON diretto e fascicoli mescolati rifiutati. Nessuna fonte reale. Stessi MCP e formato del prompt fonte+contesto in tutte le celle; il contesto è minimizzato o completo. Protocollo financial-profile-2x2-v1: occorrono nuovi S+P/M+P, senza mescolare i piloti precedenti. Metriche di byte canonici/categorie delle viste autorizzate ai confini A2A/MCP/modello, senza valori nei log; non sono pacchetti wire né prova di consegna dopo guasti o divulgazioni Internet.
+
+**Verifiche:** 493 passed, 106 warning; contratti chiusi, vincoli del corpus, rifiuto delle fonti reali, forma delle viste, conservazione delle ambiguità, revoca e comparatore. Pilota reale Docker/A2A/MCP/Ollama sui cinque casi, una ripetizione per ciascuna delle quattro celle: esiti attesi e pulizia positivi; check_factorial_pilot passed True. Artefatti runs/four_{single,multi}_{active,disabled}_validation.jsonl. Risultati strutturati uguali e pesi/budget confrontabili. C001: viste attive 119 byte mercati e 90 fiscalità contro 996 byte ciascuna senza minimizzazione; importi esatti da zero a tre campi. È un’osservazione pilota sul contenuto finanziario autorizzato, non una misura generale di privacy/utilità o un vantaggio qualitativo dimostrato. Ripristinata la precedente configurazione multi/active su 8080; il ponte dell’utente va riavviato con il codice aggiornato.
+
+README e residui aggiornati, nuovo check_factorial_pilot.py. Da completare prova manuale delle quattro celle. Restano rubriche, soglie, annotazioni, copertura V-01–V-10 e campagna finale con dieci ripetizioni; S04 non avviato.
+
+## Modifica 57 — Verifica manuale delle quattro celle pilota
+
+Controllati runs/{single,multi}_{active,disabled}_manual.jsonl: cinque righe senza duplicati per cella, stesso protocollo financial-profile-2x2-v1, ingressi per caso, pesi, impostazioni e budget confrontabili. Tutte le 20 esecuzioni con esiti attesi, controlli e pulizia positivi: C001/C024 completed, C006/C011/C016 partial. check_factorial_pilot.py: passed True. Risultati strutturati coincidenti nelle quattro celle.
+
+La riduzione del contesto finanziario è confermata nei controlli A2A/MCP/modello: per C001, viste canoniche di 119 byte mercati e 90 fiscalità con minimizzazione contro 996 byte ciascuna senza; da zero a tre campi di importi esatti, in entrambe le organizzazioni. Sono metriche del contenuto finanziario autorizzato nel laboratorio, non traffico wire complessivo o divulgazioni reali verso Internet.
+
+Chiuso il pilota manuale 2x2 nel perimetro concordato, con una ripetizione per caso/cella. Non è la campagna finale: nessuna conclusione statistica su prestazioni o superiorità, nessuna verifica umana della qualità ancora eseguita. Il report deterministico resta invariato; non si assume un vantaggio d’utilità dai dati aggiuntivi. Restano rubriche, soglie, annotazioni, verifiche mancanti e dieci ripetizioni finali; S04 fermo.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

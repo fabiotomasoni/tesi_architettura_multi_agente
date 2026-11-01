@@ -66,6 +66,14 @@ def issues(profile: Profile, scenario: Scenario) -> list[dict]:
 
 
 def make_view(profile: Profile, scenario: Scenario) -> dict:
+    from . import runtime
+    if runtime.UNMINIMIZED:
+        from .lab_profile import full_view
+        return full_view(profile)
+    return domain_view(profile,scenario)
+
+
+def domain_view(profile: Profile, scenario: Scenario) -> dict:
     if scenario == Scenario.MORTGAGE:
         months = int(str(profile.remaining_months.value))
         # Fasce (0,60], (60,120], ...: nessun valore esatto nella vista.

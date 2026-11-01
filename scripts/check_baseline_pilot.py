@@ -18,7 +18,7 @@ def verify(single,multi):
         checks[label+'/runs_passed']=all(r.get('passed') and r.get('cleanup_verified') and r.get('automatic_session_closed') for r in (a,b))
         checks[label+'/same_weights']=a.get('model_digest')==b.get('model_digest') and bool(a.get('model_digest'))
         x={k:v for k,v in a['experiment'].items() if k!='organization'};y={k:v for k,v in b['experiment'].items() if k!='organization'}
-        checks[label+'/same_settings']=x==y and x['sources']=='fixed_local_fixtures' and x['policy']=='active' and x['schedule']=='sequential'
+        checks[label+'/same_settings']=x==y and x['sources']=='fixed_local_fixtures' and x['policy'] in {'active','disabled'} and x['schedule']=='sequential'
         checks[label+'/same_structured_result']=a['semantic_result_sha256']==b['semantic_result_sha256']
         for r,kind in ((a,'single'),(b,'multi')):
             activities=r['activities'];completed=[v['measurements'] for v in activities.values() if v['status']=='completed']

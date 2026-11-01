@@ -1,0 +1,8 @@
+# Da usare SOLO dopo experiment-single oppure experiment-multi: corpus sintetico fissato.
+services:
+  gateway:
+    environment: {TESI_MINIMIZATION: disabled}
+  markets:
+    environment: {TESI_MINIMIZATION: disabled}
+  tax:
+    environment: {TESI_MINIMIZATION: disabled}

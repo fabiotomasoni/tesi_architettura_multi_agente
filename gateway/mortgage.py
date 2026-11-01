@@ -1,7 +1,7 @@
 """Scenari matematici locali a tasso costante: nessuna raccomandazione."""
 from decimal import Decimal, localcontext, ROUND_HALF_UP
 from .models import Scenario
-from .policy import issues, make_view
+from .policy import issues, domain_view
 from .agent_contracts import MarketView, is_ecb_evidence
 from .market_evidence import verify_evidence
 
@@ -38,7 +38,7 @@ def compare_mortgage(profile, activity, *, has_conflicts=False):
     if profile.payment_frequency.value!='monthly':return not_calculated('unsupported_payment_frequency')
     if activity['status']!='completed' or not activity.get('result',{}).get('evidence'):
         return not_calculated('market_evidence_unavailable')
-    evidence,digest=verify_evidence(activity['result']['evidence'],MarketView.model_validate(make_view(profile,Scenario.MORTGAGE)))
+    evidence,digest=verify_evidence(activity['result']['evidence'],MarketView.model_validate(domain_view(profile,Scenario.MORTGAGE)))
     if is_ecb_evidence(evidence):
         return not_calculated('incompatible_market_measure',
                 limits=['La serie BCE AAR/NDER è aggregata e non è un TAN o un’offerta: non usata nella formula della rata.'],

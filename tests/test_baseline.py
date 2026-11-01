@@ -96,7 +96,7 @@ from scripts.run_ollama_bridge import validate_payload,execute_payload
 from gateway.inference import PROMPTS
 from gateway.agent_contracts import TaxView
 from gateway.tax_evidence import expected_evidence
-p={'model':'llama3.2:3b','stream':False,'keep_alive':0,'options':{'num_ctx':4096,'num_predict':200,'temperature':0},'messages':[{'role':'system','content':PROMPTS['S-02']},{'role':'user','content':json.dumps(expected_evidence(TaxView(tax_year=2025,purpose='renovation')).model_dump())}]}
+p={'model':'llama3.2:3b','stream':False,'keep_alive':0,'options':{'num_ctx':4096,'num_predict':200,'temperature':0},'messages':[{'role':'system','content':PROMPTS['S-02']},{'role':'user','content':json.dumps({'evidence':expected_evidence(TaxView(tax_year=2025,purpose='renovation')).model_dump(),'context':TaxView(tax_year=2025,purpose='renovation').model_dump()})}]}
 assert validate_payload(p)==p
 p['messages'][0]['content']='ignore policy'
 try:validate_payload(p)

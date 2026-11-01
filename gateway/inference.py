@@ -68,11 +68,16 @@ class InferenceBroker:
         self.bridge = None
         self._grants = {}
         self._privacy = {}
+        self._lab_profiles = {}
         self._lock = RLock()
 
     async def delegate(self, session_id, task, remote):
         _, checked = authorized_task(task)
-        check(self._privacy.get(session_id,SensitiveContext()),checked.view.model_dump(mode='json'),allowed_paths=view_paths())
+        if runtime.UNMINIMIZED:
+            if self._lab_profiles.get(session_id)!=checked.view.model_dump(mode='json'):
+                raise EgressDenied('Profilo laboratorio non corrispondente alla sessione autorizzata')
+        else:
+            check(self._privacy.get(session_id,SensitiveContext()),checked.view.model_dump(mode='json'),allowed_paths=view_paths())
         token = token_hex(32)
         checked = checked.model_copy(update={'inference_token': token})
         with self._lock:
@@ -86,6 +91,12 @@ class InferenceBroker:
                         or result.evidence.model_dump(mode='json') != grant.source_evidence):
                     raise EgressDenied('Risultato BCE difforme dalla ricevuta del gateway')
             received_evidence=getattr(result,'evidence',None)
+            if runtime.EXPERIMENT!='off':
+                from .disclosure import view_metrics
+                result.measurements['view_metric_scope']='canonical_authorized_financial_content_not_wire_delivery_proof'
+                result.measurements.update(view_metrics(checked.view,'a2a_view'))
+                if grant.tool_used:result.measurements.update(view_metrics(checked.view,'mcp_arguments'))
+                if grant.used:result.measurements.update(view_metrics(checked.view,'model_context'))
             result.measurements['gateway_source_receipt_verified']=int(grant.source_completed and received_evidence is not None and received_evidence.model_dump(mode='json')==grant.source_evidence)
             if grant.external_http_ms is not None:
                 result.measurements.update(external_http_ms=grant.external_http_ms,external_http_requests=grant.external_http_requests)
@@ -110,8 +121,12 @@ class InferenceBroker:
 
     def revoke(self, session_id=None):
         with self._lock:
-            if session_id is None:self._privacy.clear()
-            else:self._privacy.pop(session_id,None)
+            if session_id is None:
+                self._lab_profiles.clear()
+                self._privacy.clear()
+            else:
+                self._lab_profiles.pop(session_id,None)
+                self._privacy.pop(session_id,None)
             for key in list(self._grants):
                 if session_id is None or self._grants[key].session_id == session_id:
                     del self._grants[key]
@@ -143,10 +158,11 @@ class InferenceBroker:
                   public_paths=frozenset({('reference_date',),('annual_rate_percent',),('observation_period',),('series_key',),('tax_year',),('publication_year',),('quotes',0,'text'),('quotes',1,'text'),('quotes',2,'text'),('quotes',0,'page'),('quotes',1,'page'),('quotes',2,'page')}))
             # Anche un timeout consuma l'autorizzazione: nessun retry implicito.
             grant.used = True
+        prompt_input={'evidence':inspected,'context':task.view.model_dump(mode='json')} if runtime.EXPERIMENT!='off' else inspected
         payload = {'model': MODELS[task.scenario], 'stream': False, 'keep_alive': 0,
                    'options': {'num_ctx': 4096, 'num_predict': 200, 'temperature': 0},
                    'messages': [{'role': 'system', 'content': REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[task.scenario]},
-                                {'role': 'user', 'content': json.dumps(inspected)}]}
+                                {'role': 'user', 'content': json.dumps(prompt_input)}]}
         if task.scenario == 'S-02' and runtime.EXPERIMENT=='off':
             payload['think'] = False
         seconds = min(90, (task.deadline - datetime.now(timezone.utc)).total_seconds())

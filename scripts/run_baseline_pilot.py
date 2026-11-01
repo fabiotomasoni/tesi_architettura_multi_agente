@@ -1,4 +1,4 @@
-"""Pilota S+P/M+P, metadati senza contenuti documentali; non campagna finale."""
+"""Pilota 2x2 locale, metadati senza contenuti documentali; non campagna finale."""
 import argparse,hashlib,json
 from pathlib import Path
 from importlib.metadata import version
@@ -9,6 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--organization',choices=['single','multi'],required=True)
+    p.add_argument('--minimization',choices=['active','disabled'],default='active')
     p.add_argument('--cases',nargs='+',default=['C001','C024','C006','C011','C016'])
     p.add_argument('--repetitions',type=int,default=1)
     p.add_argument('--gateway-url',choices=['http://127.0.0.1:8080','http://127.0.0.1:8081'],default='http://127.0.0.1:8080')
@@ -21,14 +22,15 @@ def main():
     if not digest:raise SystemExit('Modello llama3.2:3b non disponibile in Ollama.')
     with httpx.Client(base_url=a.gateway_url,timeout=135,trust_env=False) as c:
         h=c.get('/health');h.raise_for_status();health=h.json()
-        if health.get('experiment')!=a.organization or health.get('runtime_mode')!='isolated' or any(health.get(k)!='simulated' for k in ('market_source','tax_source')):
+        if health.get('experiment')!=a.organization or health.get('minimization')!=a.minimization or health.get('runtime_mode')!='isolated' or any(health.get(k)!='simulated' for k in ('market_source','tax_source')):
             raise SystemExit('Gateway non configurato per questo profilo sperimentale. Nessun PDF inviato.')
         for case in a.cases:
             for repetition in range(1,a.repetitions+1):
-                sid=None;row={'scope':'baseline_pilot_not_final_campaign','case':case,'repetition':repetition,'organization':a.organization,'model_digest':digest,'langgraph':version('langgraph'),'cleanup_verified':False}
+                sid=None;row={'scope':'baseline_pilot_not_final_campaign','case':case,'repetition':repetition,'organization':a.organization,'minimization':a.minimization,'model_digest':digest,'langgraph':version('langgraph'),'cleanup_verified':False}
                 try:
                     files=[('files',(k+'.pdf',(ROOT/'dataset/Documents'/f'{case}_{k}.pdf').read_bytes(),'application/pdf')) for k in ('mutuo','interessi')]
                     r=c.post('/sessions/pdf',files=files,data={'scenarios':['S-01','S-02']});r.raise_for_status();sid=r.json()['session_id']
+                    row['input_financial_amount_fields']=sum(r.json()['profile'].get(k) is not None for k in ('remaining_principal','payment_amount','annual_interest'))
                     r=c.post(f'/sessions/{sid}/analysis');r.raise_for_status();body=r.json()
                     n=int(case[1:]);expected={'S-01':'blocked' if 6<=n<=10 or 16<=n<=20 else 'completed','S-02':'blocked' if 11<=n<=15 else 'completed'}
                     activities={s:{'status':x['status'],'error_code':x.get('error_code'),'phases':x['phases'],'model':(x.get('result') or {}).get('model'),'measurements':(x.get('result') or {}).get('measurements',{})} for s,x in body['activities'].items()}

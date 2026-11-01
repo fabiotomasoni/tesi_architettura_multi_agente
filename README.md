@@ -291,3 +291,39 @@ Confrontare infine:
 I cinque casi previsti sono C001/C024 completi e C006/C011/C016 parziali. Il controllo verifica esiti, pulizia, pesi del modello, impostazioni, risultati strutturati e conteggi delle chiamate. La prosa LLM resta esclusa dal report: questo pilota confronta funzionamento e coordinamento, non dimostra un vantaggio qualitativo dei modelli. I tempi delle fasi possono essere annidati e non vanno sommati indiscriminatamente.
 
 Per tornare alla demo, fermare il ponte sperimentale, eseguire `down` con il file sperimentale usato, poi ripetere l’avvio BCE/AdE e del relativo ponte descritto sopra. Le fonti reali sono rifiutate dai profili sperimentali.
+
+## Piloti senza minimizzazione finanziaria (S−P/M−P)
+
+Nel laboratorio è possibile condividere con ciascun agente e con i suoi MCP/modello l’intero profilo finanziario estratto: valori esatti, unità, periodi e stati di validazione, senza selezione per dominio o durata in fasce. I valori assenti restano assenti e quelli ambigui mantengono il loro stato. PDF, testo grezzo, citazioni documentali e identificativi diretti restano esclusi dai messaggi in tutte le configurazioni: questo confronto riguarda la minimizzazione dei **campi finanziari**, non la rimozione di nomi o IBAN.
+
+Tutti i profili sperimentali ora accettano soltanto i PDF del corpus sintetico fissato, verificati tramite digest; l’ingresso JSON diretto è disabilitato. Il gateway non monta il dataset. File rigenerati richiedono una revisione esplicita del manifest. Autenticazione, schemi, destinazioni, isolamento e budget restano attivi. Nessuna fonte o inferenza remota è disponibile.
+
+Il protocollo aggiornato usa per tutti i profili lo stesso prompt strutturato «fonte + contesto», con contesto minimizzato o completo. **Rieseguire anche S+P/M+P** per il confronto a quattro celle: i precedenti piloti non sono mescolabili con questo protocollo. Rimangono validi come prove del precedente incremento.
+
+Dopo aver fermato il ponte e arrestato la configurazione precedente, per S−P:
+
+```bash
+docker compose -f compose.isolated.yaml -f compose.experiment-single.yaml -f compose.experiment-unminimized.yaml up -d --no-build
+```
+
+Ponte in un terminale separato:
+
+```bash
+.venv/bin/python scripts/run_experiment_bridge.py --organization single --minimization disabled
+```
+
+Pilota:
+
+```bash
+.venv/bin/python scripts/run_baseline_pilot.py --organization single --minimization disabled --output runs/single_disabled_manual.jsonl
+```
+
+Per M−P usare il file `compose.experiment-multi.yaml` al posto di quello single e `--organization multi` nei comandi Python. Prima di ogni cambio fermare il ponte ed eseguire `down` con i file della configurazione corrente. Per S+P/M+P omettere il file unminimized e usare `--minimization active` in ponte e pilota. Usare quattro file JSONL nuovi. Su Windows sostituire `.venv/bin/python` con `.\.venv\Scripts\python.exe`.
+
+Confronto finale dei quattro piloti:
+
+```bash
+.venv/bin/python scripts/check_factorial_pilot.py --single-active runs/single_active_manual.jsonl --multi-active runs/multi_active_manual.jsonl --single-disabled runs/single_disabled_manual.jsonl --multi-disabled runs/multi_disabled_manual.jsonl
+```
+
+Le nuove metriche riportano byte canonici e categorie delle viste autorizzate, senza valori. Non sono conteggi completi dei pacchetti di rete o prova di consegna di una chiamata fallita. Nei casi completati misurano il contesto autorizzato ai confini A2A, MCP e modello. Non si misura divulgazione reale a Internet: i quattro profili restano locali. Il report deterministico può rimanere uguale pur condividendo più dati; ciò non dimostra un miglioramento di utilità o qualità. Rubriche, soglie e campagna finale restano da completare.

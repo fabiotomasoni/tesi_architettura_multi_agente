@@ -35,6 +35,12 @@ def validate_payload(payload):
     else:scenario=next(k for k,v in MODELS.items() if v==payload['model'])
     messages=payload['messages']
     evidence=json.loads(messages[1]['content'])
+    lab_view=None
+    if runtime.EXPERIMENT!='off':
+        if set(evidence)!={'evidence','context'}:raise ValueError('Contesto sperimentale mancante')
+        from gateway.lab_profile import FullFinancialView
+        lab_view=(FullFinancialView if runtime.UNMINIMIZED else MarketView if scenario=='S-01' else TaxView).model_validate(evidence['context'])
+        evidence=evidence['evidence']
     real=scenario=='S-01' and messages[0].get('content')==REAL_MARKET_PROMPT
     real_tax=scenario=='S-02' and messages[0].get('content')==REAL_TAX_PROMPT
     if real_tax:
@@ -48,10 +54,10 @@ def validate_payload(payload):
         from gateway.market_evidence import RATES
         rate=next((k for k,v in RATES.items() if v==evidence.get('annual_rate_percent')),None)
         view=MarketView(mortgage_type='not_specified',rate_type=rate,remaining_years_band={'lower_exclusive':0,'upper_inclusive':5})
-        market(evidence,view)
+        market(evidence,lab_view or view)
     else:
         view=TaxView(tax_year=evidence.get('tax_year'),purpose=evidence.get('purpose'))
-        tax(evidence,view)
+        tax(evidence,lab_view or view)
     expected={'model':MODELS[scenario],'stream':False,'keep_alive':0,
               'options':{'num_ctx':4096,'num_predict':200,'temperature':0},
               'messages':[{'role':'system','content':REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[scenario]},

@@ -1,4 +1,4 @@
-"""Contratti del primo confine A2A; nessun dato finanziario esatto."""
+"""Contratti A2A: viste minimizzate o profilo finanziario del laboratorio autorizzato."""
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
@@ -6,6 +6,7 @@ from pydantic import Field, model_validator
 from .models import Contract
 from .ecb_source import EcbRateEvidence
 from .ade_source import AdeEvidence
+from .lab_profile import FullFinancialView
 
 
 class DurationBand(Contract):
@@ -32,7 +33,7 @@ class MarketTask(Contract):
     policy_version: Literal['0.1.0', '0.2.0', '0.3.0'] = '0.3.0'
     deadline: datetime
     inference_token: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$', repr=False)
-    view: MarketView
+    view: MarketView | FullFinancialView
 
     @model_validator(mode='after')
     def timezone_required(self):
@@ -83,7 +84,7 @@ class TaxTask(Contract):
     policy_version: Literal['0.2.0', '0.3.0'] = '0.3.0'
     deadline: datetime
     inference_token: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$', repr=False)
-    view: TaxView
+    view: TaxView | FullFinancialView
 
     @model_validator(mode='after')
     def timezone_required(self):

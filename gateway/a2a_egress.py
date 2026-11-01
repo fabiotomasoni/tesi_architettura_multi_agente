@@ -12,6 +12,8 @@ from uuid import UUID
 import httpx
 from .agent_contracts import MarketTask, TaxTask, BatchTask
 from .runtime import AGENT_ENDPOINTS, SINGLE
+from . import runtime
+from .lab_profile import FullFinancialView
 from .identity import a2a_headers
 
 
@@ -42,6 +44,8 @@ def authorized_task(task):
         route = ROUTES[task.scenario]
         # Rivalidare anche oggetti costruiti senza validazione o modificati.
         checked = route.task_type.model_validate(task.model_dump(mode='json'))
+        if not isinstance(checked,BatchTask) and isinstance(checked.view,FullFinancialView)!=runtime.UNMINIMIZED:
+            raise ValueError('Forma della vista incoerente con il profilo di minimizzazione')
         if isinstance(checked,BatchTask):
             if not SINGLE:raise ValueError()
             for item in checked.tasks:authorized_task(item)

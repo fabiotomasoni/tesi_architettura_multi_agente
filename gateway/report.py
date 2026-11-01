@@ -1,5 +1,5 @@
 """Report locale deterministico: separa evidenze e sintesi senza inferenza aggiuntiva."""
-from .policy import REQUIRED, OPTIONAL, POLICY_VERSION, make_view, issues
+from .policy import REQUIRED, OPTIONAL, POLICY_VERSION, domain_view, issues
 from .models import Scenario
 from .agent_contracts import TaxView, MarketView, is_ecb_evidence
 from .ade_source import is_ade
@@ -73,7 +73,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
                     'free_text_included':False,'reason':'Prosa del modello non verificata; esclusa dalla sintesi fiscale.',
                     'output_sha256':hashlib.sha256(result['summary'].encode()).hexdigest()})
             else:
-                view=MarketView.model_validate(make_view(profile,Scenario.MORTGAGE))
+                view=MarketView.model_validate(domain_view(profile,Scenario.MORTGAGE))
                 real=is_ecb_evidence(result['evidence'])
                 if real and result.get('measurements',{}).get('gateway_source_receipt_verified')!=1:
                     raise ValueError('Ricevuta di recupero BCE del gateway assente')
