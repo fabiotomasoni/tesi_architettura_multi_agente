@@ -52,6 +52,8 @@ def test_peer_cannot_reach_public_api_or_spoof_other_role(isolated):
     keys,_=isolated
     with TestClient(create_app(),client=('172.30.241.3',1234)) as client:
         assert client.get('/health').status_code==403
+        for asset in ('app.css','app.js','ui_state.js'):
+            assert client.get('/static/'+asset).status_code==403
         assert client.post('/sessions',json={}).status_code==403
         assert client.get('/_bridge/poll',headers={HEADER:keys['bridge']}).status_code==403
         assert client.post('/internal/inference',headers={HEADER:keys['tax_to_gateway']},json={}).status_code==403

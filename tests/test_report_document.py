@@ -77,3 +77,95 @@ def test_api_keeps_json_and_cleanup_if_presentation_fails(monkeypatch):
         assert body['report']['status']=='completed' and body['report_document_html'] is None
         assert 'private contents' not in response.text
         assert body['presentation_warning'] and c.delete('/sessions/'+sid).status_code==404
+
+
+@pytest.mark.parametrize('case,missing',[('C006','Capitale residuo'),('C011','Interessi annui documentati'),('C016','Tasso annuo contrattuale')])
+def test_partial_report_highlights_unusable_fields_without_losing_other_domain(case,missing):
+    from gateway.report_document import report_alerts
+    data=report(case)
+    alerts=report_alerts(data)
+    assert any(tone=='error' and missing in ' '.join(details) for tone,title,details in alerts)
+    html=render_report_document(data)
+    assert 'tone-error' in html and '! '+missing in html
+    assert len(data['document_data'])==2
+    assert any(o['status']=='completed' for o in data['outcomes'])
+
+
+def test_optional_context_and_different_domain_periods_are_not_red_errors():
+    from gateway.report_document import report_alerts
+    data=report('C021')
+    assert data['document_data'][0]['facts']['annual_rate']['period']!=data['document_data'][1]['facts']['tax_year']['period']
+    assert not any(tone=='error' for tone,_,_ in report_alerts(data))
+    assert any(tone=='warning' and 'Tipologia del mutuo' in ' '.join(details) for tone,_,details in report_alerts(data))
+    assert 'class="tone-error"' not in render_report_document(data)
+
+
+def test_conflict_keeps_both_values_provenance_and_suspension_without_mutation():
+    from copy import deepcopy
+    from gateway.comparisons import Observation,evaluate
+    data=report()
+    data['consistency']=evaluate([Observation(observation_id='a',quantity='aggregate_aar_nder',product='SIMULATED_PRESENTATION_PRODUCT',period='2025-01',value='3',unit='percent_per_year',source_kind='agent',source_ref='simulated-a',verified=True),Observation(observation_id='b',quantity='aggregate_aar_nder',product='SIMULATED_PRESENTATION_PRODUCT',period='2025-01',value='4',unit='percent_per_year',source_kind='agent',source_ref='simulated-b',verified=True)])
+    before=deepcopy(data);html=unescape(render_report_document(data))
+    assert data==before
+    assert 'Conflitto da risolvere' in html and 'conclusioni applicative sono sospese' in html
+    for part in ['3 percent_per_year','4 percent_per_year','simulated-a','simulated-b','2025-01','SIMULATED_PRESENTATION_PRODUCT']:
+        assert part in html
+
+
+def test_tax_only_reference_provenance_is_retained(monkeypatch):
+    from gateway import verification_config
+    from gateway.shared_reference import expected
+    monkeypatch.setattr(verification_config,'PROFILE','nominal')
+    profile,_=extract_profile([Path('dataset/Documents/C001_interessi.pdf').read_bytes()])
+    evidence=tax(TaxView.model_validate(make_view(profile,Scenario.TAX)))
+    reference=expected('S-02').model_dump(mode='json')
+    result={'evidence':evidence.model_dump(mode='json'),'summary':'controlled','model':'fixture','reference':reference,'measurements':{'gateway_reference_receipt_verified':1}}
+    data=build_report(profile,['S-02'],{'S-02':{'status':'completed','result':result}},'completed')
+    assert len(data['comparison_references'])==1
+    assert data['comparison_references'][0]['scenario']=='S-02'
+    assert data['comparison_references'][0]['evidence']==reference
+    assert data['comparison_references'][0]['institutional_live_retrieval'] is False
+    html=render_report_document(data)
+    assert reference['source_id'] in html
+
+
+@pytest.mark.parametrize('name,kind',[('app.css','text/css'),('app.js','text/javascript'),('ui_state.js','text/javascript')])
+def test_only_explicit_ui_assets_are_served(name,kind):
+    from gateway.app import create_app
+    with TestClient(create_app()) as client:
+        response=client.get('/static/'+name)
+        assert response.status_code==200 and response.headers['content-type'].startswith(kind)
+        assert response.content==Path('gateway/static',name).read_bytes()
+        assert response.headers['cache-control']=='no-store'
+        for forbidden in ['identity.json','app.py','../app.py','%2e%2e%2fapp.py']:
+            assert client.get('/static/'+forbidden).status_code==404
+
+
+def test_trace_polling_uses_no_store_and_never_mutates_or_exposes_profile():
+    from gateway.app import create_app
+    with TestClient(create_app()) as client:
+        payload=json.loads(Path('examples/session_complete.json').read_text())
+        response=client.post('/sessions',json=payload)
+        sid=response.json()['session_id'];identifier=response.json()['trace_id']
+        first=client.get('/traces/'+identifier)
+        assert first.headers['cache-control']=='no-store'
+        assert not first.json()['profile_closed']
+        assert client.get('/traces/'+identifier).json()==first.json()
+        assert 'remaining_principal' not in first.text and 'annual_interest' not in first.text
+        assert client.delete('/sessions/'+sid).status_code==204
+        last=client.get('/traces/'+identifier)
+        assert last.headers['cache-control']=='no-store' and last.json()['profile_closed']
+
+
+def test_incoherent_periods_inside_contract_are_red_without_rewriting_dates():
+    from datetime import date
+    from gateway.report_document import report_alerts
+    profile,_=extract_profile([Path(f'dataset/Documents/C001_{kind}.pdf').read_bytes() for kind in ('mutuo','interessi')])
+    profile.remaining_months.period=date(2024,12,31)
+    activities={'S-01':{'status':'blocked','error_code':'input_not_ready'},'S-02':{'status':'blocked','error_code':'input_not_ready'}}
+    data=build_report(profile,['S-01','S-02'],activities,'blocked')
+    assert any(tone=='error' and 'Date contrattuali non allineate' in details for tone,_,details in report_alerts(data))
+    assert data['document_data'][0]['facts']['remaining_months']['period']=='2024-12-31'
+    assert data['document_data'][0]['facts']['annual_rate']['period']=='2025-12-31'
+    html=render_report_document(data)
+    assert 'Date contrattuali non allineate' in html and 'tone-error' in html

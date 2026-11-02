@@ -115,7 +115,7 @@ def main():
                     if args.reports_dir:
                         args.reports_dir.mkdir(parents=True,exist_ok=True)
                         (args.reports_dir/(case+'.json')).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
-                        (args.reports_dir/(case+'.html')).write_text('<!doctype html><html lang="it"><meta charset="utf-8"><title>Report locale</title>'+render_report_document(report)+'</html>',encoding='utf-8')
+                        (args.reports_dir/(case+'.html')).write_text('<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Report locale</title><style>'+(ROOT/'gateway/static/app.css').read_text(encoding='utf-8')+'</style></head><body><main>'+render_report_document(report)+'</main></body></html>',encoding='utf-8')
                 except (httpx.HTTPError,KeyError,ValueError,TypeError,StopIteration,OSError):
                     row['passed']=False
                     row['error']='Controllo non completato; nessun successo registrato.'

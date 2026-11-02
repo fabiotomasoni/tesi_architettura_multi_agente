@@ -128,7 +128,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
         observations.append(reference_observation(receipt,scenario))
         reference_checks.append({'scenario':scenario,'evidence':raw,'source_sha256':digest,
             'gateway_receipt_verified':True,'institutional_live_retrieval':False,
-            'usage_limit':'Verifica del riferimento comune; nessun TAN personale o regola fiscale.'}) if 'S-01' in scenarios else []
+            'usage_limit':'Verifica del riferimento comune; nessun TAN personale o regola fiscale.'})
     if comparison_observations is not None:
         observations.extend(comparison_observations)
     consistency=evaluate(observations)

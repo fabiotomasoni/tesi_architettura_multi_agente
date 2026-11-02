@@ -1,6 +1,6 @@
 # Protocollo di valutazione — soglie approvate, congelamento pendente
 
-Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota 2×2 della versione precedente è concluso; la versione attuale richiede un nuovo pilota. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali; S04 è autorizzato solo nel perimetro locale concordato**. La configurazione corrente nel codice è `financial-profile-2x2-v6` (pilota della nuova versione ancora da eseguire); il file controllabile è `evaluation/protocol.json`.
+Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota tecnico corrente 2×2 è confermato dai file del blocco 2; la campagna finale resta distinta. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali; S04 è autorizzato solo nel perimetro locale concordato**. La configurazione corrente nel codice è `financial-profile-2x2-v6` (pilota tecnico confermato, campagna finale non autorizzata); il file controllabile è `evaluation/protocol.json`.
 
 ## Disegno e materiale di riferimento
 
@@ -290,3 +290,62 @@ Atteso: audit senza problemi, `S04 autorizzato: True` nel perimetro concordato e
 Il JSON principale rinvia ai quattro esiti di cella, alle tracce e ai quattro JSONL reali. I report finanziari non vengono archiviati automaticamente dal gateway. I consumi delle fixture controllate non sono misure Ollama. Le scelte LLM e gli eventuali commenti restano da valutare umanamente, anche quando il pilota tecnico passa. Per ripetere scegliere un nome di output nuovo; non sovrascrivere prove precedenti.
 
 Alla fine viene ripristinata **la demo base con fonti simulate**, senza lasciare ponti in background. Per tornare alla demo BCE/AdE seguire il README. I soli esiti verificati vanno aggiunti al diario: questa procedura non autorizza la campagna finale.
+
+
+## Verifica del terzo blocco — interfaccia e documento
+
+Stesso gateway, agenti, fonti, modelli e budget: questo incremento presenta gli esiti, senza aggiungere calcoli o criteri finanziari. Le fasi vengono lette dalla traccia locale già esistente, senza percentuali simulate. Il verde indica completamento tecnico, non correttezza semantica del modello. I dati obbligatori inutilizzabili e i conflitti sono rossi con testo/simbolo; contesto non specificato, fonti simulate e commenti esclusi sono note ambra. Periodi differenti fra mutuo e anno fiscale non sono automaticamente conflitti.
+
+Dalla repository, macOS, fermare il ponte precedente con Ctrl+C; lasciare Docker Desktop e Ollama aperti:
+
+```bash
+.venv/bin/python -m pytest -q --ignore=tests/test_block2_pipeline.py
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+docker compose -f compose.isolated.yaml -f compose.ecb.yaml -f compose.ade.yaml --profile verification up -d --no-build
+```
+
+In un secondo terminale, avviare un solo ponte e lasciarlo aperto:
+
+```bash
+.venv/bin/python scripts/run_ollama_bridge.py --enable-ecb --enable-ade
+```
+
+Windows PowerShell: stessi comandi Docker; comandi Python corrispondenti:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q --ignore=tests/test_block2_pipeline.py
+.\.venv\Scripts\python.exe scripts/run_ollama_bridge.py --enable-ecb --enable-ade
+```
+
+Il ponte va nel secondo terminale anche su Windows. Le 76 integrazioni lunghe del blocco 2 restano separate: questa verifica esegue le regressioni, senza ripetere la campagna Docker. Verifica di sviluppo corrente: 826 test passati, 127 warning delle dipendenze. Atteso sulla propria installazione: test passati; i warning delle dipendenze non vanno nascosti. Nessun nuovo programma o pacchetto grafico da installare per la demo.
+
+Aprire http://127.0.0.1:8080/ e ricaricare completamente la pagina (Cmd+Shift+R su macOS, Ctrl+F5 su Windows). Scegliere entrambi gli approfondimenti. Per ogni caso selezionare almeno mutuo e interessi dello stesso fascicolo, poi **Carica e verifica → Avvia analisi**. Conto e paga facoltativi non alimentano i due scenari. Non modificare manualmente i dati estratti.
+
+| Caso | Esito atteso con fonti/modelli disponibili | Controllo visivo |
+|---|---|---|
+| C001 | completo | Entrambi gli esiti disponibili; tipologia non specificata come limite, non errore obbligatorio. |
+| C006 | parziale | Capitale mancante e attività mercati non eseguibile in rosso; risultato fiscale conservato. |
+| C016 | parziale | TAN ambiguo in rosso, nessuna scelta arbitraria del tasso; risultato fiscale conservato. |
+| C021 | completo | Periodi distinti nei documenti, senza conflitto inventato tra domini. |
+
+Usare **Nuova analisi** fra i casi. Una fase registrata non dimostra da sola correttezza del risultato; se la traccia non è disponibile, la pagina lo dichiara senza inventare avanzamento. Verificare le fonti effettivamente recuperate nel report: una fonte configurata non è necessariamente disponibile. Il tasso mensile aggregato BCE non è un’offerta né il TAN da usare come tasso alternativo personale. Le condizioni AdE restano da verificare. Commento escluso e selezione valida sono distinti.
+
+Su C001 scaricare **documento HTML** e **dati JSON**. Aprire l’HTML: deve contenere gli stessi importi, periodi, fonti, citazioni, selezioni, ipotesi e limiti, senza dipendenze grafiche da Internet. Con **Stampa / salva PDF**, oppure stampando l’HTML scaricato nel browser, controllare l’anteprima A4: tutte le sezioni, righe e citazioni devono essere leggibili, senza tagli laterali; nessun modulo di upload o dettaglio tecnico nella stampa. Il salvataggio PDF nel browser dell’autore è una conferma manuale distinta dai test automatici. Se il browser integrato non apre la stampa, aprire la demo o l’HTML in un browser ordinario.
+
+Verificare il JSON esportato (adattare il solo nome se il browser aggiunge un suffisso):
+
+```bash
+# macOS
+.venv/bin/python scripts/check_report_provenance.py "$HOME/Downloads/report-locale.json"
+```
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts/check_report_provenance.py "$HOME\Downloads\report-locale.json"
+```
+
+Atteso C001: **Fatti verificati: 10; Problemi: 0**. Per C006: 9, zero problemi; C016: 10, zero problemi (anche l’ambiguità documentata mantiene provenienza); C021: 10, zero problemi. Questo controllo non attribuisce un voto alla prosa del modello e non confronta l’impaginazione del PDF.
+
+Infine ricaricare C001, avviare e premere **Annulla analisi e cancella sessione** mentre è in corso. Atteso: annullamento/chiusura dichiarati, nessun report tardivo mostrato, nuovo caricamento consentito. Ripetere C001 e verificare il recupero. Se il completamento precede il clic, la pagina dichiara la sessione già chiusa: non registrarlo come annullamento durante l’esecuzione.
+
+Il test di presentazione indisponibile resta automatico: mantiene report JSON e pulizia, disabilitando HTML/stampa senza documento inventato. I conflitti di valori hanno entrambe le provenienze e conclusioni sospese; il controllo UI di questa rappresentazione usa un conflitto sintetico esplicitamente dichiarato, distinto dalla prova agente–agente del blocco 2. Nessun nuovo endpoint di collaudo è incluso nella distribuzione.

@@ -106,10 +106,10 @@ Il comando ferma anche gli eventuali componenti temporanei delle prove. Le verif
 1. Aprire [la pagina locale](http://127.0.0.1:8080/).
 2. Selezionare fino a quattro PDF dello stesso fascicolo in `dataset/Documents`, per esempio tutti i file `C001_*`.
 3. Scegliere gli scenari desiderati e premere **Carica e verifica**.
-4. Premere **Esegui scenari selezionati e chiudi sessione**.
-5. Leggere il documento con tabelle, fonti e limiti. **Stampa / salva PDF** usa la funzione del browser; **Esporta dati JSON** conserva i dati verificabili. Il salvataggio è una scelta dell’utente.
+4. Premere **Avvia analisi** e seguire i due specialisti.
+5. Leggere il documento con tabelle, fonti e limiti. **Stampa / salva PDF** usa la funzione del browser; **Scarica documento HTML** salva una copia leggibile e autonoma; **Esporta dati JSON** conserva i dati verificabili. Il salvataggio è una scelta dell’utente.
 
-La pagina mostra la richiesta e gli esiti dei due specialisti; le singole fasi durante l’esecuzione non sono ancora visualizzate in tempo reale. I dati tecnici restano in una sezione espandibile.
+La pagina mostra le fasi effettivamente osservate e gli esiti dei due specialisti, senza percentuali simulate. Gli errori e i dati obbligatori inutilizzabili sono segnalati in rosso, con testo e simbolo; le note non bloccanti in ambra. I dati tecnici restano in una sezione espandibile. **Nuova analisi** rimuove il report dalla pagina e prepara il caricamento successivo. Se la presentazione non è disponibile, il JSON rimane esportabile.
 
 Il report distingue valori trasformati, dati mancanti o non specificati e mostra citazioni del testo di origine con un riepilogo di completezza per scenario. La sezione confronti distingue valori coerenti, conflitti e informazioni non confrontabili, mantenendo le provenienze. Il confronto del mutuo mostra rate e interessi teorici a parità di debito e durata: costi esclusi e tassi ipotizzati costanti, anche per il variabile. La rata del documento resta distinta da quella ricalcolata. Il riepilogo fiscale mostra anche interessi × quota come semplice ripartizione ipotetica: vale solo se gli interessi riguardano l’intero mutuo e non sono già ripartiti. Non è un importo detraibile né una detrazione spettante. Un esito completo indica che tutte le attività richieste sono terminate. Un esito parziale conserva le attività riuscite e spiega quelle bloccate, fallite o non verificate. Un risultato senza provenienza obbligatoria è indicato come non verificato ed escluso dai calcoli. La sessione viene chiusa automaticamente al termine; per ripetere l'analisi caricare nuovamente i PDF.
 
@@ -117,7 +117,7 @@ Per provare un caso incompleto usare `C006_*`: manca il capitale del mutuo, quin
 
 Prima delle chiamate, il gateway applica anche un filtro locale per identificativi, entità e valori sensibili conosciuti della sessione. Il filtro può commettere errori e affianca le viste ridotte e i destinatari autorizzati; non garantisce anonimato assoluto.
 
-Il report esportato contiene importi esatti. La demo non conserva uno storico dei profili e non salva automaticamente i report sul server. Il prototipo non ha ancora tutti i controlli di sicurezza previsti dalla tesi: usare il dataset sintetico e mantenere i servizi accessibili solo localmente.
+Il report esportato contiene importi esatti. La demo non conserva uno storico dei profili e non salva automaticamente i report sul server. I controlli hanno il perimetro descritto nel diario: usare il dataset sintetico e mantenere i servizi accessibili solo localmente.
 
 Durante l’elaborazione puoi premere **Annulla analisi e cancella sessione**. Il gateway interrompe l’analisi, revoca gli accessi temporanei e rifiuta risultati tardivi; puoi poi caricare un nuovo fascicolo. Anche la chiusura della connessione interrompe la richiesta. Il ponte aggiornato chiude la richiesta locale a Ollama quando l’incarico viene revocato: questo non certifica l’arresto immediato del calcolo interno al modello. Dopo questo aggiornamento ricostruire l’immagine dell’applicazione e riavviare il ponte.
 

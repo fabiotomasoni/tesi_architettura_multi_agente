@@ -149,7 +149,8 @@ def create_app() -> FastAPI:
     app.add_middleware(TraceMiddleware, store=traces)
 
     @app.get('/traces/{identifier}')
-    def read_trace(identifier: UUID):
+    def read_trace(identifier: UUID, response: Response):
+        response.headers['Cache-Control']='no-store'
         result = traces.snapshot(identifier)
         if result is None:
             raise HTTPException(404, 'Traccia assente, scaduta o persa dopo il riavvio.')
@@ -274,6 +275,12 @@ def create_app() -> FastAPI:
             raise HTTPException(504, "Tempo massimo fonte superato.") from None
         except Exception:
             raise HTTPException(502, "Fonte non disponibile.") from None
+
+    @app.get('/static/{asset}', include_in_schema=False)
+    def ui_asset(asset: str):
+        allowed={'app.css':'text/css','app.js':'text/javascript','ui_state.js':'text/javascript'}
+        if asset not in allowed:raise HTTPException(404,'Risorsa non disponibile.')
+        return FileResponse(Path(__file__).parent/'static'/asset,media_type=allowed[asset],headers={'Cache-Control':'no-store'})
 
     @app.get("/health")
     def health():
