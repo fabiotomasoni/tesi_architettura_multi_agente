@@ -166,7 +166,7 @@ def compare(phases):
 async def check(lab, controller):
     await lab.health()
     health = (await lab.client.get('/health')).json()
-    if health.get('market_tool_implementation')!='standard' or health.get('tool_catalog_version')!='0.4.0':
+    if health.get('market_tool_implementation')!='standard' or health.get('tool_catalog_version')!='0.5.0':
         raise ValueError('Avviare la demo base con l’immagine aggiornata e lo strumento standard')
     schemas = {key:await schema(module) for key,module in MODULES.items()}
     checks = {'distinct_servers':schemas['standard']['server_name']!=schemas['equivalent']['server_name'],

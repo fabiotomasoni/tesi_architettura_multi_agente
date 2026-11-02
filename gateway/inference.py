@@ -54,6 +54,9 @@ class InferenceResponse(Contract):
 class Grant:
     session_id: UUID
     task: object
+    reference_token: str | None = None
+    reference_used: bool = False
+    reference_evidence: dict | None = None
     tool_used: bool = False
     tool_module: str | None = None
     source_token: str | None = None
@@ -106,6 +109,14 @@ class InferenceBroker:
                 if (not grant.source_completed or grant.source_evidence is None or result.evidence is None
                         or result.evidence.model_dump(mode='json') != grant.source_evidence):
                     raise EgressDenied('Risultato della fonte difforme dalla ricevuta del gateway')
+            from . import verification_config
+            reference=getattr(result,'reference',None)
+            if reference is not None or verification_config.SHARED and getattr(result,'status',None)=='completed':
+                from .shared_reference import verify as verify_reference
+                if reference is None or reference!=grant.reference_evidence:
+                    raise EgressDenied('Riferimento difforme dalla ricevuta del gateway')
+                verify_reference(reference,checked.scenario,verification_config.PROFILE)
+                result.measurements['gateway_reference_receipt_verified']=1
             received_evidence=getattr(result,'evidence',None)
             analysis_field = 'market_analysis' if checked.scenario == 'S-01' else 'tax_analysis'
             returned_analysis = getattr(result, analysis_field, None)

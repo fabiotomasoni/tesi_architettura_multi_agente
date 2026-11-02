@@ -1,6 +1,6 @@
 # Protocollo di valutazione — soglie approvate, congelamento pendente
 
-Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota 2×2 della versione precedente è concluso; la versione attuale richiede un nuovo pilota. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali o S04**. La configurazione corrente nel codice è `financial-profile-2x2-v5` (pilota della nuova versione ancora da eseguire); il file controllabile è `evaluation/protocol.json`.
+Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota 2×2 della versione precedente è concluso; la versione attuale richiede un nuovo pilota. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali; S04 è autorizzato solo nel perimetro locale concordato**. La configurazione corrente nel codice è `financial-profile-2x2-v6` (pilota della nuova versione ancora da eseguire); il file controllabile è `evaluation/protocol.json`.
 
 ## Disegno e materiale di riferimento
 
@@ -141,7 +141,7 @@ La modalità crash esegue SIGKILL/start del gateway in modo esplicito e prova a 
 
 La tesi (§3.5, V-06; RNF-05) richiede un agente **o** uno strumento equivalente. Questo incremento sceglie soltanto lo strumento mercati: `services.rates_mcp` (FastMCP) e `services.rates_mcp_equivalent` (API low-level MCP) sono implementazioni distinte dello stesso `lookup_rates`. Il sostitutivo dichiara esplicitamente lo schema, senza importare il server standard; entrambi accedono alla stessa fonte esclusivamente tramite il proxy. Nessun valore della fixture viene ricostruito dal nuovo server. È una prova circoscritta di interoperabilità, non compatibilità universale o sostituzione di qualunque agente.
 
-Il catalogo strumenti 0.4.0 seleziona un solo modulo tramite `TESI_MARKET_TOOL_IMPLEMENTATION=standard|equivalent`, configurazione fidata all’avvio. La policy dei dati resta 0.3.0. Nomi di modulo arbitrari e combinazioni con profili comparativi, fonti reali o fixture negative sono rifiutati; nessuna selezione del modulo dal modello. `compose.substitution.yaml` cambia solo questa variabile nel gateway. Gli agenti continuano a seguire il permesso ottenuto dal gateway: non cambiano estrazione, viste, topologia, identità, fonte, agente o modello.
+Il catalogo strumenti 0.5.0 seleziona un solo modulo tramite `TESI_MARKET_TOOL_IMPLEMENTATION=standard|equivalent`, configurazione fidata all’avvio. La policy dei dati resta 0.3.0. Nomi di modulo arbitrari e combinazioni con profili comparativi, fonti reali o fixture negative sono rifiutati; nessuna selezione del modulo dal modello. `compose.substitution.yaml` cambia solo questa variabile nel gateway. Gli agenti continuano a seguire il permesso ottenuto dal gateway: non cambiano estrazione, viste, topologia, identità, fonte, agente o modello.
 
 I test confrontano i contratti completi di `tools/list` via stdio e verificano rifiuto senza proxy e configurazioni non ammesse. La prova positiva nativa esegue i cinque casi C001/C024/C006/C011/C016 in tre avvii del gateway (standard, equivalente, standard), con veri SDK A2A e server MCP, agenti invariati e risposta modello controllata. Non è una verifica dell’isolamento Docker: le destinazioni loopback e il ponte al modello appartengono alla fixture di test. I test del driver verificano anche ripristino della configurazione e pulizia se la prova fallisce.
 
@@ -213,15 +213,15 @@ La prova nativa automatica usa gli stessi agenti durante guasti e recupero; è i
 
 ## Selezione degli specialisti e commento opzionale
 
-Perimetro ristretto confermato dall’autore dopo l’esito negativo di report-locale-36 e la diagnosi dei modelli. Il runtime corrente è `financial-profile-2x2-v5`, contratto `market-selection-1`, generazione `market-selection-generation-1`, catalogo `market-statements-1`. Il mercati sceglie uno/due enunciati sulla fonte e uno sul contesto fra quelli ricevuti; può aggiungere una breve spiegazione collegata alla selezione. Il gateway costruisce il catalogo da fonte validata e vista già autorizzata, conserva il profilo finanziario completo nel laboratorio senza minimizzazione e ricontrolla la risposta. Nessuna selezione viene inventata se il modello manca o propone identificativi non ammessi.
+Perimetro ristretto confermato dall’autore dopo l’esito negativo di report-locale-36 e la diagnosi dei modelli. Il runtime corrente è `financial-profile-2x2-v6`, contratto `market-selection-1`, generazione `market-selection-generation-1`, catalogo `market-statements-1`. Il mercati sceglie uno/due enunciati sulla fonte e uno sul contesto fra quelli ricevuti; può aggiungere una breve spiegazione collegata alla selezione. Il gateway costruisce il catalogo da fonte validata e vista già autorizzata, conserva il profilo finanziario completo nel laboratorio senza minimizzazione e ricontrolla la risposta. Nessuna selezione viene inventata se il modello manca o propone identificativi non ammessi.
 
 Il report ricostruisce i testi dal catalogo dopo la scelta, non dal testo fornito dal modello. Sono definizioni/trasformazioni controllate con riferimenti ai campi della fonte/vista; non citazioni letterali delle pubblicazioni. Verifica di identificativi/testi/riferimenti distinta dalla pertinenza della scelta: `selection_relevance_verified` e `semantic_verified` restano falsi. Una selezione valida sopravvive al commento escluso (`selection_only`), senza spiegazione sostitutiva. I fatti documentali, le fonti e i calcoli locali restano indipendenti dalla selezione. Una prova controllata dimostra che scelte diverse del modello cambiano il focus del report a parità di risultati finanziari, senza attribuire questo effetto a una scelta autonoma degli strumenti o delle destinazioni.
 
 Numeri/date confrontati con i soli riferimenti degli enunciati scelti; non basta che un numero sia altrove nell’input. Controlli lessicali su alcune raccomandazioni, confusioni di fonte, proprietà non selezionate e frasi apparentemente incomplete: possibili falsi positivi e copertura incompleta, nessuna certificazione semantica generale. Il valutatore giudica pertinenza, completezza, fedeltà e utilità; commento assente/escluso resta un limite da valutare, anche se il pilota tecnico accetta una selezione valida. Le soglie e la rubrica approvate non cambiano. Nei JSONL del pilota si registrano stato, conteggi e disponibilità del commento, senza testi o identificativi degli enunciati scelti.
 
-Restano gli stessi modelli (llama3.2:3b mercati e pesi comuni nel laboratorio; qwen3:1.7b fiscale della demo), contesto 4096, temperatura zero, limiti 768 token S-01/200 S-02, una inferenza per attività e le deadline concordate. Non si adottano qwen3:4b, retry o nuovi provider. Il fiscale usa tax-selection-1, generazione tax-selection-generation-1 e catalogo tax-statements-1, con lo stesso compito circoscritto. I risultati delle versioni precedenti e le prove iterative di sviluppo non costituiscono la valutazione del runtime v5: ripetere il pilota a quattro celle dopo gli incrementi sugli agenti, prima del congelamento.
+Restano gli stessi modelli (llama3.2:3b mercati e pesi comuni nel laboratorio; qwen3:1.7b fiscale della demo), contesto 4096, temperatura zero, limiti 768 token S-01/200 S-02, una inferenza per attività e le deadline concordate. Non si adottano qwen3:4b, retry o nuovi provider. Il fiscale usa tax-selection-1, generazione tax-selection-generation-1 e catalogo tax-statements-1, con lo stesso compito circoscritto. I risultati delle versioni precedenti e le prove iterative di sviluppo non costituiscono la valutazione del runtime v6: ripetere il pilota a quattro celle dopo gli incrementi sugli agenti, prima del congelamento.
 
-Quattro riproduzioni con il modello locale attuale tramite broker su viste sintetiche fisse/variabili e ricevuta BCE archiviata/fixture hanno prodotto selezioni valide. Il testo dei commenti ha evidenziato anche incompletezza e proprietà non selezionate, coperte da nuove regressioni; non viene dichiarata verificata l’intera prosa. Nessun PDF, ground truth o dato originale al modello, nessun nuovo recupero BCE e nessuna prova dell’isolamento Docker in queste riproduzioni. Le verifiche automatiche con modello controllato coprono anche MCP, ciclo di vita, guardie e report. **Pilota manuale della selezione mercati confermato sulla demo aggiornata:** report-locale (3).json/C001 fisso e report-locale (4).json/C024 variabile. Testi e riferimenti selezionati ricostruibili dal catalogo, digest fonte coerente, ricevuta modello presente; in entrambi selection_only, con prosa esclusa rispettivamente per proprietà non selezionata e possibile frase incompleta. Conferma del percorso e delle guardie, non della correttezza dei commenti o di qualità umana già misurata. Restano la conferma fiscale della demo aggiornata, i nuovi piloti a quattro celle e la valutazione finale. S04 e campagna finale non autorizzati.
+Quattro riproduzioni con il modello locale attuale tramite broker su viste sintetiche fisse/variabili e ricevuta BCE archiviata/fixture hanno prodotto selezioni valide. Il testo dei commenti ha evidenziato anche incompletezza e proprietà non selezionate, coperte da nuove regressioni; non viene dichiarata verificata l’intera prosa. Nessun PDF, ground truth o dato originale al modello, nessun nuovo recupero BCE e nessuna prova dell’isolamento Docker in queste riproduzioni. Le verifiche automatiche con modello controllato coprono anche MCP, ciclo di vita, guardie e report. **Pilota manuale della selezione mercati confermato sulla demo aggiornata:** report-locale (3).json/C001 fisso e report-locale (4).json/C024 variabile. Testi e riferimenti selezionati ricostruibili dal catalogo, digest fonte coerente, ricevuta modello presente; in entrambi selection_only, con prosa esclusa rispettivamente per proprietà non selezionata e possibile frase incompleta. Conferma del percorso e delle guardie, non della correttezza dei commenti o di qualità umana già misurata. Restano la conferma fiscale della demo aggiornata, i nuovi piloti a quattro celle e la valutazione finale. S04 locale circoscritto autorizzato dall’autore; campagna finale non autorizzata.
 
 Il fiscale ricava le condizioni dal catalogo già citato `tax_review_rules`, solo dopo controllo dell’edizione e della ricevuta della fonte. Ogni scelta conserva domanda, informazioni da raccogliere, estratto letterale, pagina, anno d’imposta, edizione e digest del documento. La domanda del catalogo non viene presentata come citazione letterale: l’estratto è separato. Il modello non decide applicabilità, soddisfazione dei requisiti o spettanza. La checklist locale completa non viene ridotta dalla selezione. Con le fixture tutte le indicazioni restano esplicitamente simulate.
 
@@ -254,3 +254,39 @@ Windows PowerShell: stessi comandi Docker; sostituire `.venv/bin/python` con `.\
 Esiti attesi: C001/C024/C021 `completed`, C006/C011 `partial`; per tutti `passed: True`, `pulizia: True`, infine `passed: True`. Il controllo include PDF/citazioni/periodi, fonti/digest/ricevute, checklist completa e assenza di spettanza, calcoli locali, inventario dei risultati, ricostruzione delle selezioni, tracce e cancellazione della sessione e delle viste. Le fonti reali devono rispondere: nessun successo viene attribuito a un errore di fonte o del modello. I JSON e HTML esportati sono copie client del report sintetico richieste esplicitamente, separate dai metadati di verifica; nessun nuovo archivio del gateway.
 
 `selection_only` è ammesso: conferma la selezione controllata e l’esclusione del commento, non la qualità della prosa. Aprire i cinque HTML e controllare leggibilità, utilità delle condizioni evidenziate e limiti; citazioni corrette non garantiscono da sole pertinenza o completezza dell’interpretazione. Questo giudizio non riceve automaticamente un voto positivo dal pilota.
+
+## Verifica del secondo blocco
+
+Riferimenti e limiti nel [registro](REGISTRO_PROVE.md). È un pilota del runtime v6, non il congelamento o la campagna finale. S04 è stato autorizzato dall’autore soltanto per payload sintetici, risultato/metadati ostili e Card locali. Conservare i precedenti risultati: non diventano evidenze della nuova immagine.
+
+Fermare **tutti i ponti ordinari** con Ctrl+C, compreso quello sperimentale. Lasciare Docker Desktop e Ollama aperti. Dalla repository, macOS:
+
+```bash
+.venv/bin/python -m pytest -q
+.venv/bin/python scripts/check_evaluation_protocol.py
+.venv/bin/python scripts/check_test_registry.py
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+.venv/bin/python scripts/setup_isolation.py
+.venv/bin/python scripts/setup_baseline.py
+.venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json
+```
+
+Windows PowerShell, stessi controlli:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe scripts/check_evaluation_protocol.py
+.\.venv\Scripts\python.exe scripts/check_test_registry.py
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+.\.venv\Scripts\python.exe scripts/setup_isolation.py
+.\.venv\Scripts\python.exe scripts/setup_baseline.py
+.\.venv\Scripts\python.exe scripts/check_block2.py --live-pilot --output runs/block2_manual.json
+```
+
+Le identità esistenti vengono mantenute. Lo script configura e verifica le celle S+P, S−P, M+P, M−P, usa un ponte controllato per le prove funzionali e gestisce autonomamente il ponte Ollama per il pilota reale. **Non avviare un ponte a mano durante la procedura.** Le fonti restano locali/simulate; nessun recupero BCE/AdE avviene nel confronto. Il timeout fonte attende davvero 30 secondi in ogni cella: la procedura richiede diversi minuti.
+
+Atteso: audit senza problemi, `S04 autorizzato: True` nel perimetro concordato e campagna finale ancora non autorizzata. I casi nominali completi mostrano `completed`; gli input insufficienti `partial`/`blocked`; i guasti e la provenienza mancante gli esiti previsti, senza trasformarli in successi analitici. Ogni verifica riuscita stampa `passed: True pulizia: True`; il riepilogo finale deve essere `passed: True`. Nel pilota Ollama C001/C024 completano e C006/C011/C016 sono parziali, tutti con controlli e pulizia positivi. Se una verifica fallisce il comando termina con esito non positivo e conserva la fase e le evidenze disponibili.
+
+Il JSON principale rinvia ai quattro esiti di cella, alle tracce e ai quattro JSONL reali. I report finanziari non vengono archiviati automaticamente dal gateway. I consumi delle fixture controllate non sono misure Ollama. Le scelte LLM e gli eventuali commenti restano da valutare umanamente, anche quando il pilota tecnico passa. Per ripetere scegliere un nome di output nuovo; non sovrascrivere prove precedenti.
+
+Alla fine viene ripristinata **la demo base con fonti simulate**, senza lasciare ponti in background. Per tornare alla demo BCE/AdE seguire il README. I soli esiti verificati vanno aggiunti al diario: questa procedura non autorizza la campagna finale.

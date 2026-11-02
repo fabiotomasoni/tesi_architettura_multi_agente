@@ -32,8 +32,9 @@ class ControlledDemo:
         response = await self.client.get('/health')
         response.raise_for_status()
         body = response.json()
-        if (body.get('runtime_mode'),body.get('experiment'),body.get('market_source'),body.get('tax_source')) != ('isolated','off','simulated','simulated'):
+        if (body.get('runtime_mode'),body.get('market_source'),body.get('tax_source')) != ('isolated','simulated','simulated'):
             raise ValueError('Serve la demo isolata base con fonti simulate e ponte ordinario fermo.')
+        self.active_job_count=2 if body.get('experiment')=='off' else 1
         boot = body.get('gateway_boot_id')
         if not isinstance(boot,str) or len(boot)!=32 or any(c not in '0123456789abcdef' for c in boot):
             raise ValueError('Identificativo di avvio assente: ricostruire l’immagine aggiornata.')
@@ -263,10 +264,11 @@ async def check_crash(lab, controller):
     try:
         sid = await lab.upload()
         pending = lab.start(sid)
-        jobs = [await lab.claim(),await lab.claim()]
-        checks['two_bridge_jobs_active_before_crash'] = len({j['job_id'] for j in jobs})==2
-        entered = [asyncio.Event(),asyncio.Event()]
-        stopped = [asyncio.Event(),asyncio.Event()]
+        jobs = [await lab.claim() for _ in range(getattr(lab,'active_job_count',2))]
+        checks['expected_bridge_jobs_active_before_crash'] = len({j['job_id'] for j in jobs})==getattr(lab,'active_job_count',2)
+        if getattr(lab,'active_job_count',2)==2:checks['two_bridge_jobs_active_before_crash']=checks['expected_bridge_jobs_active_before_crash']
+        entered = [asyncio.Event() for _ in jobs]
+        stopped = [asyncio.Event() for _ in jobs]
         async def model_request(request):
             index = next(i for i,event in enumerate(entered) if not event.is_set())
             entered[index].set()
@@ -286,7 +288,7 @@ async def check_crash(lab, controller):
             else:
                 checks['inflight_http_interrupted'] = False
             replies = await asyncio.wait_for(asyncio.gather(*requests),10)
-            checks['host_bridge_requests_cancelled_on_gateway_loss'] = all(event.is_set() for event in stopped) and replies==[None,None]
+            checks['host_bridge_requests_cancelled_on_gateway_loss'] = all(event.is_set() for event in stopped) and replies==[None]*len(jobs)
         await controller.start()
         new_boot = await wait_ready(lab)
         restarted = True
@@ -317,7 +319,8 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     args = parser.parse_args()
     if args.output.exists():parser.error('File già presente: usare un nome nuovo.')
-    identity = json.loads((ROOT/'.local/s03/bridge.json').read_text())
+    from gateway import runtime
+    identity = json.loads((ROOT/('.local/baseline/bridge.json' if runtime.SINGLE else '.local/s03/bridge.json')).read_text())
     if identity.get('role')!='bridge':parser.error('Identità del ponte non valida.')
     async def run():
         async with httpx.AsyncClient(base_url='http://127.0.0.1:8080',timeout=35,trust_env=False,follow_redirects=False) as client:

@@ -58,6 +58,7 @@ class MarketResult(Contract):
     summary: str = Field(max_length=2000)
     limits: list[str] = Field(max_length=10)
     model: str
+    reference: dict | None = None
     market_analysis: dict | None = None
     tax_analysis: None = None
     measurements: dict[str, int | float | str] = Field(default_factory=dict)

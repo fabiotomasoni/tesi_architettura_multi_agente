@@ -1,0 +1,5 @@
+# Fixture chiuse del blocco 2; solo gateway riconfigurato, agenti invariati.
+services:
+  gateway:
+    environment:
+      TESI_VERIFICATION_PROFILE: ${TESI_VERIFICATION_PROFILE:-nominal}

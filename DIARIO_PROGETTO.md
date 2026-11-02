@@ -320,6 +320,18 @@ Suite completa **794 passed, 127 warning** delle dipendenze; audit protocollo **
 
 Aggiunto check_block1.py: unico pilota manuale su cinque fascicoli, controlli riutilizzati su PDF/fonti/report/tracce/pulizia e copie JSON/HTML solo su esportazione esplicita del client. README, protocollo e residui aggiornati. **Conferma della demo fiscale aggiornata ancora da eseguire dall’autore**, senza attribuire al codice un successo manuale non osservato. Blocchi successivi, S04 e campagna finale non avviati.
 
+## Modifica 82 — Secondo blocco: riferimento comune e prove controllate
+
+Riletta la tesi e mantenute le dieci famiglie V-01–V-10. Collegati entrambi gli agenti al riferimento comune via MCP, con permessi monouso distinti e ricevute confrontate dal gateway. Il replay BCE è dichiarato archiviato; i controfattuali di conflitto restano simulati. Il report conserva provenienze e valori documentali, distingue non confrontabilità/infedeltà/conflitto e sospende le conclusioni applicative in caso di conflitto irrisolto. Tre PDF negativi fissati per digest raggiungono il parser senza aprire il corpus ad altri file. Nessuna nuova infrastruttura o fonte Internet.
+
+Su ok esplicito dell’autore autorizzati solo i tre cicli S04 locali concordati: payload sintetici, risultato/metadati ostili e Card falsificate, senza esfiltrazione Internet. Predisposti i driver delle quattro celle e il pilota reale con Ollama, separato dalle risposte controllate. Runtime v6, strumenti 0.5.0 e report 0.16.0; modelli e budget invariati. Il riferimento aggiunge una consultazione MCP per attività, conteggiata in tutte le celle.
+
+Corretti due problemi effettivi: un long poll HTTP disconnesso poteva sottrarre il job successivo; una vista respinta poteva trattenere la seconda attività del generalista. Regressioni dedicate e prosecuzione fiscale verificata con U=0,5 misurata prima dello schema. Adeguata anche la prova crash a un solo job attivo nel confronto.
+
+**Verifiche:** 815 regressioni e 76 integrazioni nei quattro assetti logici superate; quattro nominali rieseguiti dopo la correzione del coordinatore. Warning delle dipendenze mantenuti. Audit protocollo 1.188 controlli e registro 183, zero problemi. Nei container del generalista confermati isolamento, guasti/sonde di sviluppo e, sull’immagine corrente, utilità, sostituzione, annullamento, consegna e crash con recupero. Le prime prove Docker non riuscite restano conservate e non sono conteggiate come esiti positivi; sintesi in runs/block2_development_summary.json. I test applicativi non dimostrano isolamento, le fixture non misurano Ollama e il TTL usa un orologio controllato.
+
+**Da confermare dall’autore:** intero pilota Docker corrente a quattro celle con i venti run Ollama e relativi JSONL. Comando unico e risultati attesi nel protocollo. Nessun voto umano, dieci ripetizioni finali o congelamento attribuiti; blocchi 3–4 non avviati. Diario, README, registro e residui aggiornati; nessun commit eseguito.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Su richiesta dell’autore svolgere ciascun blocco in un solo lavoro e fornire alla fine tutti i comandi manuali, con terminale, servizi, esito atteso e titolo del commit; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

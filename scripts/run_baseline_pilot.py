@@ -55,6 +55,7 @@ def main():
                             row[label+'_selected_source_count']=sum(item['kind']=='source' for item in generated.get('selected_statements',[]))
                             row[label+'_explanation_included']=generated['status']=='available'
                             row[label+'_comment_issue_count']=len(generated.get('issues',[]))
+                    checks['shared_references']=all(a.get('result',{}).get('measurements',{}).get('gateway_reference_receipt_verified')==1 for a in body['activities'].values() if a['status']=='completed') if health.get('shared_reference') else False
                     checks['model_analysis_not_semantically_certified']=all(
                         item.get('semantic_verified') is False for item in report.get('model_analyses',[]))
                     row['signature_scope']='deterministic_financial_sections_excluding_model_analysis'

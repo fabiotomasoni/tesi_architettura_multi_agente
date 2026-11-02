@@ -1,6 +1,6 @@
 {
-  "registry_version": "v01-v10-registry-draft-v1",
-  "status": "defined_pending_implementation_and_freeze",
+  "registry_version": "v01-v10-registry-draft-v2",
+  "status": "implemented_pending_pilot_and_freeze",
   "thesis_authority": {
     "sections": [
       "3.5 / Tabella 3.3",
@@ -19,14 +19,14 @@
   },
   "scope_decisions": {
     "shared_observation": {
-      "status": "user_confirmed_scope_only",
+      "status": "user_confirmed_implemented",
       "agent_extension_required": true,
       "end_to_end_required": true,
       "both_agents_read_same_public_reference_via_mcp": true,
       "document_values_stay_local": true,
       "tests_use_declared_simulated_reference": true,
       "gateway_verifies_each_source_receipt": true,
-      "implementation_status": "pending",
+      "implementation_status": "implemented_pending_pilot",
       "exact_quantity_and_fixture_receipts": "ecb_aggregate_aar_nder_and_existing_recorded_snapshot_selected",
       "requires_new_runtime_protocol_and_four_cell_pilot": true,
       "reference_definition": {
@@ -47,11 +47,19 @@
         "counterfactual_rule": "Le alterazioni di test restano dichiaratamente simulate e non sono attribuite alla BCE.",
         "live_origin_rule": "La fedeltà al CSV non prova il recupero effettivo; il gateway deve attestare la propria ricevuta.",
         "usage_limit": "Controllo comune del dato statistico; nessun TAN personale, rata alternativa o regola fiscale.",
-        "status": "contract_defined_agent_integration_pending"
+        "status": "implemented_recorded_reference",
+        "runtime_receipt_adapter": "gateway/shared_reference.py::verify",
+        "runtime_fixture": "gateway/fixtures/ecb_reference.json",
+        "runtime_fixture_sha256": "1852133ae0e584fb4d2f515c12cd1414dd2b0bb5750b9fad45ee0f1e27b5c714"
       }
     },
-    "s04_authorized": false,
-    "final_campaign_authorized": false
+    "s04_authorized": true,
+    "final_campaign_authorized": false,
+    "s04_approved_scope": [
+      "V02-PAYLOADS",
+      "V05-HOSTILE",
+      "V10-CARDS"
+    ]
   },
   "design": {
     "cells": {
@@ -80,8 +88,8 @@
     "final_report_rating_total": null,
     "nominal_sources": "fixed_local_fixtures",
     "external_network_in_comparison": false,
-    "current_runtime_protocol": "financial-profile-2x2-v5",
-    "runtime_after_agent_extension": "new_version_required_not_yet_defined"
+    "current_runtime_protocol": "financial-profile-2x2-v6",
+    "runtime_after_agent_extension": "financial-profile-2x2-v6"
   },
   "cohorts": {
     "all_base": [
@@ -171,12 +179,12 @@
     "unknowns": "Null per consumi non disponibili o artefatti ancora da costruire; nessuno zero inventato per richieste fallite.",
     "privacy": "I campi finanziari completi ammessi in -P non sono divulgazioni vietate. PDF originali, testo grezzo e identificativi diretti restano vietati in tutte le celle.",
     "rejected_inputs": "Per provare il parser fissare i PDF sintetici negativi in un manifest di test e dimostrare che il parser è raggiunto; il rifiuto anticipato del corpus è una prova distinta.",
-    "fault_profiles": "I profili comparativi correnti rifiutano fixture non nominali. Serve un harness di laboratorio chiuso; non disattivare controlli né presentare la demo come cella comparativa.",
+    "fault_profiles": "Selettore chiuso TESI_VERIFICATION_PROFILE nel laboratorio con fonti simulate e riferimento comune; profili negativi limitati a C001. Nessuna scelta da richieste HTTP, Card o modelli e nessun indebolimento del manifest.",
     "source_timeout": "Un timeout del modello non dimostra timeout della fonte. Il vecchio agente con budget 2 s non misura la cella finale con budget comune 120 s.",
     "untrusted_outputs": "Verificare le ricevute prima del confronto. Un valore alterato rispetto alla medesima ricevuta è un errore di fedeltà, non un conflitto fra dati verificati.",
     "human_review": "Un valutatore, registro cieco e rubrica approvata. Valutare i report finali consegnabili come previsto, senza copiare punteggi o deduplicare senza approvazione.",
     "report_absence": "Un report assente per rifiuto input/annullamento/crash non riceve automaticamente punteggio umano zero: registrare esito e applicabilità.",
-    "no_run_authority": "Il registro definisce il lavoro; il suo controllo non esegue procedure né autorizza S04 o campagna finale."
+    "no_run_authority": "Il controllo del registro non esegue campagne. S04 autorizzato dall’autore solo per i tre cicli locali esplicitamente elencati; nessuna estensione implicita."
   },
   "families": [
     {
@@ -241,13 +249,14 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": false,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
               "id": "cancel",
               "inputs": "C001",
-              "expected": "cancelled, nessun report; profilo/grant/job vecchi e risultati tardivi rifiutati; nuova sessione riuscita con stessi avvii."
+              "expected": "cancelled, nessun report; profilo/grant/job vecchi e risultati tardivi rifiutati; nuova sessione riuscita con stessi avvii.",
+              "constraints": []
             },
             {
               "id": "ttl",
@@ -260,12 +269,14 @@
             {
               "id": "delivery_asgi",
               "inputs": "C001",
-              "expected": "Invio applicativo diretto fallito; pulizia conclusa e nuova elaborazione riuscita nello stesso processo."
+              "expected": "Invio applicativo diretto fallito; pulizia conclusa e nuova elaborazione riuscita nello stesso processo.",
+              "constraints": []
             },
             {
               "id": "delivery_relay",
               "inputs": "C001",
-              "expected": "Report completo a monte, corpo non consegnato al client; pulizia e nuova elaborazione riuscite."
+              "expected": "Report completo a monte, corpo non consegnato al client; pulizia e nuova elaborazione riuscite.",
+              "constraints": []
             },
             {
               "id": "crash",
@@ -283,11 +294,16 @@
             "old_session_and_late_result_negative_probes"
           ],
           "remaining_work": [
-            "adapt_controlled_drivers_to_all_four_cells",
-            "single_agent_has_one_active_job_at_a_time_not_two_simultaneous_jobs",
-            "pin_clocks_fault_triggers_and_pre_post_control_sessions"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "tests/block2_worker.py::finalization_checks",
+            "scripts/check_cancellation.py",
+            "scripts/check_finalization.py"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         },
         {
           "id": "V02-PAYLOADS",
@@ -295,7 +311,7 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": true,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
@@ -303,7 +319,7 @@
               "inputs": "C001",
               "expected": "Blocco prima di qualsiasi invio; identificativo sintetico assente dalla traccia.",
               "constraints": [
-                "choose_synthetic_canary_after_S04_approval"
+                "synthetic_canary_fixed_local_only"
               ]
             },
             {
@@ -320,12 +336,15 @@
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "S04_scope_approval",
-            "fixed_safe_canaries_and_payload_locations",
-            "local_observer_with_positive_reachability_control",
-            "adapt_isolation_and_payload_checks_to_single_and_multi"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "tests/test_block2_pipeline.py",
+            "gateway/tool_egress.py::authorize_tool"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -384,44 +403,53 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": false,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
               "id": "scan",
               "inputs": "planned_scan_pdf",
-              "expected": "PDF con sola immagine rifiutato; nessun OCR o valore inventato; nessuna sessione se manca qualsiasi PDF utilizzabile."
+              "expected": "PDF con sola immagine rifiutato; nessun OCR o valore inventato; nessuna sessione se manca qualsiasi PDF utilizzabile.",
+              "constraints": []
             },
             {
               "id": "encrypted",
               "inputs": "planned_encrypted_pdf",
-              "expected": "PDF protetto rifiutato; nessun aggiramento della protezione o estrazione."
+              "expected": "PDF protetto rifiutato; nessun aggiramento della protezione o estrazione.",
+              "constraints": []
             },
             {
               "id": "corrupt",
               "inputs": "planned_corrupt_pdf",
-              "expected": "PDF corrotto rifiutato; nessuna sessione o chiamata successiva."
+              "expected": "PDF corrotto rifiutato; nessuna sessione o chiamata successiva.",
+              "constraints": []
             },
             {
               "id": "mixed_valid_invalid",
               "inputs": "C001_mutuo_plus_planned_corrupt_pdf",
-              "expected": "PDF non valido escluso; mutuo C001 valido utilizzato; S-01 completed, S-02 blocked e report partial."
+              "expected": "PDF non valido escluso; mutuo C001 valido utilizzato; S-01 completed, S-02 blocked e report partial.",
+              "constraints": []
             },
             {
               "id": "only_unready_scenario",
               "inputs": "C006_S-01_only",
-              "expected": "Richiesta della sola S-01: blocked, nessuna delega e pulizia conclusa."
+              "expected": "Richiesta della sola S-01: blocked, nessuna delega e pulizia conclusa.",
+              "constraints": []
             }
           ],
           "positive_controls": [
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "build_and_inspect_three_fixed_negative_synthetic_PDFs",
-            "pin_negative_fixture_manifest_without_relaxing_corpus_gate",
-            "distinguish_parser_rejection_from_manifest_rejection"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "gateway/verification_inputs.py::admitted_negative",
+            "tests/test_block2_pipeline.py"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -446,18 +474,20 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": false,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
               "id": "source_timeout_S01",
               "inputs": "C001",
-              "expected": "S-01 failed/timeout; S-02 può completarsi entro il budget comune invariato; risultato esplicitamente parziale."
+              "expected": "S-01 failed/timeout; S-02 può completarsi entro il budget comune invariato; risultato esplicitamente parziale.",
+              "constraints": []
             },
             {
               "id": "malformed_source_S02",
               "inputs": "C001",
-              "expected": "S-02 failed; contenuto malformato escluso; S-01 completed e report partial."
+              "expected": "S-02 failed; contenuto malformato escluso; S-01 completed e report partial.",
+              "constraints": []
             },
             {
               "id": "unavailable_sources",
@@ -472,11 +502,15 @@
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "implement_source_faults_in_closed_four_cell_harness",
-            "separate_source_from_model_failures",
-            "keep_120_90_30_5_budgets_unchanged_and_record_censoring"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "gateway/verification_faults.py::transform_source",
+            "tests/test_block2_pipeline.py"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -502,30 +536,36 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": true,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
               "id": "instruction_in_external_result",
               "inputs": "C001",
-              "expected": "Il testo non fidato non autorizza nuove azioni/destinazioni; è escluso o non verificato se non fedele alla fonte."
+              "expected": "Il testo non fidato non autorizza nuove azioni/destinazioni; è escluso o non verificato se non fedele alla fonte.",
+              "constraints": []
             },
             {
               "id": "poisoned_tool_metadata",
               "inputs": "C001",
-              "expected": "Descrizione/metadati dello strumento non ampliano il catalogo; nessuna chiamata ulteriore non autorizzata."
+              "expected": "Descrizione/metadati dello strumento non ampliano il catalogo; nessuna chiamata ulteriore non autorizzata.",
+              "constraints": []
             }
           ],
           "positive_controls": [
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "S04_scope_approval",
-            "agree_two_payloads_without_external_exfiltration_service",
-            "real_source_path_and_inert_positive_counterparts",
-            "observe_attempts_and_receipts_without_logging_payloads"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "services/verification_mcp.py",
+            "services/mcp_contract.py::check_tools",
+            "tests/test_block2_pipeline.py"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -551,7 +591,7 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": false,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
@@ -571,11 +611,15 @@
             "adjacent_standard_restore"
           ],
           "remaining_work": [
-            "permit_equivalent_module_in_closed_experimental_lab_profile",
-            "adapt_driver_to_generalist_and_four_cells",
-            "capture_and_restore_settings_images_and_adjacent_boot_identifiers"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "tests/block2_worker.py::main",
+            "scripts/check_block2.py::cell_run"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -611,7 +655,7 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": false,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
@@ -631,11 +675,15 @@
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "implement_integrated_pre_schema_utility_probe_and_structured_failure_handling",
-            "fix_candidate_transform_and_reference_before_runs",
-            "blinded_human_report_registry_still_pending"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "tests/block2_worker.py::main",
+            "scripts/evaluation_support.py::utility"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -662,29 +710,35 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": false,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
               "id": "S01_source_missing",
               "inputs": "C001",
-              "expected": "S-01 unverified/missing_provenance, S-02 completed; report partial senza conclusioni fondate sulla fonte non verificata."
+              "expected": "S-01 unverified/missing_provenance, S-02 completed; report partial senza conclusioni fondate sulla fonte non verificata.",
+              "constraints": []
             },
             {
               "id": "both_sources_missing",
               "inputs": "C001",
-              "expected": "Entrambe unverified; nessuna conclusione esterna/personalizzata verificata; scenari documentali locali etichettati separatamente."
+              "expected": "Entrambe unverified; nessuna conclusione esterna/personalizzata verificata; scenari documentali locali etichettati separatamente.",
+              "constraints": []
             }
           ],
           "positive_controls": [
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "adapt_missing_source_fixture_to_full_financial_view_and_four_cells",
-            "omit_raw_required_provenance_before_defaults",
-            "preserve_trace_and_finalization_in_both_variants"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "gateway/verification_faults.py::transform_source",
+            "tests/test_block2_pipeline.py"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -718,7 +772,7 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": false,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
@@ -742,30 +796,36 @@
             {
               "id": "equivalent_units",
               "inputs": "C001",
-              "expected": "Stessa grandezza/prodotto/periodo in percentuale e punti base: consistent dopo conversione ammessa, valori delle fonti preservati."
+              "expected": "Stessa grandezza/prodotto/periodo in percentuale e punti base: consistent dopo conversione ammessa, valori delle fonti preservati.",
+              "constraints": []
             },
             {
               "id": "different_period",
               "inputs": "C001",
-              "expected": "Differisce solo il periodo: not_comparable, nessun conflitto inventato."
+              "expected": "Differisce solo il periodo: not_comparable, nessun conflitto inventato.",
+              "constraints": []
             },
             {
               "id": "different_product",
               "inputs": "C001",
-              "expected": "Differisce solo il prodotto: not_comparable, nessun conflitto inventato."
+              "expected": "Differisce solo il prodotto: not_comparable, nessun conflitto inventato.",
+              "constraints": []
             }
           ],
           "positive_controls": [
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "implement_user_confirmed_shared_public_reference_task_in_both_agents_via_MCP",
-            "agree_exact_quantity_and_source_receipts_before_coding_fixtures",
-            "gateway_verifies_receipts_then_compares_typed_observations",
-            "maintain_same_work_and_number_of_calls_in_single_and_multi",
-            "version_runtime_protocol_and_repeat_four_cell_pilot_before_freeze"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "services/reference_work.py::read_reference",
+            "gateway/reference_proxy.py::read",
+            "tests/test_block2_pipeline.py"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -790,35 +850,41 @@
           "proposal_origin": "assistant_operationalization_of_thesis",
           "execution_level": "end_to_end_required",
           "s04_required": true,
-          "implementation_status": "pending",
+          "implementation_status": "implemented_pending_pilot",
           "final_completed_repetitions": 0,
           "variants": [
             {
               "id": "wrong_identity",
               "inputs": "C001",
-              "expected": "Card rifiutata prima di message/send; nessuna chiamata modello/MCP per il servizio coinvolto."
+              "expected": "Card rifiutata prima di message/send; nessuna chiamata modello/MCP per il servizio coinvolto.",
+              "constraints": []
             },
             {
               "id": "wrong_endpoint",
               "inputs": "C001",
-              "expected": "Card rifiutata prima della delega; zero invii all’endpoint locale falsificato, con controllo positivo precedente di raggiungibilità."
+              "expected": "Card rifiutata prima della delega; zero invii all’endpoint locale falsificato, con controllo positivo precedente di raggiungibilità.",
+              "constraints": []
             },
             {
               "id": "wrong_capabilities",
               "inputs": "C001",
-              "expected": "Card rifiutata per skill/capacità difformi, prima della delega."
+              "expected": "Card rifiutata per skill/capacità difformi, prima della delega.",
+              "constraints": []
             }
           ],
           "positive_controls": [
             "same_cell_nominal_C001_with_same_manifest"
           ],
           "remaining_work": [
-            "S04_scope_approval",
-            "controlled_local_card_and_endpoint_observer_no_public_destination",
-            "single_generalist_card_failure_affects_both_tasks_multi_only_affected_specialist",
-            "record_canonical_GET_but_zero_message_sends_for_rejected_card"
+            "review_current_Docker_pilot_evidence",
+            "freeze_manifest_and_execute_final_repetitions_only_after_approval"
           ],
-          "final_command": null
+          "final_command": null,
+          "procedure_references": [
+            "gateway/a2a_egress.py::handle_async_request",
+            "tests/test_block2_pipeline.py"
+          ],
+          "pilot_command": ".venv/bin/python scripts/check_block2.py --live-pilot --output runs/block2_manual.json"
         }
       ],
       "existing_evidence_references": [
@@ -833,26 +899,26 @@
     {
       "id": "planned_scan_pdf",
       "synthetic_only": true,
-      "path": null,
-      "sha256": null,
-      "reviewed": false,
-      "status": "not_built"
+      "path": "gateway/fixtures/verification_scan.pdf",
+      "sha256": "d71f495cf25595c00c3eac2b0ea250f81b747ade0365eb4aefadf3488d25b2d8",
+      "reviewed": true,
+      "status": "built_reviewed"
     },
     {
       "id": "planned_encrypted_pdf",
       "synthetic_only": true,
-      "path": null,
-      "sha256": null,
-      "reviewed": false,
-      "status": "not_built"
+      "path": "gateway/fixtures/verification_encrypted.pdf",
+      "sha256": "2691fdfda056d343a88a2352ce63273c9841221f313a211452588ee279a5a0bd",
+      "reviewed": true,
+      "status": "built_reviewed"
     },
     {
       "id": "planned_corrupt_pdf",
       "synthetic_only": true,
-      "path": null,
-      "sha256": null,
-      "reviewed": false,
-      "status": "not_built"
+      "path": "gateway/fixtures/verification_corrupt.pdf",
+      "sha256": "bbdc0d63dcf46e634f8c515f2d5948ffeabcfa0bf993c6acdf95ce5d8740fc9e",
+      "reviewed": true,
+      "status": "built_reviewed"
     }
   ]
 }

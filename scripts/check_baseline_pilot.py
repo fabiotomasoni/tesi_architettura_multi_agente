@@ -16,6 +16,7 @@ def verify(single,multi):
     for key in sorted(set(s)&set(m)):
         a,b=s[key],m[key];label=key[0]+'/'+str(key[1])
         checks[label+'/runs_passed']=all(r.get('passed') and r.get('cleanup_verified') and r.get('automatic_session_closed') for r in (a,b))
+        checks[label+'/current_reference_contract']=all(r['experiment'].get('protocol')=='financial-profile-2x2-v6' and r['experiment'].get('shared_reference') is True and r['experiment'].get('mcp_calls_per_activity')==2 for r in (a,b))
         checks[label+'/same_weights']=a.get('model_digest')==b.get('model_digest') and bool(a.get('model_digest'))
         x={k:v for k,v in a['experiment'].items() if k!='organization'};y={k:v for k,v in b['experiment'].items() if k!='organization'}
         checks[label+'/same_settings']=x==y and x['sources']=='fixed_local_fixtures' and x['policy'] in {'active','disabled'} and x['schedule']=='sequential'
@@ -24,7 +25,7 @@ def verify(single,multi):
             activities=r['activities'];completed=[v['measurements'] for v in activities.values() if v['status']=='completed']
             sends=r.get('coordination',{}).get('a2a_message_sends',0) if kind=='single' else sum(v['measurements'].get('a2a_requests',0) for v in activities.values())
             checks[label+'/'+kind+'_delegations']=sends==(1 if completed and kind=='single' else len(completed))
-            checks[label+'/'+kind+'_calls']=sum(v.get('mcp_tool_calls',0) for v in completed)==len(completed) and sum(v.get('ollama_calls',0) for v in completed)==len(completed)
+            checks[label+'/'+kind+'_calls']=sum(v.get('mcp_tool_calls',0) for v in completed)==len(completed)*r['experiment'].get('mcp_calls_per_activity',0) and sum(v.get('ollama_calls',0) for v in completed)==len(completed)
             boots={v.get('agent_boot_id') for v in completed}
             checks[label+'/'+kind+'_agent_identity']=len(boots)==(1 if kind=='single' and completed else len(completed)) and None not in boots
     return checks

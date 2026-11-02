@@ -114,7 +114,21 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
         # provengono dai controlli locali e dai modelli di calcolo verificati.
         if activity['status']!='completed':
             limits.append(f"{scenario}: attività {activity['status']} ({activity.get('error_code') or 'esito incompleto'}).")
-    observations=report_observations(profile,sources) if 'S-01' in scenarios else []
+    observations=report_observations(profile,sources)
+    reference_checks=[]
+    from . import verification_config
+    from .shared_reference import verify as verify_reference, observation as reference_observation
+    for scenario,activity in activities.items():
+        result=activity.get('result') or {}
+        raw=result.get('reference')
+        if activity['status']!='completed' or raw is None:continue
+        if result.get('measurements',{}).get('gateway_reference_receipt_verified')!=1:
+            raise ValueError('Riferimento senza ricevuta gateway')
+        receipt,digest=verify_reference(raw,scenario,verification_config.PROFILE)
+        observations.append(reference_observation(receipt,scenario))
+        reference_checks.append({'scenario':scenario,'evidence':raw,'source_sha256':digest,
+            'gateway_receipt_verified':True,'institutional_live_retrieval':False,
+            'usage_limit':'Verifica del riferimento comune; nessun TAN personale o regola fiscale.'}) if 'S-01' in scenarios else []
     if comparison_observations is not None:
         observations.extend(comparison_observations)
     consistency=evaluate(observations)
@@ -125,7 +139,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
     mortgage=compare_mortgage(profile,activities['S-01'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-01' in scenarios else None
     tax_review=build_tax_review(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
     tax_application=apply_tax_scenario(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
-    return {'model_analyses':model_analyses,'tax_review':tax_review,'mortgage_contract_analysis':contract,'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.15.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
+    return {'model_analyses':model_analyses,'tax_review':tax_review,'mortgage_contract_analysis':contract,'tax_application':tax_application,'mortgage_comparison':mortgage,'comparison_references':reference_checks,'report_version':'0.16.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
         'consistency':consistency,'analysis_status':'unresolved_conflict' if consistency['unresolved_conflicts'] else 'no_conflict_in_registered_observations','completeness':completeness,'status':status,'requested_scenarios':scenarios,'document_data':document_data,'simulated_sources':[s for s in sources if s['evidence'].get('simulated') is True],
         'external_sources':[s for s in sources if s['evidence'].get('simulated') is False],
         'faithful_summaries':faithful,'model_evaluation':evaluation,'unverified_summaries':summaries,'outcomes':outcomes,'limits':list(dict.fromkeys(limits))}

@@ -45,22 +45,25 @@ def main():
         if time.monotonic()>=deadline:
             raise RuntimeError('Gateway isolato non pronto entro 30 secondi; controllare lo stato dei container.')
         time.sleep(0.5)
+    single=response.json().get('experiment')=='single'
+    roles=('gateway','markets') if single else ('gateway','markets','tax')
     checks={};metadata={};probes={}
     # Controllo positivo: i bersagli vietati devono essere realmente raggiungibili
     # da un workload di controllo sulle stesse reti, altrimenti il diniego è inconcludente.
     control=execute('control',"import json;from services.isolation_probe import tcp,udp;print(json.dumps({n:tcp('172.30.'+n+'.4',8088) and tcp('172.30.'+n+'.4',53) and udp('172.30.'+n+'.4',53) for n in ('241','242')}))")
     checks['controlled_targets_available']=all(control.values())
-    for role in ('gateway','markets','tax'):
+    for role in roles:
         cid=run(COMPOSE+['ps','-q',role]).strip()
         if not cid:raise RuntimeError('Servizio applicativo assente')
         info=json.loads(run(['docker','inspect',cid]))[0]
         host=info['HostConfig']
         checks[role+'_non_privileged_config']=(info['Config']['User']=='10001:10001' and not host['Privileged'] and host['ReadonlyRootfs'] and host['CapDrop']==['ALL'] and not host['CapAdd'] and 'no-new-privileges:true' in host['SecurityOpt'])
         mounts=[m for m in info['Mounts'] if m['Type']!='tmpfs']
-        checks[role+'_only_own_identity_mounted']=len(mounts)==1 and mounts[0]['Destination']=='/run/secrets/identity' and not mounts[0]['RW'] and Path(mounts[0]['Source']).name==role+'.json'
+        checks[role+'_only_own_identity_mounted']=len(mounts)==1 and mounts[0]['Destination']=='/run/secrets/identity' and not mounts[0]['RW'] and Path(mounts[0]['Source']).name==('generalist.json' if single and role=='markets' else role+'.json')
         metadata[role]={'image_id':info['Image'],'network_mode':host['NetworkMode']}
         probes[role]=execute(role,"import json;from services.isolation_probe import probe;print(json.dumps(probe('"+role+"')))")
         for key,value in probes[role].items():
+            if single and key=='other_agent_reachable':continue
             if value is not None:
                 check_name=key.replace('_reachable','_blocked').replace('external_name_resolved','external_dns_blocked')
                 checks[role+'_'+check_name]=(value if key in {'uid_non_root','no_effective_capabilities','runtime_socket_absent','dataset_absent'} else not value)
@@ -72,24 +75,25 @@ def main():
     # Identità e percorso positivo controllati dentro la rete del gateway.
     auth=execute('gateway',"""
 import json,httpx
-from gateway.runtime import AGENT_ENDPOINTS
+from gateway.runtime import AGENT_ENDPOINTS,SINGLE
 from gateway.identity import a2a_headers,HEADER,key_for
 checks={}
 with httpx.Client(timeout=5,trust_env=False,follow_redirects=False) as client:
  for scenario,endpoint in AGENT_ENDPOINTS.items():
+  if scenario=='BATCH':continue
   url=endpoint+'.well-known/agent-card.json'
   checks[scenario+'_card_authorized']=client.get(url,headers=a2a_headers(scenario)).status_code==200
   checks[scenario+'_card_no_key_denied']=client.get(url).status_code==403
   wrong='S-02' if scenario=='S-01' else 'S-01'
-  checks[scenario+'_card_other_role_denied']=client.get(url,headers=a2a_headers(wrong)).status_code==403
+  checks[scenario+('_card_wrong_key_denied' if SINGLE else '_card_other_role_denied')]=client.get(url,headers={HEADER:'0'*64} if SINGLE else a2a_headers(wrong)).status_code==403
 print(json.dumps(checks))
 """)
     checks.update(auth)
-    for role,network in (('markets','241'),('tax','242')):
+    for role,network in ([('markets','241')] if single else [('markets','241'),('tax','242')]):
         result=execute(role,"""
 import json,httpx
 from gateway.identity import HEADER,key_for
-role='"""+role+"""'
+role='"""+('generalist' if single else role)+"""'
 base='http://172.30."""+network+""".2:8000'
 with httpx.Client(timeout=5,trust_env=False) as client:
  print(json.dumps({'gateway_reachable_and_auth_applied':client.post(base+'/internal/tools/authorize',json={},headers={HEADER:key_for(role+'_to_gateway',expected_role=role)}).status_code==422,
@@ -100,7 +104,7 @@ with httpx.Client(timeout=5,trust_env=False) as client:
         checks.update({role+'_'+k:v for k,v in result.items()})
     # Gli agenti hanno solo reti interne. L'ingresso del gateway pubblica il solo
     # loopback host; il firewall del namespace vieta le nuove uscite da quella rete.
-    for role in ('gateway','markets','tax'):
+    for role in roles:
         cid=run(COMPOSE+['ps','-q','net-'+role]).strip()
         info=json.loads(run(['docker','inspect',cid]))[0]
         guard=info['HostConfig']

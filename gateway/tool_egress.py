@@ -21,12 +21,13 @@ from .market_evidence import expected_evidence as market
 from .tax_evidence import expected_evidence as tax
 from .tracing import callback_trace
 from .budgets import BUDGETS
+from . import verification_config
 
 from .ade_source import DESTINATION as ADE_DESTINATION, source_job, publication, AdeEvidence, verify_ade, selected_quotes
 TAX_SOURCE=os.environ.get('TESI_TAX_SOURCE','simulated')
 if TAX_SOURCE not in {'simulated','ade'} or TAX_SOURCE=='ade' and not runtime.ISOLATED:
     raise RuntimeError('Fonte fiscale non autorizzata per questa modalità')
-TOOL_CATALOG_VERSION = '0.4.0'
+TOOL_CATALOG_VERSION = '0.5.0'
 MARKET_SOURCE = os.environ.get('TESI_MARKET_SOURCE','simulated')
 if runtime.EXPERIMENT!='off' and (MARKET_SOURCE!='simulated' or TAX_SOURCE!='simulated' or os.environ.get('TESI_MCP_PROFILE','nominal')!='nominal'):
     raise RuntimeError('Il profilo comparativo ammette soltanto fixture nominali fissate')
@@ -39,7 +40,7 @@ if MARKET_SOURCE=='ecb' and not runtime.ISOLATED:
 MARKET_TOOL_IMPLEMENTATION = os.environ.get('TESI_MARKET_TOOL_IMPLEMENTATION','standard')
 if MARKET_TOOL_IMPLEMENTATION not in {'standard','equivalent'}:
     raise RuntimeError('Implementazione MCP mercati non autorizzata')
-if MARKET_TOOL_IMPLEMENTATION=='equivalent' and (runtime.EXPERIMENT!='off' or MARKET_SOURCE!='simulated' or TAX_SOURCE!='simulated' or os.environ.get('TESI_MCP_PROFILE','nominal')!='nominal'):
+if MARKET_TOOL_IMPLEMENTATION=='equivalent' and ((runtime.EXPERIMENT!='off' and not verification_config.SHARED) or MARKET_SOURCE!='simulated' or TAX_SOURCE!='simulated' or os.environ.get('TESI_MCP_PROFILE','nominal')!='nominal'):
     raise RuntimeError('La sostituzione V-06 richiede la demo nominale con fonti simulate, fuori dal confronto 2x2')
 
 
@@ -100,6 +101,9 @@ class SourceRequest(ToolRequest):
 
 @callback_trace('tool_authorization')
 def authorize_tool(broker, request, authorization):
+    if request.tool=='lookup_reference':
+        from .reference_proxy import authorize
+        return authorize(broker,request,authorization,ToolPermit)
     token = authorization[7:] if authorization and authorization.startswith('Bearer ') else None
     with broker._lock:
         grant = broker._grants.get(token)
@@ -107,6 +111,10 @@ def authorize_tool(broker, request, authorization):
             raise EgressDenied('Strumento non autorizzato')
         _, task = authorized_task(grant.task)
         route = TOOL_ROUTES[task.scenario]
+        if verification_config.PROFILE in {'payload_identifier','payload_financial'}:
+            context=broker._privacy.get(grant.session_id,SensitiveContext())
+            marker='alice.canary@example.invalid' if verification_config.PROFILE=='payload_identifier' else str(min(context.amounts))
+            request=request.model_copy(update={'server_module':marker})
         inspected=request.model_dump(mode='json',exclude={'correlation_id','scenario'})
         if runtime.UNMINIMIZED:
             from .lab_profile import inspectable_view
@@ -118,7 +126,8 @@ def authorize_tool(broker, request, authorization):
         if request.tool != route.tool or json.dumps(request.arguments, sort_keys=True) != json.dumps(expected, sort_keys=True):
             raise EgressDenied('Argomenti MCP non autorizzati')
         module = request.server_module or route.module
-        if module not in (route.module, *route.test_modules):
+        if verification_config.PROFILE=='metadata':module='services.verification_mcp'
+        if module not in (route.module, *route.test_modules) and not (verification_config.PROFILE=='metadata' and module=='services.verification_mcp'):
             raise EgressDenied('Server MCP non autorizzato')
         grant.tool_used = True
         grant.tool_module = module
@@ -129,6 +138,9 @@ def authorize_tool(broker, request, authorization):
 
 @callback_trace('source_proxy', source=True)
 async def source_request(broker, request, authorization):
+    if request.tool=='lookup_reference':
+        from .reference_proxy import read
+        return await read(broker,request,authorization)
     token = authorization[7:] if authorization and authorization.startswith('Bearer ') else None
     with broker._lock:
         grant_token, grant = next(((k,g) for k,g in broker._grants.items() if g.source_token and g.source_token == token), (None,None))
@@ -193,6 +205,8 @@ async def source_request(broker, request, authorization):
                     raise EgressDenied('Redirect fonte non autorizzato')
                 response.raise_for_status()
                 evidence = response.json()
+    from .verification_faults import transform_source
+    evidence=await transform_source(task,evidence)
     with broker._lock:
         if not any(g is grant for g in broker._grants.values()):
             raise EgressDenied('Autorizzazione fonte revocata')

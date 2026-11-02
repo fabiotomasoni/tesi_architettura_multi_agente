@@ -16,25 +16,35 @@ from .inference import MODELS
 
 class BatchDelegate:
     def __init__(self,expected):
-        self.expected=tuple(expected);self.tasks={};self.waiters={}
+        self.expected=tuple(expected);self.tasks={};self.waiters={};self.started=False
         self.measurements={'a2a_delegations_attempted':0,'a2a_message_sends':0}
 
     async def submit(self,task):
         if task.scenario not in self.expected or task.scenario in self.tasks:raise ValueError('Attività aggregata inattesa')
         self.tasks[task.scenario]=task
         future=asyncio.get_running_loop().create_future();self.waiters[task.scenario]=future
-        if len(self.tasks)==len(self.expected):
-            try:
-                results=await self.send([self.tasks[s] for s in self.expected])
-                for s,f in self.waiters.items():
-                    if not f.done():f.set_result(results[s])
-            except BaseException as error:
-                for f in self.waiters.values():
-                    if not f.done():
-                        if isinstance(error,asyncio.CancelledError):f.cancel()
-                        else:f.set_exception(error)
-                if isinstance(error,asyncio.CancelledError):raise
+        await self.dispatch_ready()
         return await future
+
+    async def unavailable(self,scenario):
+        # Una vista respinta prima della delega non deve trattenere le altre attività.
+        if self.started or scenario in self.tasks:return
+        self.expected=tuple(s for s in self.expected if s!=scenario)
+        await self.dispatch_ready()
+
+    async def dispatch_ready(self):
+        if self.started or not self.expected or set(self.tasks)!=set(self.expected):return
+        self.started=True
+        try:
+            results=await self.send([self.tasks[s] for s in self.expected])
+            for s,f in self.waiters.items():
+                if not f.done():f.set_result(results[s])
+        except BaseException as error:
+            for f in self.waiters.values():
+                if not f.done():
+                    if isinstance(error,asyncio.CancelledError):f.cancel()
+                    else:f.set_exception(error)
+            if isinstance(error,asyncio.CancelledError):raise
 
     async def send(self,tasks):
         batch=BatchTask(correlation_id=uuid4(),deadline=min(t.deadline for t in tasks),tasks=tasks)

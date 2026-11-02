@@ -8,7 +8,7 @@ from .tracing import Span
 from .budgets import BUDGETS
 
 
-async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=None):
+async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=None, on_unready=None):
     from . import runtime
     from datetime import datetime,timedelta,timezone
     shared_deadline=datetime.now(timezone.utc)+timedelta(seconds=BUDGETS.activity_seconds) if runtime.EXPERIMENT!='off' else None
@@ -16,6 +16,8 @@ async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=
     async def branch(scenario):
         options={} if scenario=='S-01' else {'task_type':TaxTask,'view_type':TaxView,'result_type':TaxResult,'scope':'tax_context'}
         result=await run_workflow(lambda:request_view(scenario),delegates[scenario],lambda:None,deadline=shared_deadline,**options)
+        if on_unready is not None and result['status'] in {'blocked','failed'}:
+            await on_unready(scenario)
         # I subgrafi non possiedono la sessione: solo il coordinatore la chiude.
         result.pop('session_closed',None)
         result['phases']=[p for p in result['phases'] if p['phase']!='cleanup']

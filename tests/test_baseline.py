@@ -1,5 +1,5 @@
 """Configurazioni in processi separati: nessuna contaminazione della demo."""
-import json,os,subprocess,sys
+import asyncio,json,os,subprocess,sys
 from pathlib import Path
 import pytest
 
@@ -184,8 +184,8 @@ asyncio.run(test())
 def test_baseline_checker_rejects_mismatched_results_and_duplicate_runs():
     from copy import deepcopy
     from scripts.check_baseline_pilot import verify
-    common={'case':'C001','repetition':1,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'sha-model','semantic_result_sha256':'sha-result','experiment':{'policy':'active','sources':'fixed_local_fixtures','schedule':'sequential','model':'llama3.2:3b'}}
-    def activity(boot):return {'status':'completed','measurements':{'agent_boot_id':boot,'mcp_tool_calls':1,'ollama_calls':1,'a2a_requests':1}}
+    common={'case':'C001','repetition':1,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'sha-model','semantic_result_sha256':'sha-result','experiment':{'policy':'active','sources':'fixed_local_fixtures','schedule':'sequential','protocol':'financial-profile-2x2-v6','shared_reference':True,'mcp_calls_per_activity':2,'model':'llama3.2:3b'}}
+    def activity(boot):return {'status':'completed','measurements':{'agent_boot_id':boot,'mcp_tool_calls':2,'ollama_calls':1,'a2a_requests':1}}
     s={**common,'organization':'single','coordination':{'a2a_message_sends':1},'activities':{'S-01':activity('generalist'),'S-02':activity('generalist')}}
     m={**common,'organization':'multi','activities':{'S-01':activity('markets'),'S-02':activity('tax')}}
     assert all(verify([s],[m]).values())
@@ -205,3 +205,22 @@ def test_compose_single_keeps_isolation_and_disables_tax_service():
     assert s['services']['markets']['command'][3]=='services.generalist_agent:app'
     assert not {'networks','ports','privileged','cap_add'} & s['services']['markets'].keys()
     assert base['services']['markets']['cap_drop']==['ALL'] and base['services']['markets']['read_only']
+
+
+@pytest.mark.parametrize('withdraw_before',[False,True])
+def test_rejected_view_does_not_deadlock_other_generalist_task(withdraw_before):
+    from gateway.baseline_client import BatchDelegate
+    async def exercise():
+        calls=[]
+        class Batch(BatchDelegate):
+            async def send(self,tasks):calls.append(tasks);return {'S-02':'ok'}
+        from types import SimpleNamespace
+        batch=Batch(['S-01','S-02'])
+        if withdraw_before:await batch.unavailable('S-01')
+        pending=asyncio.create_task(batch.submit(SimpleNamespace(scenario='S-02')))
+        await asyncio.sleep(0)
+        if not withdraw_before:await batch.unavailable('S-01')
+        assert await asyncio.wait_for(pending,1)=='ok'
+        assert len(calls)==1 and len(calls[0])==1
+        await batch.unavailable('S-01');assert len(calls)==1
+    asyncio.run(exercise())

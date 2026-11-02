@@ -73,7 +73,7 @@ def verify(protocol,annotations,root=ROOT):
             'base_design_count':protocol['design']['base_executions']==25*4*10,
             'campaign_not_started':protocol['final_campaign_started'] is False,
             'not_all_tests_claimed':protocol['design']['includes_all_V01_V10'] is False,
-            'security_stage_not_started':protocol['security_stage']=='S04_not_authorized',
+            'security_stage_scoped':protocol['security_stage']=='S04_scoped_local_tests_authorized',
             'absolute_zero_violation_constraint':protocol['thresholds']['unauthorized_transmissions']['maximum']==0,
             'freeze_blockers_explicit':bool(protocol['freeze_blockers'])}
     approval=protocol.get('threshold_approval',{})

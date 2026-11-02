@@ -1,0 +1,7 @@
+{
+  "retrieved_at": "2026-10-31T22:34:22.201981+00:00",
+  "source_url": "https://data-api.ecb.europa.eu/service/data/MIR/M.IT.B.A2C.A.R.A.2250.EUR.N?lastNObservations=1&format=csvdata",
+  "response_sha256": "5da48e703caccc1708e167764297ad20a08eb6d33af0e72a88b1ad7163cf56f6",
+  "note": "Risposta pubblica catturata per test offline; i test non provano un nuovo recupero reale.",
+  "source_csv": "KEY,FREQ,REF_AREA,BS_REP_SECTOR,BS_ITEM,MATURITY_NOT_IRATE,DATA_TYPE_MIR,AMOUNT_CAT,BS_COUNT_SECTOR,CURRENCY_TRANS,IR_BUS_COV,TIME_PERIOD,OBS_VALUE,OBS_STATUS,OBS_CONF,OBS_PRE_BREAK,OBS_COM,TIME_FORMAT,BREAKS,COLLECTION,COMPILING_ORG,DISS_ORG,DOM_SER_IDS,PUBL_ECB,PUBL_MU,PUBL_PUBLIC,UNIT_INDEX_BASE,COMPILATION,COVERAGE,DECIMALS,NAT_TITLE,SOURCE_AGENCY,TITLE,TITLE_COMPL,UNIT,UNIT_MULT\r\nMIR.M.IT.B.A2C.A.R.A.2250.EUR.N,M,IT,B,A2C,A,R,A,2250,EUR,N,2026-08,3.55,A,F,,,P1M,,A,,,,,,,,,,4,,IT2,Bank interest rates on loans to households for house purchase (new business),\"Italy, Annualised agreed rate (AAR) / Narrowly defined effective rate (NDER), Credit and other institutions (MFI except MMFs and central banks) reporting sector - Lending for house purchase excluding revolving loans and overdrafts, convenience and extended credit card debt, Total initial rate fixation, New business coverage, Households and non-profit institutions serving households (S.14 and S.15) sector, denominated in Euro\",PCPA,0\r\n"
+}

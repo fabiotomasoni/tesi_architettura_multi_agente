@@ -44,7 +44,7 @@ def verify_report(report, expected):
     checks={'documentary_provenance':checked>0 and not problems,
             'requested_scenarios':set(report['requested_scenarios'])==set(expected),
             'no_simulated_fallback':not report.get('simulated_sources'),
-            'report_version':report.get('report_version')=='0.15.0',
+            'report_version':report.get('report_version')=='0.16.0',
             'source_inventory':sorted(x['scenario'] for x in report.get('external_sources',[]))==sorted(s for s,v in expected.items() if v=='completed')}
     for prefix,verify in [('mortgage',mortgage),('tax_application',tax_application),('tax_review',tax_review)]:
         checks.update({prefix+'/'+key:value for key,value in verify(report).items()})
@@ -93,7 +93,7 @@ def main():
             response=client.get('/health');response.raise_for_status();health=response.json()
             required={'runtime_mode':'isolated','experiment':'off','minimization':'active',
                       'market_source':'ecb','tax_source':'ade','market_analysis_version':'market-selection-1',
-                      'tax_analysis_version':'tax-selection-1','runtime_protocol':'financial-profile-2x2-v5'}
+                      'tax_analysis_version':'tax-selection-1','runtime_protocol':'financial-profile-2x2-v6'}
             if any(health.get(k)!=v for k,v in required.items()):
                 parser.error('Servono la demo aggiornata e le fonti BCE/AdE attive. Ricostruire immagine e riavviare i tre servizi e il ponte.')
             for case in CASES:
@@ -133,7 +133,7 @@ def main():
     except httpx.HTTPError:
         parser.error('Gateway non raggiungibile; avviare la demo aggiornata.')
     payload={'scope':'real_source_demo_pilot_not_final_campaign_or_semantic_certification',
-             'runtime_protocol':'financial-profile-2x2-v5','cases':rows,'passed':all(r['passed'] for r in rows)}
+             'runtime_protocol':'financial-profile-2x2-v6','cases':rows,'passed':all(r['passed'] for r in rows)}
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(payload,indent=2,ensure_ascii=False),encoding='utf-8')
     print('passed:',payload['passed'])

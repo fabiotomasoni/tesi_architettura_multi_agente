@@ -40,6 +40,17 @@ def observe_work(function):
         except BaseException as error:
             # L'eccezione non viene serializzata né stampata. La pipeline ADK
             # può recuperare soltanto questo dizionario di contatori/durate.
+            if isinstance(error,BaseExceptionGroup):
+                from gateway.a2a_egress import EgressDenied
+                def leaves(group):
+                    for item in group.exceptions:
+                        if isinstance(item,BaseExceptionGroup):yield from leaves(item)
+                        else:yield item
+                problems=list(leaves(error))
+                if problems and all(isinstance(item,EgressDenied) for item in problems):
+                    denied=EgressDenied('Catalogo MCP non autorizzato')
+                    denied.work_metrics=values.copy()
+                    raise denied from None
             error.work_metrics = values.copy()
             raise
         finally:

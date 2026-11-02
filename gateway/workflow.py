@@ -6,6 +6,7 @@ from typing import TypedDict
 from uuid import uuid4
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 from langgraph.graph import StateGraph, START, END
 from langsmith import tracing_context
 
@@ -48,6 +49,9 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
         except TimeoutError:
             phase('request_view',began,'failed')
             return {'status':'failed','error_code':'timeout'}
+        except ValidationError:
+            phase('request_view',began,'blocked')
+            return {'status':'blocked','error_code':'invalid_view'}
         except HTTPException as exc:
             status = 'blocked' if exc.status_code in {403,409} else 'failed'
             phase('request_view',began,status)

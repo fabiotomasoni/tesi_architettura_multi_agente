@@ -1,8 +1,8 @@
 # Solo M+P, sequenziale, stesso modello e fixture del generalista.
 services:
   gateway:
-    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}
+    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal, TESI_SHARED_REFERENCE: "1"}
   markets:
-    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}
+    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal, TESI_SHARED_REFERENCE: "1"}
   tax:
-    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal}
+    environment: {TESI_EXPERIMENT: multi, TESI_MARKET_SOURCE: simulated, TESI_TAX_SOURCE: simulated, TESI_MCP_PROFILE: nominal, TESI_SHARED_REFERENCE: "1"}

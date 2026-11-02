@@ -103,7 +103,7 @@ def test_threshold_approval_does_not_approve_annotations_or_campaign():
     assert p['threshold_approval']['status']=='approved'
     assert p['frozen_at'] is None and p['approved_by'] is None
     assert p['freeze_blockers']  # Restano altre verifiche anche con annotazioni confermate.
-    assert p['security_stage']=='S04_not_authorized' and not p['final_campaign_started']
+    assert p['security_stage']=='S04_scoped_local_tests_authorized' and not p['final_campaign_started']
     altered=deepcopy(p);altered['thresholds']['human_quality']['minimum_per_report']=0
     assert not all(verify(altered,reference()).values())
 
@@ -146,7 +146,7 @@ def test_complete_review_cannot_omit_a_case_or_keep_pending_annotation_status():
 
 def test_annotation_confirmation_does_not_remove_other_campaign_gates():
     protocol=json.loads((ROOT/'evaluation/protocol.json').read_text())
-    assert 'approve_remaining_S04_scope' in protocol['freeze_blockers']
-    assert protocol['security_stage']=='S04_not_authorized'
+    assert 'approve_remaining_S04_scope' not in protocol['freeze_blockers']
+    assert protocol['security_stage']=='S04_scoped_local_tests_authorized'
     changed=deepcopy(protocol);changed['freeze_blockers'].append('human_review_of_annotations')
     assert not all(verify(changed,reference()).values())

@@ -70,6 +70,9 @@ def make_view(profile: Profile, scenario: Scenario) -> dict:
     if runtime.UNMINIMIZED:
         from .lab_profile import full_view
         return full_view(profile)
+    from .verification_config import PROFILE
+    if PROFILE=='utility_loss' and scenario==Scenario.MORTGAGE:
+        return {'rate_type':profile.rate_type.value}
     return domain_view(profile,scenario)
 
 

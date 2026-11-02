@@ -35,8 +35,8 @@ def reference_exists(root, reference):
 
 def verify(registry, protocol, annotations, *, root=ROOT):
     checks={
-        'draft_definition_only':registry['registry_version']=='v01-v10-registry-draft-v1'
-            and registry['status']=='defined_pending_implementation_and_freeze',
+        'draft_definition_only':registry['registry_version']=='v01-v10-registry-draft-v2'
+            and registry['status']=='implemented_pending_pilot_and_freeze',
         'protocol_points_to_this_registry':protocol.get('test_registry')=={
             'path':'evaluation/test_registry.json','version':registry['registry_version'],
             'status':registry['status'],'authorizes_execution':False},
@@ -49,22 +49,23 @@ def verify(registry, protocol, annotations, *, root=ROOT):
             and registry['design']['final_report_rating_total'] is None,
         'local_fixed_sources':registry['design']['nominal_sources']=='fixed_local_fixtures'
             and registry['design']['external_network_in_comparison'] is False,
-        's04_still_not_authorized':registry['scope_decisions']['s04_authorized'] is False
-            and protocol['security_stage']=='S04_not_authorized'
-            and 'approve_remaining_S04_scope' in protocol['freeze_blockers'],
+        's04_scoped_user_authorization':registry['scope_decisions']['s04_authorized'] is True
+            and set(registry['scope_decisions'].get('s04_approved_scope',[]))==GATED
+            and protocol['security_stage']=='S04_scoped_local_tests_authorized'
+            and 'approve_remaining_S04_scope' not in protocol['freeze_blockers'],
         'final_campaign_still_not_authorized':registry['scope_decisions']['final_campaign_authorized'] is False
             and protocol['final_campaign_started'] is False and protocol['approved_by'] is None and protocol['frozen_at'] is None,
         'remaining_instance_gate_not_removed': 'complete_controlled_instances_for_V01_V10' in protocol['freeze_blockers'],
         'new_runtime_version_and_pilot_required':registry['design']['current_runtime_protocol']==protocol['runtime_protocol']
-            and registry['design']['runtime_after_agent_extension']=='new_version_required_not_yet_defined',
+            and registry['design']['runtime_after_agent_extension']==protocol['runtime_protocol'],
     }
     shared=registry['scope_decisions']['shared_observation']
-    checks['confirmed_real_agent_extension_not_component_substitution']=(shared['status']=='user_confirmed_scope_only'
+    checks['confirmed_real_agent_extension_not_component_substitution']=(shared['status']=='user_confirmed_implemented'
         and all(shared[k] is True for k in ('agent_extension_required','end_to_end_required',
               'both_agents_read_same_public_reference_via_mcp','document_values_stay_local',
               'tests_use_declared_simulated_reference','gateway_verifies_each_source_receipt',
               'requires_new_runtime_protocol_and_four_cell_pilot'))
-        and shared['implementation_status']=='pending')
+        and shared['implementation_status']=='implemented_pending_pilot')
     reference=shared['reference_definition']
     checks['one_existing_official_public_reference']=(shared['exact_quantity_and_fixture_receipts']=='ecb_aggregate_aar_nder_and_existing_recorded_snapshot_selected'
         and reference['source_id']=='ecb-mir-it-house-purchase-v1'
@@ -76,7 +77,7 @@ def verify(registry, protocol, annotations, *, root=ROOT):
         and reference['evidence_contract']=='gateway.ecb_source.EcbRateEvidence'
         and reference['observation_contract']=='gateway.comparisons.Observation'
         and reference['offline_mode']=='recorded_official_response_replay_not_new_web_retrieval'
-        and reference['status']=='contract_defined_agent_integration_pending')
+        and reference['status']=='implemented_recorded_reference' and reference_exists(root,reference['runtime_receipt_adapter']))
     checks['existing_reference_contract_and_snapshot']=(reference_exists(root,reference['observation_adapter'])
         and reference_exists(root,reference['offline_fixture']))
     cases={c['case_id']:c for c in annotations['cases']}
@@ -106,7 +107,7 @@ def verify(registry, protocol, annotations, *, root=ROOT):
         for cycle in family['additional_cycles']:
             cid=cycle['id'];cycle_ids.append(cid)
             checks[cid+'/correct_family']=cid.startswith(fid.replace('-','')+'-')
-            checks[cid+'/no_false_readiness']=cycle['implementation_status']=='pending' and cycle['final_completed_repetitions']==0 and cycle['final_command'] is None
+            checks[cid+'/no_false_readiness']=cycle['implementation_status']=='implemented_pending_pilot' and bool(cycle.get('procedure_references')) and all(reference_exists(root,ref) for ref in cycle.get('procedure_references',[])) and cycle['final_completed_repetitions']==0 and cycle['final_command'] is None
             checks[cid+'/pipeline_required']=cycle['execution_level']=='end_to_end_required'
             checks[cid+'/security_gate']=cycle['s04_required']==(cid in GATED)
             checks[cid+'/controls_and_pending_work']=bool(cycle['positive_controls']) and bool(cycle['remaining_work'])
@@ -116,10 +117,14 @@ def verify(registry, protocol, annotations, *, root=ROOT):
                 checks[cid+'/'+variant['id']+'/defined']=bool(variant['expected']) and variant['inputs'] in allowed_inputs
     checks['ten_unique_additional_cycles']=len(cycle_ids)==10 and set(cycle_ids)==CYCLES
     artifacts=registry['planned_artifacts']
-    checks['negative_artifacts_not_claimed_built']=(len(artifacts)==3
+    import hashlib
+    checks['negative_artifacts_fixed_and_reviewed']=(len(artifacts)==3
         and {a['id'] for a in artifacts}=={'planned_scan_pdf','planned_encrypted_pdf','planned_corrupt_pdf'}
-        and all(a['synthetic_only'] is True and a['status']=='not_built' and a['path'] is None
-                and a['sha256'] is None and a['reviewed'] is False for a in artifacts))
+        and all(a['synthetic_only'] is True and a['status']=='built_reviewed'
+            and isinstance(a['path'],str) and reference_exists(root,a['path']) and a['reviewed'] is True
+            and hashlib.sha256((root/a['path']).read_bytes()).hexdigest()==a['sha256'] for a in artifacts))
+    reference=shared['reference_definition']
+    checks['recorded_reference_pinned']=reference_exists(root,reference['runtime_fixture']) and hashlib.sha256((root/reference['runtime_fixture']).read_bytes()).hexdigest()==reference['runtime_fixture_sha256']
     required_rules={'base_reuse','cycle_variants','session_independence','counting','reuse_controls',
                     'unknowns','privacy','rejected_inputs','fault_profiles','source_timeout',
                     'untrusted_outputs','human_review','report_absence','no_run_authority'}
@@ -141,7 +146,7 @@ def main():
     print('Famiglie V:',len(registry['families']))
     print('Cicli aggiuntivi:',sum(len(g['additional_cycles']) for g in registry['families']))
     print('Pronto per campagna finale: False')
-    print('S04 autorizzato: False')
+    print('S04 autorizzato: '+str(registry['scope_decisions']['s04_authorized'])+' (solo perimetro locale concordato)')
     print('Procedure eseguite: 0')
     raise SystemExit(1 if failed else 0)
 

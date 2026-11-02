@@ -25,7 +25,7 @@ PHASES = frozenset({
     'asgi_delivery', 'agent_measurements', 'bridge_wait', 'local_model_http', 'source_http',
 })
 OUTCOMES = frozenset({'completed', 'partial', 'blocked', 'failed', 'cancelled', 'unverified'})
-ERROR_CODES = frozenset({'timeout','not_authorized','input_not_ready','delegation_failed',
+ERROR_CODES = frozenset({'invalid_view','timeout','not_authorized','input_not_ready','delegation_failed',
                         'invalid_result','execution_failed','missing_provenance','workflow_error',
                         'operation_failed','cancelled','request_rejected','http_error'})
 METRICS = frozenset({
@@ -321,13 +321,14 @@ def callback_trace(phase, *, source=False):
             auth = arguments['authorization']
             token = auth[7:] if auth and auth.startswith('Bearer ') else None
             with broker._lock:
-                grant = next((g for g in broker._grants.values() if g.source_token == token and token), None) if source else broker._grants.get(token)
+                grant = next((g for g in broker._grants.values() if token and (g.source_token == token or g.reference_token == token)), None) if source else broker._grants.get(token)
                 return grant
         if inspect.iscoroutinefunction(function):
             @wraps(function)
             async def asynchronous(*args, **kwargs):
                 grant = selected(args, kwargs)
-                source_already_used = bool(grant and grant.source_used) if source else False
+                is_reference=bool(source and grant and grant.reference_token and kwargs.get('authorization',args[2] if len(args)>2 else '')=='Bearer '+grant.reference_token)
+                source_already_used = bool(grant and (grant.reference_used if is_reference else grant.source_used)) if source else False
                 with use_trace(getattr(grant, 'trace_context', None)), Span(phase, getattr(getattr(grant,'task',None),'scenario',None), getattr(getattr(grant,'task',None),'correlation_id',None)) as span:
                     try:
                         result = await function(*args, **kwargs)
@@ -336,9 +337,9 @@ def callback_trace(phase, *, source=False):
                                         ollama_ms=result.ollama_ms, model_load_ms=result.model_load_ms)
                         return result
                     finally:
-                        if source and grant is not None and grant.source_used and not source_already_used:
+                        if source and grant is not None and (grant.reference_used if is_reference else grant.source_used) and not source_already_used:
                             from .tool_egress import TOOL_ROUTES
-                            fixture = TOOL_ROUTES[grant.task.scenario].destination.startswith('fixture://')
+                            fixture = is_reference or TOOL_ROUTES[grant.task.scenario].destination.startswith('fixture://')
                             span.metric(source_fixture=int(fixture),
                                         source_http_success_receipts=0 if fixture else grant.external_http_requests or None,
                                         source_http_ms=grant.external_http_ms)

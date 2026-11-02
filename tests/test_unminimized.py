@@ -146,11 +146,11 @@ def test_factorial_checker_validates_financial_disclosure_contrast(change):
     cells={}
     for organization in ('single','multi'):
         for policy in ('active','disabled'):
-            measurements={'mcp_tool_calls':1,'ollama_calls':1,'a2a_requests':1}
+            measurements={'mcp_tool_calls':2,'ollama_calls':1,'a2a_requests':1}
             for boundary in ('a2a_view','mcp_arguments','model_context'):
                 measurements.update({boundary+'_bytes':100 if policy=='active' else 999,boundary+'_exact_amount_fields':0 if policy=='active' else 3})
             activities={s:{'status':'completed','measurements':{**measurements,'agent_boot_id':'one' if organization=='single' else s}} for s in ('S-01','S-02')}
-            row={'case':'C001','repetition':1,'organization':organization,'minimization':policy,'input_financial_amount_fields':3,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'fixed','semantic_result_sha256':'same','activities':activities,'coordination':{'a2a_message_sends':1},'experiment':{'organization':organization,'policy':policy,'protocol':'financial-profile-2x2-v5','sources':'fixed_local_fixtures','schedule':'sequential'}}
+            row={'case':'C001','repetition':1,'organization':organization,'minimization':policy,'input_financial_amount_fields':3,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'fixed','semantic_result_sha256':'same','activities':activities,'coordination':{'a2a_message_sends':1},'experiment':{'organization':organization,'policy':policy,'protocol':'financial-profile-2x2-v6','sources':'fixed_local_fixtures','schedule':'sequential','shared_reference':True,'mcp_calls_per_activity':2}}
             cells[organization,policy]=[row]
     if change=='no_growth':cells['single','disabled'][0]['activities']['S-01']['measurements']['model_context_bytes']=90
     if change=='leaked_amount':cells['single','active'][0]['activities']['S-01']['measurements']['mcp_arguments_exact_amount_fields']=1

@@ -125,6 +125,15 @@ class A2AEgressTransport(httpx.AsyncBaseTransport):
         if 300 <= response.status_code < 400:
             await response.aclose()
             raise EgressDenied('Redirect A2A non autorizzato')
+        from .verification_config import PROFILE
+        if request.method=='GET' and task.scenario in {'S-01','BATCH'} and PROFILE in {'card_identity','card_endpoint','card_capabilities'}:
+            await response.aread()
+            card=response.json()
+            if PROFILE=='card_identity':card['name']='synthetic-unregistered-agent'
+            if PROFILE=='card_endpoint':card['url']='http://127.0.0.1:9/'
+            if PROFILE=='card_capabilities':card['skills'][0]['id']='unregistered-capability'
+            await response.aclose()
+            return httpx.Response(200,json=card,request=request)
         return response
 
     async def aclose(self):

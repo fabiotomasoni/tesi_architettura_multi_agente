@@ -1,0 +1,14 @@
+{
+  "scan": {
+    "file": "verification_scan.pdf",
+    "sha256": "d71f495cf25595c00c3eac2b0ea250f81b747ade0365eb4aefadf3488d25b2d8"
+  },
+  "encrypted": {
+    "file": "verification_encrypted.pdf",
+    "sha256": "2691fdfda056d343a88a2352ce63273c9841221f313a211452588ee279a5a0bd"
+  },
+  "corrupt": {
+    "file": "verification_corrupt.pdf",
+    "sha256": "bbdc0d63dcf46e634f8c515f2d5948ffeabcfa0bf993c6acdf95ce5d8740fc9e"
+  }
+}

@@ -23,7 +23,7 @@ COMPARISON_REASONS = {'incompatible_market_measure': 'Il riferimento BCE AAR/NDE
     'invalid_numeric_value': 'valore numerico non utilizzabile'}
 STATUSES = {'completed': 'Completato', 'partial': 'Parziale', 'blocked': 'Non eseguito',
             'failed': 'Non completato', 'unverified': 'Non verificato'}
-REASONS = {'incompatible_market_measure': 'Il riferimento BCE AAR/NDER è aggregato, non un TAN o un’offerta: non viene usato per calcolare una rata alternativa.','input_not_ready': 'Dati obbligatori mancanti, ambigui o non validati.',
+REASONS = {'invalid_view':'La vista prodotta dalla policy non contiene i dati richiesti: attività bloccata.','incompatible_market_measure': 'Il riferimento BCE AAR/NDER è aggregato, non un TAN o un’offerta: non viene usato per calcolare una rata alternativa.','input_not_ready': 'Dati obbligatori mancanti, ambigui o non validati.',
            'timeout': 'Tempo massimo superato.', 'missing_provenance': 'Provenienza obbligatoria assente.',
            'not_authorized': 'Richiesta non autorizzata dal gateway.',
            'market_evidence_unavailable': 'Fonte mercati non disponibile o non utilizzabile.',
@@ -259,6 +259,12 @@ def render_report_document(report):
               [[ref, raw if raw is not None else 'Non specificato nella vista autorizzata']
                for ref, raw in generated.get('references', {}).items()])
         paragraph('La selezione e il commento non alimentano i calcoli e non determinano conclusioni finanziarie verificate.')
+    for reference in report.get('comparison_references',[]):
+        paragraph('Riferimento comune letto tramite MCP — '+reference['scenario'])
+        evidence=reference['evidence']
+        paragraph('Replay di una risposta istituzionale archiviata; nessun nuovo recupero Internet.' if evidence['origin']=='recorded_official_response_replay' else 'Ricevuta controfattuale interamente simulata; valore non attribuito alla BCE.')
+        paragraph('Fonte: '+evidence['source_id']+'; periodo: '+evidence['period']+'; valore: '+evidence['value']+' '+evidence['unit'])
+        paragraph(reference['usage_limit'])
     heading('6. Completezza e confronti')
     for section in report.get('completeness', []):
         for key, description in [('missing_required', 'Campi obbligatori mancanti'),

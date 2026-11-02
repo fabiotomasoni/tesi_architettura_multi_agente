@@ -8,6 +8,8 @@ import sys
 from time import perf_counter
 
 from .inference_client import request_summary
+from .reference_work import read_reference
+from .mcp_contract import check_tools
 from .tool_client import request_tool, server_environment
 from gateway.a2a_egress import EgressDenied
 from gateway.inference import MODELS
@@ -37,6 +39,7 @@ async def perform(task: TaxTask, *, mcp_module: str | None = None, budget_second
             async with stdio_client(parameters) as streams:
                 async with ClientSession(*streams) as client:
                     await client.initialize()
+                    await check_tools(client,permit.tool,permit.module)
                     count('mcp_tool_calls')
                     result = await client.call_tool(permit.tool, permit.arguments)
                     count('mcp_tool_calls_completed')
@@ -50,13 +53,14 @@ async def perform(task: TaxTask, *, mcp_module: str | None = None, budget_second
                 raise TimeoutError('Timeout fonte gateway')
             evidence, source_digest = verify_evidence(raw, task.view)
             mcp_ms = (perf_counter() - mcp_started) * 1000
+        reference=await read_reference(task)
         ollama_started = perf_counter()
         with duration('inference_gateway_roundtrip_ms'):
             inference = await request_summary(task, evidence)
         summary = inference.summary
         return TaxResult(correlation_id=task.correlation_id, status='completed', evidence=evidence,
-            summary=summary, model=MODEL, tax_analysis=getattr(inference, 'tax_analysis', None), measurements={
-                'source_content_verified':1, **({} if is_ade(evidence) else {'fixture_content_verified':1}), 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1,
+            summary=summary, model=MODEL, reference=reference, tax_analysis=getattr(inference, 'tax_analysis', None), measurements={
+                'source_content_verified':1, **({} if is_ade(evidence) else {'fixture_content_verified':1}), 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1+int(reference is not None),
                 'ollama_ms':inference.ollama_ms, 'inference_gateway_roundtrip_ms':round((perf_counter()-ollama_started)*1000, 3), 'ollama_calls':1, 'inference_via_gateway':1,
                 'prompt_tokens':inference.prompt_tokens, 'output_tokens':inference.output_tokens,
                 'model_load_ms':inference.model_load_ms}, limits=[('Pubblicazione AdE verificata; nessuna spettanza personale accertata.' if is_ade(evidence) else 'Riferimenti fiscali inventati per test; nessuna normativa reale.'), 'Sintesi generata dal modello e non verificata.', 'Nessun confronto economico personalizzato eseguito.'])

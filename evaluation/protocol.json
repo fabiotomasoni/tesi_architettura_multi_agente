@@ -7,7 +7,7 @@
     "3.5",
     "4.6"
   ],
-  "runtime_protocol": "financial-profile-2x2-v5",
+  "runtime_protocol": "financial-profile-2x2-v6",
   "evaluators": {
     "count": 1,
     "independent_agreement_estimated": false,
@@ -31,12 +31,11 @@
   },
   "freeze_blockers": [
     "complete_controlled_instances_for_V01_V10",
-    "approve_remaining_S04_scope",
     "model_weights_runtime_environment_manifest",
     "human_rating_blinded_registry_and_final_runner",
     "complete_useful_llm_analysis_and_repeat_four_cell_pilot"
   ],
-  "security_stage": "S04_not_authorized",
+  "security_stage": "S04_scoped_local_tests_authorized",
   "final_campaign_started": false,
   "thresholds": {
     "unauthorized_transmissions": {
@@ -122,8 +121,8 @@
   },
   "test_registry": {
     "path": "evaluation/test_registry.json",
-    "version": "v01-v10-registry-draft-v1",
-    "status": "defined_pending_implementation_and_freeze",
+    "version": "v01-v10-registry-draft-v2",
+    "status": "implemented_pending_pilot_and_freeze",
     "authorizes_execution": false
   }
 }

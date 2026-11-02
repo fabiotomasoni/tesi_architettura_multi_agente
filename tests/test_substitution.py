@@ -47,7 +47,7 @@ async def remote(task):
  return SimpleNamespace(measurements={})
 task=MarketTask(correlation_id=uuid4(),deadline=datetime.now(timezone.utc)+timedelta(seconds=10),view={'mortgage_type':'other','rate_type':'fixed','remaining_years_band':{'lower_exclusive':5,'upper_inclusive':10}})
 r=asyncio.run(broker.delegate(uuid4(),task,remote))
-assert r.measurements['gateway_tool_module']==selected and r.measurements['tool_catalog_version']=='0.4.0'
+assert r.measurements['gateway_tool_module']==selected and r.measurements['tool_catalog_version']=='0.5.0'
 assert not broker._grants
 ''',implementation)
     assert result.returncode==0,result.stderr
@@ -116,7 +116,7 @@ def test_checker_restores_standard_and_cleans_local_requests_on_failure(monkeypa
         client=None
         async def health(self):return '0'*32
         async def get(self,*args):
-            return httpx.Response(200,json={'market_tool_implementation':controller.flag,'tool_catalog_version':'0.4.0'})
+            return httpx.Response(200,json={'market_tool_implementation':controller.flag,'tool_catalog_version':'0.5.0'})
         async def run_case(self,case,implementation):
             if implementation=='equivalent':raise ValueError('Controlled execution failure')
             return {'case':case,'passed':True}

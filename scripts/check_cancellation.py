@@ -20,7 +20,7 @@ async def check(client, key):
     health = await client.get('/health')
     health.raise_for_status()
     config = health.json()
-    if (config.get('runtime_mode'),config.get('experiment'),config.get('market_source'),config.get('tax_source')) != ('isolated','off','simulated','simulated'):
+    if (config.get('runtime_mode'),config.get('market_source'),config.get('tax_source')) != ('isolated','simulated','simulated'):
         raise ValueError('Usare la demo isolata base con fonti simulate, senza profili sperimentali o fonti reali.')
     headers = {'x-tesi-service-key':key}
     sessions = []
@@ -73,8 +73,9 @@ async def check(client, key):
         sid = await upload()
         running = asyncio.create_task(client.post(f'/sessions/{sid}/analysis'))
         try:
-            jobs = [await claim(),await claim()]
-            checks['both_agents_waiting_on_bridge'] = len({job['job_id'] for job in jobs})==2
+            jobs = [await claim() for _ in range(2 if config.get('experiment')=='off' else 1)]
+            checks['expected_active_jobs_waiting_on_bridge'] = len({job['job_id'] for job in jobs})==(2 if config.get('experiment')=='off' else 1)
+            if config.get('experiment')=='off':checks['both_agents_waiting_on_bridge']=checks['expected_active_jobs_waiting_on_bridge']
             duplicate = await client.post(f'/sessions/{sid}/analysis')
             checks['duplicate_analysis_denied'] = duplicate.status_code==409 and duplicate.json().get('detail',{}).get('error_code')=='analysis_already_running'
             deleted = await client.delete('/sessions/'+sid)
@@ -111,7 +112,8 @@ def main():
     args=parser.parse_args()
     if args.output.exists():
         parser.error('File già presente: usare un nome nuovo per questa prova.')
-    identity=json.loads((ROOT/'.local/s03/bridge.json').read_text())
+    from gateway import runtime
+    identity=json.loads((ROOT/('.local/baseline/bridge.json' if runtime.SINGLE else '.local/s03/bridge.json')).read_text())
     if identity.get('role')!='bridge':
         parser.error('Identità del ponte non valida.')
     async def run():

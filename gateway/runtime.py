@@ -10,7 +10,7 @@ if EXPERIMENT not in {'off','single','multi'}:
     raise RuntimeError('Profilo sperimentale non riconosciuto')
 SINGLE = EXPERIMENT == 'single'
 MINIMIZATION=os.environ.get('TESI_MINIMIZATION','active')
-EXPERIMENT_PROTOCOL = 'financial-profile-2x2-v5'
+EXPERIMENT_PROTOCOL = 'financial-profile-2x2-v6'
 if MINIMIZATION not in {'active','disabled'} or MINIMIZATION=='disabled' and EXPERIMENT=='off':
     raise RuntimeError('Minimizzazione disattivabile solo nei profili sperimentali locali')
 UNMINIMIZED=MINIMIZATION=='disabled'

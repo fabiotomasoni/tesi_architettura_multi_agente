@@ -32,4 +32,18 @@ def server_environment(task, permit):
         import os
         environment.update(TESI_RUNTIME='isolated', TESI_IDENTITY_FILE=os.environ['TESI_IDENTITY_FILE'])
         if runtime.EXPERIMENT!='off':environment.update(TESI_EXPERIMENT=runtime.EXPERIMENT,TESI_MINIMIZATION=runtime.MINIMIZATION)
+    from gateway import verification_config
+    environment.update(TESI_SHARED_REFERENCE='1' if verification_config.SHARED else '0',TESI_VERIFICATION_PROFILE=verification_config.PROFILE)
+    if runtime.EXPERIMENT!='off':environment.update(TESI_EXPERIMENT=runtime.EXPERIMENT,TESI_MINIMIZATION=runtime.MINIMIZATION)
     return environment
+
+
+async def request_reference(task):
+    from gateway.shared_reference import TOOL, MODULE
+    async with httpx.AsyncClient(timeout=10,trust_env=False,follow_redirects=False) as client:
+        response=await client.post((runtime.GATEWAY_ENDPOINTS[task.scenario] if runtime.ISOLATED else GATEWAY_BASE)+'/internal/tools/authorize',
+            headers={**callback_headers(task.scenario),'Authorization':'Bearer '+task.inference_token},
+            json={'correlation_id':str(task.correlation_id),'scenario':task.scenario,'tool':TOOL,'arguments':{},'server_module':MODULE})
+        if response.status_code==403 or 300<=response.status_code<400:raise EgressDenied('Riferimento rifiutato')
+        response.raise_for_status()
+        return ToolPermit.model_validate(response.json())

@@ -19,4 +19,4 @@ include = ["gateway*", "services*"]
 testpaths = ["tests"]
 
 [tool.setuptools.package-data]
-gateway = ["static/*.html"]
+gateway = ["static/*.html", "fixtures/*.json", "fixtures/*.pdf"]
