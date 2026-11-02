@@ -6,11 +6,12 @@ from pydantic import Field
 from .models import Contract
 from .agent_contracts import RateEvidence, MarketEvidence, is_ecb_evidence
 
-CATALOG_VERSION='0.1.0'
+CATALOG_VERSION='0.2.0'
 # Tolleranza iniziale esatta, nessuna soglia sperimentale dedotta dai risultati.
 CATALOG={
     'contract_annual_rate':('percent_per_year', {'percent_per_year':'1','fraction_per_year':'100','basis_points_per_year':'0.01'}, '0'),
     'market_annual_rate':('percent_per_year', {'percent_per_year':'1','fraction_per_year':'100','basis_points_per_year':'0.01'}, '0'),
+    'aggregate_aar_nder':('percent_per_year', {'percent_per_year':'1','fraction_per_year':'100','basis_points_per_year':'0.01'}, '0'),
     'remaining_principal':('EUR', {'EUR':'1','EUR_cent':'0.01'}, '0'),
     'payment_amount':('EUR', {'EUR':'1','EUR_cent':'0.01'}, '0'),
     'annual_interest':('EUR', {'EUR':'1','EUR_cent':'0.01'}, '0'),
@@ -60,6 +61,23 @@ def evaluate(observations, tolerances=None):
             'decision':'Nessun valore viene sovrascritto o selezionato automaticamente.'}
 
 
+def ecb_reference_observation(evidence, scenario='S-01'):
+    """Contratto comune: sola osservazione pubblica della serie già ammessa.
+
+    Verifica fedeltà a CSV/metadati; la ricevuta di recupero effettivo resta
+    responsabilità del gateway. Un replay di test non prova una nuova chiamata.
+    """
+    from .ecb_source import verify_ecb
+    if scenario not in {'S-01','S-02'}:
+        raise ValueError('Scenario non supportato per il riferimento pubblico')
+    parsed,_=verify_ecb(evidence)
+    return Observation(observation_id='agent-ecb-statistical-rate' if scenario=='S-01' else 'agent-tax-ecb-statistical-rate',
+        quantity='aggregate_aar_nder',product='Italy_new_house_purchase_loans',
+        period=parsed.observation_period,value=parsed.annual_rate_percent,
+        unit=parsed.unit,source_kind='agent',source_ref=parsed.series_key+'#'+parsed.observation_period,
+        verified=True)
+
+
 def report_observations(profile, sources):
     result=[]
     fact=profile.annual_rate
@@ -69,7 +87,7 @@ def report_observations(profile, sources):
         if source['scenario']=='S-01':
             parsed=MarketEvidence.model_validate(source['evidence'])
             if is_ecb_evidence(parsed):
-                result.append(Observation(observation_id='agent-ecb-statistical-rate',quantity='aggregate_aar_nder',product='Italy_new_house_purchase_loans',period=parsed.observation_period,value=parsed.annual_rate_percent,unit=parsed.unit,source_kind='agent',source_ref=parsed.series_key+'#'+parsed.observation_period,verified=True))
+                result.append(ecb_reference_observation(source['evidence']))
                 continue
             evidence=parsed.model_dump(mode='json')
             result.append(Observation(observation_id='agent-market-rate',quantity='market_annual_rate',product='market_fixture',period=evidence['reference_date'],value=evidence['annual_rate_percent'],unit=evidence['unit'],source_kind='agent',source_ref=evidence['source_id']+'#annual_rate_percent',verified=True))

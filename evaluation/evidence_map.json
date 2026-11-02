@@ -95,7 +95,7 @@
       "final_campaign_complete": false
     },
     "V-09": {
-      "status": "partial_evidence_final_instances_pending",
+      "status": "comparison_component_evidence_agent_extension_pending_for_end_to_end_conflict",
       "references": [
         "tests/test_comparisons.py::test_agent_agent_conflict",
         "tests/test_comparisons.py::test_conflict_retains_both_sources_and_values",

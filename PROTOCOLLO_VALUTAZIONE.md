@@ -69,7 +69,7 @@ La scheda vuota è `evaluation/human_review_template.csv`. Un futuro registro se
 | Valori numerici | Importi documentali esatti al centesimo; ≤0,01 EUR di errore assoluto solo sui calcoli derivati rispetto al riferimento indipendente; categorie, periodi, conteggi e mesi esatti; tolleranze non autorizzano la sovrascrittura di dati documentali |
 | Utilità per attività eleggibile | U ≥0,95; perdita media +P rispetto a −P ≤0,05, segnalando anche ogni caso sotto soglia |
 | Qualità umana | ≥7/8 per report, nessun criterio a 0, nessun errore critico; perdita media +P rispetto a −P ≤1 punto, riportando anche gli insuccessi individuali |
-| Tempi | Budget tecnico comune di sessione 120 s già configurato. Nessuna SLA prestazionale inventata: la soglia di accettazione di latenza resta da concordare, con perimetro temporale completo e misure del pilota |
+| Tempi | Budget tecnico comune di sessione 120 s già configurato. Nessuna SLA prestazionale approvata: latenza descrittiva, perimetro temporale completo, medie/varianze e conteggi dei timeout |
 
 Non usare il vincolo di centesimo come tolleranza universale dei confronti RF-07: il catalogo dei confronti omogenei mantiene le sue tolleranze esplicite (attualmente zero salvo conversioni). Questi criteri sono stati approvati dall’utente; i valori quantitativi sono scelte sperimentali, non numeri prescritti dalla tesi. Il digest delle soglie approvate è registrato nel file macchina: una modifica richiede una nuova approvazione. Lo stato corrente è `draft_pending_verification`: soglie e annotazioni sono confermate separatamente; restano verifiche e strumenti finali prima del congelamento e dell’approvazione della campagna.
 
@@ -79,22 +79,15 @@ Dieci sessioni indipendenti per istanza/cella. Per le misure continue riportare 
 
 Riportare confronti appaiati +P/−P sullo stesso caso e distinguere perdita di utilità e qualità. Per S/M mantenere comparabili modelli, budget e pianificazione. Non chiamare economicamente sostenuti costi API che non esistono: tempi/token locali osservati; eventuali stime separate. La prosa LLM è esclusa dal report e molte uscite sono deterministiche: risultati uguali e varianza nulla possono derivare dalla costruzione del sistema, non dimostrano superiorità o equivalenza generale. Con un solo valutatore, la varianza dei punteggi non misura incertezza inter-valutatore.
 
-## Stato delle verifiche V-01–V-10
+## Registro operativo V-01–V-10
 
-| Caso | Evidenze attuali | Residuo prima della campagna |
-|---|---|---|
-| V-01 percorso completo | Piloti a quattro celle; test PDF/report/provenienza; script di controllo dei calcoli | Traccia per fase completa, 10 sessioni per istanza/cella; annotazioni dei 25 fascicoli riviste |
-| V-02 confine dati e pulizia | Detector locale, identità/isolamento S03, corpus vincolato, viste; annullamento verificato anche sui container; prove automatiche di consegna fallita e SIGKILL del gateway | Istanze finali ripetute e traccia completa; annullamento, consegna a valle e crash confermati anche sui container nei piloti controllati; distinguere proiezioni autorizzate e consegna effettiva |
-| V-03 input | Test su 25 casi, PDF corrotti, duplicati e non supportati | Istanze controllate di scansione/protezione e loro esecuzione finale; il corpus vincolato può rifiutare prima del parser: distinguere i due controlli |
-| V-04 guasto fonte | Test MCP, timeout, ponte assente e recupero già osservato | Harness finale compatibile con tutte le celle; i profili comparativi attuali ammettono solo fixture nominali |
-| V-05 contenuto ostile | Controlli di catalogo, payload e isolamento esistenti | S04 non autorizzato: nessun nuovo attacco eseguito; fissare sonde e controlli positivi dopo consenso |
-| V-06 sostituzione | Sostituzione positiva del server MCP mercati con contratto equivalente, A2A/MCP reali e report completi invariati sui cinque casi pilota | Istanze/ripetizioni finali; conferma manuale Docker raccolta per un server MCP, non è una prova generale di sostituzione di agenti arbitrari |
-| V-07 utilità | Contrasto finanziario dei quattro piloti; riferimento e funzione del valutatore | Prova integrata di generalizzazione eccessiva e giudizi sui report; riferimento, rubrica e soglie approvati |
-| V-08 provenienza | Test dedicati e prove manuali pregresse di risultati non verificati | Istanze finali riproducibili nelle quattro celle, senza riammettere il risultato tramite default |
-| V-09 conflitti | Test agente–agente/agente–documento, unità convertibili e periodi distinti | Istanze finali collegate a report ed esiti, senza creare falsi conflitti fra scenari eterogenei |
-| V-10 Card | Validazione Card, identità e rifiuti nei test | Evidenza finale prima della delega e nessuna chiamata al destinatario falsificato; nuove prove S04 ferme |
+Il [REGISTRO_PROVE.md](REGISTRO_PROVE.md) definisce la copertura riutilizzabile dei 25 fascicoli e dieci cicli aggiuntivi con 29 varianti controllate. Il file macchina è `evaluation/test_registry.json`; `scripts/check_test_registry.py` controlla coerenza con tesi, annotazioni, quattro celle e autorizzazioni. L’audit del protocollo include anche questi controlli. Definizione preparata, fixture/driver finali ancora da completare; nessuna esecuzione o approvazione della campagna implicita.
 
-I riferimenti puntuali a file e test sono in `evaluation/evidence_map.json`; il controllo verifica anche l’esistenza delle funzioni citate. Questa è una mappa di evidenze, non una dichiarazione di conformità. Il controllo del protocollo verifica esistenza e coerenza dei riferimenti, non trasforma test presenti in test finali superati.
+I cicli contengono più sessioni e controlli di recupero: i loro totali fisici e i report da giudicare restano da calcolare prima del congelamento. Riutilizzare un run di base per più assert non lo trasforma in ripetizioni indipendenti. Un test di comparatore o detector rimane evidenza di componente, finché manca il percorso integrato richiesto dal registro.
+
+**Scelta V-09 confermata dall’autore:** estendere entrambi gli agenti con un compito comune di verifica di un riferimento numerico pubblico autorizzato, consultato via MCP e restituito con fonte/unità/periodo/prodotto. Valori del fascicolo locali; fixture dichiaratamente simulate nei test. È una modifica ancora da implementare, non coperta dal solo comparatore attuale. Verificare le ricevute prima del confronto: un numero non fedele alla fonte va rifiutato; un conflitto verificato richiede osservazioni controfattuali entrambe ammesse dal catalogo di test. Nessuna statistica aggregata viene trasformata in TAN personale. Fissata la fonte comune sulla serie BCE già prevista, con tasso AAR/NDER aggregato mensile e tipi esistenti; adattatore verificato nel catalogo confronti 0.2.0. Il collegamento a entrambi gli agenti resta da implementare; il replay del CSV istituzionale congelato non attesta un nuovo recupero. Predisporre separatamente ricevute controfattuali dichiarate, versionare il protocollo runtime e ripetere il pilota a quattro celle prima di congelare: le misure precedenti rimangono della versione `financial-profile-2x2-v1`.
+
+Le sonde nuove per payload vietati, contenuti ostili e Card falsificate restano subordinate al consenso S04. I riferimenti a file/test già presenti sono in `evaluation/evidence_map.json`; la loro esistenza non attesta che tutte le istanze finali siano state eseguite o superate.
 
 ## Verifica dell’annullamento e del recupero
 
@@ -214,6 +207,6 @@ La prova nativa automatica usa gli stessi agenti durante guasti e recupero; è i
 ## Prima del congelamento
 
 1. Completato: annotazioni dei 25 fascicoli riviste contro i PDF dall’utente; rubrica, soglie e trattamento descrittivo della latenza approvati. Nessun punteggio dei report o nuova SLA introdotti.
-2. Completare il registro delle istanze V-01–V-10, ottenere eventuale consenso S04 e colmare i residui di robustezza/tracciamento.
+2. Materializzare e verificare le istanze definite nel REGISTRO_PROVE.md: prima estensione V-09 concordata e fixture/driver benigni nelle quattro celle; ottenere consenso S04 prima delle relative prove.
 3. Preparare manifest immutabile di ambiente, runner finale e registro cieco del valutatore.
 4. Approvare una versione congelata con identificativo/digest. Solo allora eseguire la campagna finale e scrivere i risultati nei capitoli 5–6.

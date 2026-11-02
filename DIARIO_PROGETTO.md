@@ -268,6 +268,22 @@ Controllato runs/trace_manual_retry.json: **62 controlli True, passed true e sei
 
 Rifinita una sola diagnostica emersa dal file: HTTP 409 per dati insufficienti nella sottofase policy diventa input_not_ready, coerente col grafo, e indica lo scenario anche prima di creare il task. Verifica mirata su C001/C006/C011/C016: **4 passed, 13 warning**; evidenza manuale originale invariata, rifinitura inclusa alla prossima costruzione dell’immagine. Chiuso il pilota del blocco 1 e rimosso il relativo impedimento dal protocollo; restano registro delle istanze, manifest/runner/registro cieco e prove finali. S04 e campagna finale non autorizzati.
 
+## Modifica 73 — Registro operativo V-01–V-10
+
+Rilette Tabella 3.3 e §§4.4–4.6 della tesi. Creati REGISTRO_PROVE.md ed evaluation/test_registry.json: dieci famiglie, riuso dei 25 fascicoli e dieci cicli aggiuntivi con 29 varianti, ciascuna da ripetere dieci volte per cella. Distinti requisiti della tesi, proposte operative, piloti disponibili e preparazioni ancora mancanti. I cicli non equivalgono a singole sessioni; totali fisici e report da valutare restano da calcolare prima del congelamento. Esplicitati i limiti del corpus vincolato, dei timeout modello/fonte e dei driver demo rispetto alle quattro celle.
+
+L’autore ha confermato per V-09 l’estensione reale degli agenti: entrambi consultano via MCP un riferimento numerico pubblico comune e restituiscono fonte/unità/periodo/prodotto; fixture dichiarate nei test e dati del fascicolo locali. Da fissare grandezza/ricevute e implementare il contratto; verificare la fedeltà prima di confrontare, senza promuovere valori alterati a conflitti verificati. Serviranno nuova versione runtime e nuovo pilota a quattro celle. Audit offline del registro **180 controlli, zero problemi**; audit complessivo **1.185 controlli, zero problemi**; verifiche dedicate **31 passed, 13 warning**. Nessun servizio avviato, nessuna prova operativa eseguita o risultato finale attribuito. Aggiornati protocollo, README e residui. S04 e campagna finale fermi; prossimo lavoro: contratto e implementazione dell’osservazione pubblica comune.
+
+## Modifica 74 — Fonte e contratto pubblico comune fissati
+
+Scelta la serie BCE MIR.M.IT.B.A2C.A.R.A.2250.EUR.N già prevista dal connettore, verificandone la definizione sul portale ufficiale: AAR/NDER aggregato dei nuovi mutui abitativi in Italia, percentuale annua e periodo mensile. Riusati EcbRateEvidence/Observation; adattatore con verifica del CSV e catalogo confronti 0.2.0. Valore e periodo provengono dalla fonte, non dal modello; il dato rimane distinto dal TAN del documento e dai riferimenti fiscali AdE già selezionati. Nessun nuovo provider o modello introdotto.
+
+Verifiche mirate su fonte, contratto, confronti e registro: **93 passed, 13 warning**; audit registro **182 controlli, zero problemi**, protocollo **1.187 controlli, zero problemi**. Test offline sullo snapshot pubblico già acquisito: nessun nuovo recupero reale attestato. Fonte e contratto nominale definiti; **integrazione nei risultati di entrambi gli agenti ancora da realizzare**. Le future perturbazioni sono fixture esplicite, non dati attribuiti alla BCE. Aggiornati registro, protocollo e residui; campagna finale e S04 fermi.
+
+## Modifica 75 — Piano di chiusura in quattro passi
+
+Riorganizzato DA_IMPLEMENTARE.md: contributo utile degli LLM; integrazione e verifiche; demo/documento; valutazione riproducibile. Esplicitato il limite attuale: i modelli generano descrizioni delle fonti, ma la loro prosa non alimenta il report. Priorità proposta all’analisi contestuale dell’agente mercati, poi al fiscale, mantenendo calcoli e sicurezza applicativi e senza nuove infrastrutture. Conservati i residui V-01–V-10, il riferimento comune V-09, i piloti già confermati e le condizioni del confronto. Solo documentazione: nessuna funzionalità o prova aggiunta; dettagli del contratto LLM da concordare, S04 e campagna finale non autorizzati.
+
 ## Metodo da mantenere
 
 Concordare i cambiamenti di perimetro e scrivere nella repository. Dettare i comandi in chat uno alla volta, con terminale, servizi e risultato atteso; l’utente esegue e l’assistente controlla anche i file prodotti. Registrare solo modifica, evidenza verificata e limite. Non trasformare prove previste in risultati, nascondere warning o sommare tempi annidati.

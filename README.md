@@ -133,6 +133,7 @@ Se il controllo delle tracce si interrompe, il file indica `passed: false` e la 
 
 - [Diario di progetto](DIARIO_PROGETTO.md): sintesi delle modifiche e delle verifiche.
 - [Attività da completare](DA_IMPLEMENTARE.md): lavori residui, priorità e criteri di completamento.
+- [Registro delle prove](REGISTRO_PROVE.md): verifiche della tesi già coperte e ancora da preparare.
 
 ## Fonte BCE reale per l’agente mercati
 

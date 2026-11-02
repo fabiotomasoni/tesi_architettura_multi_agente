@@ -118,5 +118,11 @@
       "C024": "488186bab83d3f2ca39f25021128364bd09b4109b3b18ecf53ad1633ff9ce3e2",
       "C025": "de940682f8741af9d7e0a85b0f87dfec4743960913d56138a7a8e78f57ca9d15"
     }
+  },
+  "test_registry": {
+    "path": "evaluation/test_registry.json",
+    "version": "v01-v10-registry-draft-v1",
+    "status": "defined_pending_implementation_and_freeze",
+    "authorizes_execution": false
   }
 }

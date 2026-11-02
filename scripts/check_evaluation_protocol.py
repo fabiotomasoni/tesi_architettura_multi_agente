@@ -4,6 +4,10 @@ from decimal import Decimal
 from pathlib import Path
 from pypdf import PdfReader
 ROOT=Path(__file__).resolve().parents[1]
+if __package__ in (None,''):
+    from check_test_registry import verify as registry_checks
+else:
+    from .check_test_registry import verify as registry_checks
 
 
 def annotation_checks(annotation,directory):
@@ -75,6 +79,8 @@ def verify(protocol,annotations,root=ROOT):
     approval=protocol.get('threshold_approval',{})
     digest=hashlib.sha256(json.dumps(protocol['thresholds'],sort_keys=True,separators=(',',':')).encode()).hexdigest()
     checks['thresholds_approved_without_freezing_campaign']=approval.get('status')=='approved' and approval.get('approved_by')=='user' and approval.get('scope')=='thresholds_rubric_and_descriptive_latency_policy_only' and approval.get('thresholds_sha256')==digest and 'user_threshold_approval' not in protocol['freeze_blockers']
+    registry=json.loads((root/'evaluation/test_registry.json').read_text())
+    checks.update({'registry/'+key:value for key,value in registry_checks(registry,protocol,annotations,root=root).items()})
     checks.update(annotation_checks(annotations,root/'dataset/Documents'))
     checks.update(review_checks(protocol.get('annotation_review',{}),annotations))
     evidence=json.loads((root/'evaluation/evidence_map.json').read_text())
