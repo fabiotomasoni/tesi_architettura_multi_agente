@@ -32,7 +32,8 @@ def test_catalog_context_quotes_and_model_projection(year,purpose):
     from gateway.inference import MODELS
     from scripts.run_ollama_bridge import validate_payload
     import json
-    payload={'model':MODELS['S-02'],'stream':False,'keep_alive':0,'options':{'num_ctx':4096,'num_predict':200,'temperature':0},'think':False,'messages':[{'role':'system','content':ade.REAL_TAX_PROMPT},{'role':'user','content':json.dumps(data)}]}
+    from gateway.tax_analysis import build_analysis_input, tax_payload
+    payload=tax_payload(MODELS['S-02'],build_analysis_input(TaxView(tax_year=year,purpose=purpose),e))
     assert validate_payload(payload)==payload
 
 
@@ -98,7 +99,7 @@ def test_gateway_attests_publication_receipt(monkeypatch,fault):
     from dataclasses import replace
     from gateway import runtime
     import gateway.tool_egress as tools
-    from gateway.inference import InferenceBroker,InferenceRequest
+    from gateway.inference import InferenceBroker,InferenceRequest,MODELS
     from gateway.a2a_egress import EgressDenied
     monkeypatch.setattr(runtime,'ISOLATED',True)
     monkeypatch.setattr(tools,'TAX_SOURCE','ade')
@@ -126,9 +127,10 @@ def test_gateway_attests_publication_receipt(monkeypatch,fault):
             raw=await tools.source_request(broker,tools.SourceRequest(**request.model_dump(),destination=permit.destination,headers={}), 'Bearer '+permit.source_token)
         if fault in {'changed_return','changed_prompt'}:
             raw['retrieved_at']='2026-01-01T00:00:00Z'
+        inferred=None
         if fault in {None,'changed_prompt'}:
-            await broker.infer(InferenceRequest(correlation_id=task.correlation_id,scenario='S-02',evidence=raw),'Bearer '+task.inference_token)
-        return TaxResult(correlation_id=task.correlation_id,status='completed',evidence=raw,summary='Test',limits=[],model='test')
+            inferred=await broker.infer(InferenceRequest(correlation_id=task.correlation_id,scenario='S-02',evidence=raw),'Bearer '+task.inference_token)
+        return TaxResult(correlation_id=task.correlation_id,status='completed',evidence=raw,summary='Test',limits=[],model=MODELS['S-02'],tax_analysis=inferred.tax_analysis if inferred else None)
     if fault:
         with pytest.raises(EgressDenied):asyncio.run(broker.delegate(session_id,t,remote))
         assert broker.bridge.model_calls==0

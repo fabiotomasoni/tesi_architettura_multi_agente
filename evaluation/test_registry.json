@@ -80,7 +80,7 @@
     "final_report_rating_total": null,
     "nominal_sources": "fixed_local_fixtures",
     "external_network_in_comparison": false,
-    "current_runtime_protocol": "financial-profile-2x2-v1",
+    "current_runtime_protocol": "financial-profile-2x2-v5",
     "runtime_after_agent_extension": "new_version_required_not_yet_defined"
   },
   "cohorts": {

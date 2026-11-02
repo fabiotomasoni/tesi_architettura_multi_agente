@@ -1,6 +1,6 @@
 # Protocollo di valutazione — soglie approvate, congelamento pendente
 
-Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota 2×2 è concluso. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali o S04**. La configurazione corrente è `financial-profile-2x2-v1`; il file controllabile è `evaluation/protocol.json`.
+Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota 2×2 della versione precedente è concluso; la versione attuale richiede un nuovo pilota. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali o S04**. La configurazione corrente nel codice è `financial-profile-2x2-v5` (pilota della nuova versione ancora da eseguire); il file controllabile è `evaluation/protocol.json`.
 
 ## Disegno e materiale di riferimento
 
@@ -77,7 +77,7 @@ Non usare il vincolo di centesimo come tolleranza universale dei confronti RF-07
 
 Dieci sessioni indipendenti per istanza/cella. Per le misure continue riportare media e varianza campionaria (`n−1`) per caso e configurazione, con n effettivo e dati mancanti dichiarati; per esiti binari conteggi e tassi. Non sostituire timeout con latenze zero, non calcolare token mancanti come zero osservato, non mediare importi di casi diversi per giudicare correttezza. Conservare il tasso di timeout separato e specificare quali latenze sono censurate/incomplete.
 
-Riportare confronti appaiati +P/−P sullo stesso caso e distinguere perdita di utilità e qualità. Per S/M mantenere comparabili modelli, budget e pianificazione. Non chiamare economicamente sostenuti costi API che non esistono: tempi/token locali osservati; eventuali stime separate. La prosa LLM è esclusa dal report e molte uscite sono deterministiche: risultati uguali e varianza nulla possono derivare dalla costruzione del sistema, non dimostrano superiorità o equivalenza generale. Con un solo valutatore, la varianza dei punteggi non misura incertezza inter-valutatore.
+Riportare confronti appaiati +P/−P sullo stesso caso e distinguere perdita di utilità e qualità. Per S/M mantenere comparabili modelli, budget e pianificazione. Non chiamare economicamente sostenuti costi API che non esistono: tempi/token locali osservati; eventuali stime separate. Le selezioni LLM sono separate dai calcoli deterministici; un eventuale commento ammesso dai filtri resta non verificato semanticamente: risultati uguali e varianza nulla possono derivare dalla costruzione del sistema, non dimostrano superiorità o equivalenza generale. Con un solo valutatore, la varianza dei punteggi non misura incertezza inter-valutatore.
 
 ## Registro operativo V-01–V-10
 
@@ -210,3 +210,47 @@ La prova nativa automatica usa gli stessi agenti durante guasti e recupero; è i
 2. Materializzare e verificare le istanze definite nel REGISTRO_PROVE.md: prima estensione V-09 concordata e fixture/driver benigni nelle quattro celle; ottenere consenso S04 prima delle relative prove.
 3. Preparare manifest immutabile di ambiente, runner finale e registro cieco del valutatore.
 4. Approvare una versione congelata con identificativo/digest. Solo allora eseguire la campagna finale e scrivere i risultati nei capitoli 5–6.
+
+## Selezione degli specialisti e commento opzionale
+
+Perimetro ristretto confermato dall’autore dopo l’esito negativo di report-locale-36 e la diagnosi dei modelli. Il runtime corrente è `financial-profile-2x2-v5`, contratto `market-selection-1`, generazione `market-selection-generation-1`, catalogo `market-statements-1`. Il mercati sceglie uno/due enunciati sulla fonte e uno sul contesto fra quelli ricevuti; può aggiungere una breve spiegazione collegata alla selezione. Il gateway costruisce il catalogo da fonte validata e vista già autorizzata, conserva il profilo finanziario completo nel laboratorio senza minimizzazione e ricontrolla la risposta. Nessuna selezione viene inventata se il modello manca o propone identificativi non ammessi.
+
+Il report ricostruisce i testi dal catalogo dopo la scelta, non dal testo fornito dal modello. Sono definizioni/trasformazioni controllate con riferimenti ai campi della fonte/vista; non citazioni letterali delle pubblicazioni. Verifica di identificativi/testi/riferimenti distinta dalla pertinenza della scelta: `selection_relevance_verified` e `semantic_verified` restano falsi. Una selezione valida sopravvive al commento escluso (`selection_only`), senza spiegazione sostitutiva. I fatti documentali, le fonti e i calcoli locali restano indipendenti dalla selezione. Una prova controllata dimostra che scelte diverse del modello cambiano il focus del report a parità di risultati finanziari, senza attribuire questo effetto a una scelta autonoma degli strumenti o delle destinazioni.
+
+Numeri/date confrontati con i soli riferimenti degli enunciati scelti; non basta che un numero sia altrove nell’input. Controlli lessicali su alcune raccomandazioni, confusioni di fonte, proprietà non selezionate e frasi apparentemente incomplete: possibili falsi positivi e copertura incompleta, nessuna certificazione semantica generale. Il valutatore giudica pertinenza, completezza, fedeltà e utilità; commento assente/escluso resta un limite da valutare, anche se il pilota tecnico accetta una selezione valida. Le soglie e la rubrica approvate non cambiano. Nei JSONL del pilota si registrano stato, conteggi e disponibilità del commento, senza testi o identificativi degli enunciati scelti.
+
+Restano gli stessi modelli (llama3.2:3b mercati e pesi comuni nel laboratorio; qwen3:1.7b fiscale della demo), contesto 4096, temperatura zero, limiti 768 token S-01/200 S-02, una inferenza per attività e le deadline concordate. Non si adottano qwen3:4b, retry o nuovi provider. Il fiscale usa tax-selection-1, generazione tax-selection-generation-1 e catalogo tax-statements-1, con lo stesso compito circoscritto. I risultati delle versioni precedenti e le prove iterative di sviluppo non costituiscono la valutazione del runtime v5: ripetere il pilota a quattro celle dopo gli incrementi sugli agenti, prima del congelamento.
+
+Quattro riproduzioni con il modello locale attuale tramite broker su viste sintetiche fisse/variabili e ricevuta BCE archiviata/fixture hanno prodotto selezioni valide. Il testo dei commenti ha evidenziato anche incompletezza e proprietà non selezionate, coperte da nuove regressioni; non viene dichiarata verificata l’intera prosa. Nessun PDF, ground truth o dato originale al modello, nessun nuovo recupero BCE e nessuna prova dell’isolamento Docker in queste riproduzioni. Le verifiche automatiche con modello controllato coprono anche MCP, ciclo di vita, guardie e report. **Pilota manuale della selezione mercati confermato sulla demo aggiornata:** report-locale (3).json/C001 fisso e report-locale (4).json/C024 variabile. Testi e riferimenti selezionati ricostruibili dal catalogo, digest fonte coerente, ricevuta modello presente; in entrambi selection_only, con prosa esclusa rispettivamente per proprietà non selezionata e possibile frase incompleta. Conferma del percorso e delle guardie, non della correttezza dei commenti o di qualità umana già misurata. Restano la conferma fiscale della demo aggiornata, i nuovi piloti a quattro celle e la valutazione finale. S04 e campagna finale non autorizzati.
+
+Il fiscale ricava le condizioni dal catalogo già citato `tax_review_rules`, solo dopo controllo dell’edizione e della ricevuta della fonte. Ogni scelta conserva domanda, informazioni da raccogliere, estratto letterale, pagina, anno d’imposta, edizione e digest del documento. La domanda del catalogo non viene presentata come citazione letterale: l’estratto è separato. Il modello non decide applicabilità, soddisfazione dei requisiti o spettanza. La checklist locale completa non viene ridotta dalla selezione. Con le fixture tutte le indicazioni restano esplicitamente simulate.
+
+Le ricevute del gateway legano anche la risposta fiscale all’inferenza effettiva: l’agente non può cambiarla o ometterla. Nel prompt minimizzato non compaiono interessi, quota, importi del mutuo, PDF o identificativi; nel solo laboratorio senza minimizzazione si conserva il profilo finanziario strutturato concordato. Gli estratti pubblici sono esentati dal controllo di sottostringhe sensibili solo dopo ricostruzione esatta dal catalogo verificato. Filtri conservativi possono escludere anche frasi lecite; non certificano tutte le parafrasi. I commenti fiscali senza chiusura di frase sono esclusi, senza completamenti inventati.
+
+## Verifica del primo blocco
+
+Pilota tecnico della demo aggiornata con fonti reali, distinto dal confronto 2×2 e dalla campagna finale. Fermare il ponte precedente con Ctrl+C; lasciare Docker Desktop e Ollama aperti. Dalla radice della repository:
+
+```bash
+.venv/bin/python -m pytest -q
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+docker compose -f compose.isolated.yaml -f compose.ecb.yaml -f compose.ade.yaml --profile verification up -d --no-build
+```
+
+In un secondo terminale, sempre nella repository, avviare un solo ponte e lasciarlo aperto:
+
+```bash
+.venv/bin/python scripts/run_ollama_bridge.py --enable-ecb --enable-ade
+```
+
+Nel primo terminale:
+
+```bash
+.venv/bin/python scripts/check_block1.py --output runs/block1_manual.json --reports-dir runs/block1_reports
+```
+
+Windows PowerShell: stessi comandi Docker; sostituire `.venv/bin/python` con `.\.venv\Scripts\python.exe` nei tre comandi Python. Per ripetere il pilota scegliere nomi nuovi per output e cartella: non sovrascrive prove esistenti.
+
+Esiti attesi: C001/C024/C021 `completed`, C006/C011 `partial`; per tutti `passed: True`, `pulizia: True`, infine `passed: True`. Il controllo include PDF/citazioni/periodi, fonti/digest/ricevute, checklist completa e assenza di spettanza, calcoli locali, inventario dei risultati, ricostruzione delle selezioni, tracce e cancellazione della sessione e delle viste. Le fonti reali devono rispondere: nessun successo viene attribuito a un errore di fonte o del modello. I JSON e HTML esportati sono copie client del report sintetico richieste esplicitamente, separate dai metadati di verifica; nessun nuovo archivio del gateway.
+
+`selection_only` è ammesso: conferma la selezione controllata e l’esclusione del commento, non la qualità della prosa. Aprire i cinque HTML e controllare leggibilità, utilità delle condizioni evidenziate e limiti; citazioni corrette non garantiscono da sole pertinenza o completezza dell’interpretazione. Questo giudizio non riceve automaticamente un voto positivo dal pilota.

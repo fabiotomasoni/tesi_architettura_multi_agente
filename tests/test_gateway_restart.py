@@ -27,7 +27,7 @@ module.InferenceBroker=lambda:broker
 async def remote(task):
     evidence=(markets if task.scenario=='S-01' else taxes)(task.view)
     reply=await broker.infer(InferenceRequest(correlation_id=task.correlation_id,scenario=task.scenario,evidence=evidence.model_dump(mode='json')),'Bearer '+task.inference_token)
-    return (MarketResult if task.scenario=='S-01' else TaxResult)(correlation_id=task.correlation_id,status='completed',evidence=evidence,summary=reply.summary,limits=[],model=MODELS[task.scenario],measurements={'agent_boot_id':'controlled-delegate-'+task.scenario})
+    return (MarketResult if task.scenario=='S-01' else TaxResult)(correlation_id=task.correlation_id,status='completed',evidence=evidence,summary=reply.summary,limits=[],model=MODELS[task.scenario],market_analysis=reply.market_analysis,tax_analysis=reply.tax_analysis,measurements={'agent_boot_id':'controlled-delegate-'+task.scenario})
 import gateway.market_client, gateway.tax_client
 gateway.market_client.delegate=remote
 gateway.tax_client.delegate=remote

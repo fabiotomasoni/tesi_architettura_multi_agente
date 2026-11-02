@@ -47,6 +47,17 @@ def main():
                         from .check_mortgage import verify as mortgage
                         from .check_tax_application import verify as tax
                     checks={**mortgage(report),**tax(report)}
+                    for scenario,label in [('S-01','market'),('S-02','tax')]:
+                        generated=next((item for item in report.get('model_analyses',[]) if item.get('scenario')==scenario),None)
+                        checks[label+'_selection_available_when_requested']=expected[scenario]!='completed' or generated is not None and generated.get('status') in {'available','selection_only'}
+                        if generated is not None:
+                            row[label+'_selection_status']=generated['status']
+                            row[label+'_selected_source_count']=sum(item['kind']=='source' for item in generated.get('selected_statements',[]))
+                            row[label+'_explanation_included']=generated['status']=='available'
+                            row[label+'_comment_issue_count']=len(generated.get('issues',[]))
+                    checks['model_analysis_not_semantically_certified']=all(
+                        item.get('semantic_verified') is False for item in report.get('model_analyses',[]))
+                    row['signature_scope']='deterministic_financial_sections_excluding_model_analysis'
                     # Nessun dato della fixture o contenuto del report viene archiviato.
                     stable={'status':report['status'],'mortgage':report['mortgage_comparison'],'contract':report.get('mortgage_contract_analysis'),'tax':report['tax_application']}
                     signature=hashlib.sha256(json.dumps(stable,sort_keys=True,ensure_ascii=False).encode()).hexdigest()

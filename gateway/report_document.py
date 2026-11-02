@@ -230,6 +230,35 @@ def render_report_document(report):
                 for item in summary.get('statements', []))
     if not report.get('faithful_summaries'):
         paragraph('Nessuna sintesi con provenienza verificata disponibile.')
+    for generated in report.get('model_analyses', []):
+        heading('Condizioni fiscali messe in evidenza dall’agente' if generated.get('scenario')=='S-02' else 'Enunciati messi in evidenza dall’agente mercati')
+        paragraph(generated.get('warning', 'Pertinenza della selezione e commento non verificati semanticamente.'))
+        if generated.get('status') not in {'available', 'selection_only'}:
+            paragraph('Selezione non disponibile o esclusa; nessuna spiegazione sostitutiva generata.')
+            continue
+        paragraph('I testi sono ricostruiti dal catalogo e dalla vista autorizzata dopo la scelta del modello; non sono citazioni letterali della pubblicazione.')
+        for kind, label in [('source', 'Sulla fonte'), ('context', 'Sul contesto ricevuto')]:
+            paragraph(label)
+            listing(item['text'] + ' [Riferimenti: ' + ', '.join(item['references']) + ']'
+                    for item in generated.get('selected_statements', []) if item['kind'] == kind)
+        if generated.get('scenario')=='S-02':
+            paragraph('Tutte le condizioni restano da verificare. La scelta del modello non prova requisiti soddisfatti o diritto a una detrazione.')
+            for item in generated.get('selected_statements',[]):
+                source=item.get('source') or {}
+                if source.get('simulated') is False:
+                    paragraph('Estratto della pubblicazione: «'+str(source.get('quote',''))+'» — pagina '+str(source.get('page',''))+', anno d’imposta '+str(source.get('tax_year','')))
+                    paragraph('Fonte: '+str(source.get('source_ref','')))
+                listing(item.get('needed_information',[]))
+        paragraph('Breve spiegazione del modello — non verificata semanticamente')
+        explanation = (generated.get('content') or {}).get('explanation')
+        if generated.get('status') == 'available' and explanation:
+            paragraph(explanation)
+        else:
+            paragraph('Commento escluso dai controlli; selezione valida conservata, senza un commento sostitutivo.')
+        table(['Riferimento', 'Valore nella fonte o nella vista autorizzata'],
+              [[ref, raw if raw is not None else 'Non specificato nella vista autorizzata']
+               for ref, raw in generated.get('references', {}).items()])
+        paragraph('La selezione e il commento non alimentano i calcoli e non determinano conclusioni finanziarie verificate.')
     heading('6. Completezza e confronti')
     for section in report.get('completeness', []):
         for key, description in [('missing_required', 'Campi obbligatori mancanti'),
@@ -254,6 +283,6 @@ def render_report_document(report):
     paragraph(consistency.get('scope', 'Copertura limitata ai dati previsti dagli scenari richiesti.'))
     heading('7. Limiti e conclusioni')
     listing(report.get('limits', []))
-    paragraph('I risultati sostengono soltanto gli approfondimenti descritti, nelle ipotesi dichiarate. Le sintesi libere dei modelli non verificate sono escluse dal documento.')
+    paragraph('I risultati sostengono soltanto gli approfondimenti descritti, nelle ipotesi dichiarate. L’eventuale interpretazione LLM è separata e non verificata semanticamente; le altre sintesi libere sono escluse.')
     parts.append('</article>')
     return ''.join(parts)

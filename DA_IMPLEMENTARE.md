@@ -4,18 +4,18 @@ La tesi, soprattutto capitoli 3–4, resta il riferimento. Questo piano operativ
 
 **Già disponibile:** gateway per PDF nativi del dataset, provenienza documentale, viste minimizzate, LangGraph, servizi ADK/A2A, MCP, Ollama, isolamento Docker e collegamenti controllati a BCE e alle istruzioni AdE 730/2025–2026. Esistono upload, report JSON e documento leggibile/stampabile. I piloti di annullamento, consegna fallita, crash, sostituzione MCP e tracciamento sono confermati nel perimetro descritto nel diario; non sostituiscono la valutazione finale.
 
-**Punto da correggere:** oggi gli LLM descrivono le fonti, ma la loro prosa è esclusa dal report; analisi e sintesi utilizzate sono applicative. La base tecnica è avanzata, mentre il contributo utile dei modelli resta da realizzare e valutare. I quattro passi seguenti sono ancora aperti.
+**Stato del contributo LLM:** entrambi gli specialisti selezionano enunciati associati alla fonte e alla vista autorizzata. Il gateway ricostruisce testi e riferimenti; l’eventuale commento resta separato e non verificato semanticamente. Le domande fiscali riportano gli estratti delle due edizioni AdE e sono tutte candidate **da verificare**, senza spettanza accertata. I calcoli e i dati documentali restano indipendenti dal modello.
 
-## 1. Dare agli LLM un compito utile e circoscritto
+## 1. Contributo utile e circoscritto degli LLM — implementazione completata
 
 Riferimenti: S-01/S-02, RF-04–RF-08, sezioni 4.2–4.3.
 
-- Partire dall’agente mercati: usare la vista autorizzata e la fonte già verificata per spiegare pertinenza, limiti e informazioni mancanti rispetto all’attività richiesta. La statistica BCE aggregata non diventa un TAN contrattuale o un’offerta personale.
-- Estendere poi il fiscale: individuare condizioni pertinenti e informazioni mancanti nei passaggi annuali AdE autorizzati, senza dichiarare spettanza o calcolare detrazioni.
-- Definire risposte strutturate con riferimenti alle evidenze ricevute. I dettagli dei contratti vanno concordati prima dell’implementazione. Nessun nuovo provider, modello o terzo LLM orchestratore necessario.
-- Mantenere applicativi estrazione, autorizzazioni, minimizzazione, calcoli e controlli numerici. Il modello non decide i propri permessi. Nelle prove simulate deve riconoscere il carattere simulato delle fonti.
+- Implementati `market-selection-1` e `tax-selection-1`: uno/due enunciati sulla fonte, uno sul contesto e commento opzionale. Identificativi fuori catalogo o risposta assente non producono sostituti inventati.
+- Testi e citazioni ricostruiti dal gateway dopo la scelta. Per il fiscale: domande e informazioni da raccogliere dal catalogo già esistente, con estratti/pagine dell’edizione corrispondente. Non sono requisiti personali soddisfatti né checklist normativa esaustiva. La checklist locale completa resta disponibile anche quando il modello ne evidenzia un sottoinsieme.
+- Commento escluso conservando la selezione valida (`selection_only`); nessuna certificazione semantica o di pertinenza. Estrazione, autorizzazioni, minimizzazione e calcoli restano applicativi; il modello non sceglie permessi o destinazioni.
+- Modelli, budget e scadenze invariati: S-01 768 token/S-02 200, pesi comuni nel confronto, runtime `financial-profile-2x2-v5`, inferenza 0.5.0 e report 0.15.0. Nessun modello/provider/infrastruttura aggiunto.
 
-**Chiusura:** il modello produce un contributo identificabile e utile all’analisi, distinto dai risultati già ottenuti con regole. Verificare anche l’assenza di risposta o una risposta irrilevante: il sistema deve segnalarla, senza inventare un’analisi completata. Non richiedere differenze artificiali tra singolo agente e multi-agente.
+**Verifica tecnica automatica completata.** Il pilota manuale mercati precedente è confermato su C001/C024. **Resta la conferma della demo aggiornata per entrambi gli agenti** con `scripts/check_block1.py` (cinque fascicoli, fonti reali): procedura nel protocollo. Non confondere una selezione valida con un commento corretto o una valutazione umana positiva. La nuova esecuzione a quattro celle appartiene al passo 2; i vecchi piloti non verificano v5.
 
 ## 2. Integrare i risultati nel report e completarne le verifiche
 
@@ -52,6 +52,6 @@ Riferimenti: RNF-08, RQ1–RQ3, sezioni 3.5/4.6.
 
 ## Metodo e prossimo intervento
 
-**Partire dal passo 1, agente mercati:** concordare il contratto minimo di analisi contestuale, poi implementare e verificare il percorso completo prima di replicarlo sul fiscale. Riutilizzare vista minimizzata, connettore BCE e gateway esistenti; nessuna nuova fonte o ipotesi economica implicita. Un confronto finanziario alternativo reale richiederebbe un riferimento compatibile e costi documentati: non ricavarlo dalla statistica BCE.
+Completare la verifica manuale del blocco 1 con i comandi forniti insieme: aggiornamento immagine, Compose con BCE/AdE, riavvio di un solo ponte e controllo dei cinque fascicoli. Lo script può esportare esplicitamente i report sul client; non crea uno storico nel gateway. Controllare il file di esito prima di registrare il successo. Quindi proseguire dal passo 2, senza nuove infrastrutture o fonti.
 
-Aggiornare questo file rimuovendo il residuo soltanto dopo verifica. Dettare i comandi in chat uno alla volta, indicando terminale, servizi e risultato atteso; controllare anche i file prodotti prima di registrare un successo nel diario. Mantenere il diario breve, numerato e senza date. Non avviare la campagna finale o S04 con un semplice aggiornamento documentale. Database dei profili, OCR, agenti remoti e ulteriori infrastrutture restano fuori dal perimetro implicito.
+Su richiesta dell’autore ogni blocco viene svolto in un unico lavoro, con implementazione, documenti e verifiche automatiche; alla fine fornire tutti i comandi manuali con terminale, servizi, esiti attesi e titolo del commit. Non interrompere ogni comando per conferma. Diario breve, numerato e senza date; aggiornare i residui solo dopo verifica. S04 e campagna finale richiedono ancora autorizzazione distinta. Database dei profili, OCR, agenti remoti e ulteriori infrastrutture restano fuori dal perimetro implicito.

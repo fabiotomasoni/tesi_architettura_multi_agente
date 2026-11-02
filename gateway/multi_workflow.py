@@ -39,11 +39,11 @@ async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=
             with Span('report'):
                 report=make_report(tasks,status)
             report_ms=(perf_counter()-began)*1000
-            # I riepiloghi tecnici non riespongono prosa esclusa dal report.
+            # La sintesi tecnica rimanda alle sezioni distinte del report.
             for activity in tasks.values():
                 result=activity.get('result')
                 if result is not None:
-                    result['summary']='Prosa del modello esclusa; consultare la sintesi deterministica del report.'
+                    result['summary']='Consultare il report: fonti e calcoli sono separati dall’eventuale interpretazione non verificata del modello.'
 
     finally:
         began=perf_counter()

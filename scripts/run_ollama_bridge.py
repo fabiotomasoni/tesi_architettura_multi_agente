@@ -16,6 +16,8 @@ from gateway.ecb_source import (BRIDGE_JOB, REAL_MARKET_PROMPT, PublicObservatio
 from gateway.market_evidence import verify_evidence as market
 from gateway.tax_evidence import verify_evidence as tax
 from gateway.ade_source import REAL_TAX_PROMPT, fetch_ade, source_job, publication, selected_quotes
+from gateway.market_analysis import MARKET_ANALYSIS_PROMPT, market_payload, validate_bridge_input
+from gateway.tax_analysis import TAX_ANALYSIS_PROMPT, tax_payload, validate_bridge_input as validate_tax_input
 
 BASE='http://127.0.0.1:8080'
 OLLAMA='http://127.0.0.1:11434/api/chat'
@@ -27,47 +29,22 @@ def messages_prompt(payload):
 
 
 def validate_payload(payload):
-    # Controllo aggiuntivo del ponte: non è un proxy HTTP generico né una API Ollama.
-    if not isinstance(payload,dict) or payload.get('model') not in MODELS.values():
+    # Ogni ruolo ha un template fisso, anche quando condivide lo stesso modello.
+    if not isinstance(payload, dict) or payload.get('model') not in MODELS.values():
         raise ValueError('Modello non autorizzato')
     from gateway import runtime
-    if runtime.EXPERIMENT!='off':
-        scenario=next((s for s in MODELS if messages_prompt(payload)==PROMPTS[s]),None)
-        if scenario is None or payload['model']!=MODELS[scenario]:raise ValueError('Prompt sperimentale fuori catalogo')
-    else:scenario=next(k for k,v in MODELS.items() if v==payload['model'])
-    messages=payload['messages']
-    evidence=json.loads(messages[1]['content'])
-    lab_view=None
-    if runtime.EXPERIMENT!='off':
-        if set(evidence)!={'evidence','context'}:raise ValueError('Contesto sperimentale mancante')
-        from gateway.lab_profile import FullFinancialView
-        lab_view=(FullFinancialView if runtime.UNMINIMIZED else MarketView if scenario=='S-01' else TaxView).model_validate(evidence['context'])
-        evidence=evidence['evidence']
-    real=scenario=='S-01' and messages[0].get('content')==REAL_MARKET_PROMPT
-    real_tax=scenario=='S-02' and messages[0].get('content')==REAL_TAX_PROMPT
-    if real_tax:
-        p=publication(evidence.get('tax_year'))
-        if not any(evidence=={'source_id':'ade-annual-mortgage-v1','simulated':False,'tax_year':p['tax_year'],'publication_year':p['publication_year'],'quotes':selected_quotes(p['tax_year'],purpose)} for purpose in ('primary_home_purchase','renovation','other')):
-            raise ValueError('Proiezione AdE difforme')
-    elif real:
-        parsed=PublicObservation.model_validate(evidence)
-        if evidence!=parsed.model_dump(mode='json'):raise ValueError('Proiezione BCE non canonica')
-    elif scenario=='S-01':
-        from gateway.market_evidence import RATES
-        rate=next((k for k,v in RATES.items() if v==evidence.get('annual_rate_percent')),None)
-        view=MarketView(mortgage_type='not_specified',rate_type=rate,remaining_years_band={'lower_exclusive':0,'upper_inclusive':5})
-        market(evidence,lab_view or view)
-    else:
-        view=TaxView(tax_year=evidence.get('tax_year'),purpose=evidence.get('purpose'))
-        tax(evidence,lab_view or view)
-    expected={'model':MODELS[scenario],'stream':False,'keep_alive':0,
-              'options':{'num_ctx':4096,'num_predict':200,'temperature':0},
-              'messages':[{'role':'system','content':REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[scenario]},
-                          {'role':'user','content':messages[1]['content']}]}
-    if scenario=='S-02' and runtime.EXPERIMENT=='off':expected['think']=False
-    if payload!=expected:
-        raise ValueError('Payload non autorizzato')
-    return payload
+    for scenario, prompt, validate, build in (
+        ('S-01', MARKET_ANALYSIS_PROMPT, validate_bridge_input, market_payload),
+        ('S-02', TAX_ANALYSIS_PROMPT, validate_tax_input, tax_payload)):
+        if messages_prompt(payload) != prompt or payload['model'] != MODELS[scenario]:
+            continue
+        data=validate(json.loads(payload['messages'][1]['content']),unminimized=runtime.UNMINIMIZED)
+        if runtime.EXPERIMENT!='off' and data['evidence'].get('simulated') is not True:
+            raise ValueError('Fonte reale vietata nel confronto')
+        if payload!=build(MODELS[scenario],data):
+            raise ValueError('Payload specialista non autorizzato')
+        return payload
+    raise ValueError('Prompt specialista fuori catalogo')
 
 
 async def execute_payload(payload, model, enable_ecb=False, enable_ade=False):

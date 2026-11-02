@@ -54,7 +54,7 @@ async def perform(task: MarketTask, *, mcp_module: str | None = None, budget_sec
             inference = await request_summary(task, evidence)
         summary = inference.summary
         return MarketResult(correlation_id=task.correlation_id, status='completed', evidence=evidence,
-            summary=summary, model=MODEL, measurements={
+            summary=summary, model=MODEL, market_analysis=getattr(inference, 'market_analysis', None), measurements={
                 'mcp_server_name':initialized.serverInfo.name, 'mcp_server_version':initialized.serverInfo.version,
                 'source_content_verified':1, **({} if is_ecb_evidence(evidence) else {'fixture_content_verified':1}), 'source_sha256':source_digest, 'mcp_ms':round(mcp_ms, 3), 'mcp_tool_calls':1,
                 'ollama_ms':inference.ollama_ms, 'inference_gateway_roundtrip_ms':round((perf_counter()-ollama_started)*1000, 3), 'ollama_calls':1, 'inference_via_gateway':1,

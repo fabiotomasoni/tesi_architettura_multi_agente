@@ -2,14 +2,14 @@
 
 Prototipo di tesi che legge PDF sintetici, affida attività a due specialisti locali — mercati e fiscalità — e produce un report con dati documentali, fonti e limiti. Le attività indipendenti vengono coordinate da LangGraph. Gli specialisti richiedono l’inferenza al gateway, che controlla l’incarico e costruisce il prompt per Ollama. Anche gli strumenti MCP ottengono le fonti attraverso il gateway, con autorizzazioni temporanee per il compito.
 
-**La modalità predefinita usa fonti simulate; è disponibile anche una fonte BCE reale per i mercati.** Il report riproduce fedelmente i dati delle simulazioni e confronta due scenari ipotetici del mutuo. Non fornisce quotazioni reali, consigli finanziari o attestazioni fiscali. Sono supportati i PDF del dataset incluso, non documenti bancari generici.
+**La modalità predefinita usa fonti simulate; sono disponibili anche la fonte BCE e due pubblicazioni annuali dell’Agenzia delle Entrate.** Il report distingue dati documentali, fonti, calcoli e contributi dei modelli. Mercati e fiscale scelgono cosa mettere in evidenza fra enunciati associati alle fonti e al contesto autorizzato. Il gateway ricostruisce testi e riferimenti: le domande fiscali hanno estratti, pagine ed edizione della pubblicazione, ma restano condizioni **da verificare**, senza attestare diritti o detrazioni. Un eventuale commento del modello è separato e non verificato semanticamente; se escluso, la selezione valida rimane visibile. Sono supportati i PDF del dataset incluso, non documenti bancari generici. Le statistiche BCE non sono offerte personali.
 
 ## Cosa serve
 
 - Python 3.11 o successivo, disponibile su [python.org](https://www.python.org/downloads/).
 - [Ollama](https://ollama.com/download) installato e aperto.
 - Docker Desktop installato e avviato per la modalità isolata.
-- Connessione Internet per installare dipendenze e scaricare i modelli. L’elaborazione avviene localmente; la modalità BCE consulta una fonte pubblica via Internet.
+- Connessione Internet per installare dipendenze e scaricare i modelli. L’elaborazione avviene localmente; le modalità BCE/AdE consultano fonti pubbliche via Internet.
 
 Aprire i terminali nella cartella principale della repository. Non occorrono chiavi API per usare la demo.
 
@@ -127,7 +127,7 @@ Se la consegna del report fallisce, il gateway non lo conserva per un successivo
 
 ## Documentazione del progetto
 
-I nuovi piloti salvano anche una traccia di soli tempi, conteggi ed esiti, senza documenti o prompt. La procedura guidata per verificarla è nel [protocollo di valutazione](PROTOCOLLO_VALUTAZIONE.md#tracciamento-e-budget-del-prototipo); il report per l’utente conserva gli stessi dati e contenuti.
+I nuovi piloti salvano anche una traccia di soli tempi, conteggi ed esiti, senza documenti o prompt. La procedura guidata per verificarla è nel [protocollo di valutazione](PROTOCOLLO_VALUTAZIONE.md#tracciamento-e-budget-del-prototipo); la traccia rimane separata dal contenuto del report per l’utente.
 
 Se il controllo delle tracce si interrompe, il file indica `passed: false` e la fase interessata, conservando le sole evidenze raccolte. Per riprovare usare un nome di output nuovo: le prove precedenti non vengono sovrascritte.
 
@@ -299,7 +299,7 @@ Confrontare infine:
 .venv/bin/python scripts/check_baseline_pilot.py runs/baseline_single_manual.jsonl runs/baseline_multi_manual.jsonl
 ```
 
-I cinque casi previsti sono C001/C024 completi e C006/C011/C016 parziali. Il controllo verifica esiti, pulizia, pesi del modello, impostazioni, risultati strutturati e conteggi delle chiamate. La prosa LLM resta esclusa dal report: questo pilota confronta funzionamento e coordinamento, non dimostra un vantaggio qualitativo dei modelli. I tempi delle fasi possono essere annidati e non vanno sommati indiscriminatamente.
+I cinque casi previsti sono C001/C024 completi e C006/C011/C016 parziali. Il controllo verifica esiti, pulizia, pesi del modello, impostazioni, risultati strutturati e conteggi delle chiamate. Il runtime attuale include la selezione mercati di enunciati controllati e un eventuale commento separato non verificato semanticamente. I vecchi piloti appartengono al percorso precedente: usare file nuovi e ripetere le quattro configurazioni. Il controllo richiede anche una selezione valida quando S-01 è completato; registra separatamente disponibilità del commento e numero di problemi, senza salvare testi o identificativi scelti nei metadati del pilota. Un commento escluso non invalida la selezione, ma resta un limite da valutare: il superamento del pilota non certifica la qualità. L’uguaglianza dei risultati finanziari deterministici non implica uguaglianza delle spiegazioni generate o vantaggio qualitativo del multi-agente. I tempi delle fasi possono essere annidati e non vanno sommati indiscriminatamente.
 
 Per tornare alla demo, fermare il ponte sperimentale, eseguire `down` con il file sperimentale usato, poi ripetere l’avvio BCE/AdE e del relativo ponte descritto sopra. Le fonti reali sono rifiutate dai profili sperimentali.
 
@@ -372,3 +372,5 @@ Start-Process .\runs\annotation_review_first5.html
 ```
 
 La scheda affianca valori attesi ed estratti, con collegamenti ai PDF da leggere. Controllare tutti i campi e segnalare le discordanze: nessuna conferma viene salvata automaticamente. Docker e Ollama non servono per questa revisione. Per gli altri casi usare `--cases C002 C003` oppure `--all`, con `--output runs/annotation_review_all.html`. Se il file esiste già, aprirlo oppure scegliere un nuovo nome; la generazione non sovrascrive le schede.
+
+Il controllo guidato del primo blocco è descritto nel [protocollo](PROTOCOLLO_VALUTAZIONE.md#verifica-del-primo-blocco). Usa cinque fascicoli del dataset e verifica provenienza, fonti, selezioni e chiusura delle sessioni; non sostituisce la valutazione umana del report.

@@ -51,8 +51,12 @@ def test_nominal_payload_and_single_use(monkeypatch,fiscal):
     wire=sent[0]; payload=json.loads(wire.content)
     assert str(wire.url)==OLLAMA_ENDPOINT
     assert payload['model']==MODELS[t.scenario]
-    assert json.loads(payload['messages'][1]['content'])==request(t).evidence
-    assert payload['options']=={'num_ctx':4096,'num_predict':200,'temperature':0}
+    from gateway.market_analysis import build_analysis_input, market_schema
+    from gateway.tax_analysis import build_analysis_input as tax_input, tax_schema
+    assert json.loads(payload['messages'][1]['content'])==((tax_input if fiscal else build_analysis_input)(t.view, request(t).evidence))
+    if fiscal:assert payload['format']==tax_schema(tax_input(t.view, request(t).evidence))
+    if not fiscal:assert payload['format']==market_schema(build_analysis_input(t.view, request(t).evidence))
+    assert payload['options']=={'num_ctx':4096,'num_predict':200 if fiscal else 768,'temperature':0}
     assert payload['keep_alive']==0 and payload['stream'] is False
     if fiscal:assert payload['think'] is False
     assert token[0] not in wire.content.decode() and token[0] not in str(wire.headers)
@@ -136,7 +140,10 @@ def test_multi_real_mcp_and_inference_roundtrip(monkeypatch,fail_market,local_ga
                 payload=json.loads(req.content);sent.append(payload)
                 if fail_market and payload['model']==MODELS['S-01']:
                     raise httpx.ReadTimeout('private failure')
-                return httpx.Response(200,json={'message':{'content':'Sintesi simulata'},'prompt_eval_count':12,'eval_count':4,'load_duration':0})
+                from test_market_analysis_runtime import candidate
+                from test_tax_analysis_runtime import candidate as tax_candidate
+                content=json.dumps(candidate()) if payload['model']==MODELS['S-01'] else json.dumps(tax_candidate())
+                return httpx.Response(200,json={'message':{'content':content},'prompt_eval_count':12,'eval_count':4,'load_duration':0})
             assert req.url.path in {'/internal/inference','/internal/tools/authorize'}
             return await httpx.ASGITransport(app=app).handle_async_request(req)
     monkeypatch.setattr(httpx,'AsyncClient',lambda **kw:original(transport=Router(),**kw))
@@ -157,17 +164,24 @@ def test_multi_real_mcp_and_inference_roundtrip(monkeypatch,fail_market,local_ga
             body=result.json()
             assert body['status']==('partial' if fail_market else 'completed'),body
             assert body['activities']['S-02']['status']=='completed'
+            fiscal=next(item for item in body['report']['model_analyses'] if item['scenario']=='S-02')
+            assert fiscal['status']=='available' and fiscal['gateway_model_output_receipt_verified']
+            assert not fiscal['semantic_verified'] and fiscal['tax_entitlement']=='not_assessed'
             assert body['activities']['S-02']['result']['measurements']['inference_via_gateway']==1
             assert body['activities']['S-02']['result']['measurements']['gateway_inference_completed']==1
             assert body['activities']['S-01']['result']['measurements']['gateway_inference_authorized']==1
             assert body['activities']['S-01']['result']['measurements']['gateway_inference_completed']==(0 if fail_market else 1)
             if fail_market:assert body['activities']['S-01']['error_code']=='timeout'
+            else:
+                assert body['report']['model_analyses'][0]['status']=='available'
+                assert body['report']['model_analyses'][0]['gateway_model_output_receipt_verified']
             assert body['session_closed'] and client.delete(f'/sessions/{sid}').status_code==404
             assert 'private failure' not in result.text and 'inference_token' not in result.text
     assert len(sent)==2
 
 
-def test_revoked_inflight_result_is_not_delivered(monkeypatch):
+@pytest.mark.parametrize('fiscal',[False,True])
+def test_revoked_inflight_result_is_not_delivered(monkeypatch,fiscal):
     broker=InferenceBroker(); sid=uuid4(); original=httpx.AsyncClient
     async def run():
         entered=asyncio.Event(); release=asyncio.Event()
@@ -181,7 +195,7 @@ def test_revoked_inflight_result_is_not_delivered(monkeypatch):
             with pytest.raises(EgressDenied):await running
             from types import SimpleNamespace
             return SimpleNamespace(measurements={})
-        with pytest.raises(EgressDenied):await broker.delegate(sid,task(),delegate)
+        with pytest.raises(EgressDenied):await broker.delegate(sid,task(fiscal),delegate)
     asyncio.run(run())
     assert not broker._grants
 

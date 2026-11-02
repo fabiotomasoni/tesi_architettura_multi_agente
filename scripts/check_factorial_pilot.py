@@ -1,6 +1,7 @@
 """Controlli descrittivi delle quattro celle pilota; non giudizio umano o campagna finale."""
 import argparse,json
 from pathlib import Path
+from gateway.runtime import EXPERIMENT_PROTOCOL
 if __package__ in (None,''):
     from check_baseline_pilot import verify as pair_verify
 else:
@@ -17,7 +18,7 @@ def verify(cells):
             key=(r['case'],r['repetition'])
             if key in records:raise ValueError('Righe duplicate')
             records[key]=r
-            if r.get('minimization')!=policy or r['experiment']['policy']!=policy or r['experiment'].get('protocol')!='financial-profile-2x2-v1':raise ValueError('Profili o protocolli diversi: rieseguire i quattro piloti')
+            if r.get('minimization')!=policy or r['experiment']['policy']!=policy or r['experiment'].get('protocol')!=EXPERIMENT_PROTOCOL:raise ValueError('Profili o protocolli diversi: rieseguire i quattro piloti')
         indexed[organization,policy]=records
     keys=set(indexed['single','active'])
     checks['same_cases_and_repetitions']=bool(keys) and all(set(x)==keys for x in indexed.values())
@@ -29,7 +30,7 @@ def verify(cells):
             a=indexed[organization,'active'][key];b=indexed[organization,'disabled'][key];label=organization+'/'+key[0]+'/'+str(key[1])
             x={k:v for k,v in a['experiment'].items() if k not in {'policy'}};y={k:v for k,v in b['experiment'].items() if k not in {'policy'}}
             checks[label+'/same_other_settings']=x==y and a['model_digest']==b['model_digest']
-            checks[label+'/same_structured_result']=a['semantic_result_sha256']==b['semantic_result_sha256']
+            checks[label+'/same_deterministic_financial_result']=a['semantic_result_sha256']==b['semantic_result_sha256']
             for scenario in ('S-01','S-02'):
                 if a['activities'][scenario]['status']!='completed':continue
                 am=a['activities'][scenario]['measurements'];bm=b['activities'][scenario]['measurements']

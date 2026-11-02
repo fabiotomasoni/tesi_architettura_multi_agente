@@ -7,7 +7,7 @@
     "3.5",
     "4.6"
   ],
-  "runtime_protocol": "financial-profile-2x2-v1",
+  "runtime_protocol": "financial-profile-2x2-v5",
   "evaluators": {
     "count": 1,
     "independent_agreement_estimated": false,
@@ -33,7 +33,8 @@
     "complete_controlled_instances_for_V01_V10",
     "approve_remaining_S04_scope",
     "model_weights_runtime_environment_manifest",
-    "human_rating_blinded_registry_and_final_runner"
+    "human_rating_blinded_registry_and_final_runner",
+    "complete_useful_llm_analysis_and_repeat_four_cell_pilot"
   ],
   "security_stage": "S04_not_authorized",
   "final_campaign_started": false,

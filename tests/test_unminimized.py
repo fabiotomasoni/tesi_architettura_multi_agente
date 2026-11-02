@@ -61,8 +61,8 @@ class Bridge:
 broker.bridge=Bridge()
 task=MarketTask(correlation_id=uuid4(),deadline=datetime.now(timezone.utc)+timedelta(seconds=60),view=view)
 async def remote(t):
- await broker.infer(InferenceRequest(correlation_id=t.correlation_id,scenario=t.scenario,evidence=expected_evidence(t.view).model_dump()),'Bearer '+t.inference_token)
- return MarketResult(correlation_id=t.correlation_id,status='completed',evidence=expected_evidence(t.view),summary='test',limits=[],model='llama3.2:3b')
+ inferred=await broker.infer(InferenceRequest(correlation_id=t.correlation_id,scenario=t.scenario,evidence=expected_evidence(t.view).model_dump()),'Bearer '+t.inference_token)
+ return MarketResult(correlation_id=t.correlation_id,status='completed',evidence=expected_evidence(t.view),summary='test',limits=[],model='llama3.2:3b',market_analysis=inferred.market_analysis)
 async def test():
  result=await broker.delegate(sid,task,remote)
  assert result.measurements['a2a_view_exact_amount_fields']==3
@@ -150,7 +150,7 @@ def test_factorial_checker_validates_financial_disclosure_contrast(change):
             for boundary in ('a2a_view','mcp_arguments','model_context'):
                 measurements.update({boundary+'_bytes':100 if policy=='active' else 999,boundary+'_exact_amount_fields':0 if policy=='active' else 3})
             activities={s:{'status':'completed','measurements':{**measurements,'agent_boot_id':'one' if organization=='single' else s}} for s in ('S-01','S-02')}
-            row={'case':'C001','repetition':1,'organization':organization,'minimization':policy,'input_financial_amount_fields':3,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'fixed','semantic_result_sha256':'same','activities':activities,'coordination':{'a2a_message_sends':1},'experiment':{'organization':organization,'policy':policy,'protocol':'financial-profile-2x2-v1','sources':'fixed_local_fixtures','schedule':'sequential'}}
+            row={'case':'C001','repetition':1,'organization':organization,'minimization':policy,'input_financial_amount_fields':3,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'fixed','semantic_result_sha256':'same','activities':activities,'coordination':{'a2a_message_sends':1},'experiment':{'organization':organization,'policy':policy,'protocol':'financial-profile-2x2-v5','sources':'fixed_local_fixtures','schedule':'sequential'}}
             cells[organization,policy]=[row]
     if change=='no_growth':cells['single','disabled'][0]['activities']['S-01']['measurements']['model_context_bytes']=90
     if change=='leaked_amount':cells['single','active'][0]['activities']['S-01']['measurements']['mcp_arguments_exact_amount_fields']=1

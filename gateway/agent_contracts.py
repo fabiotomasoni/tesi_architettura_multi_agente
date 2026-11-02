@@ -58,6 +58,8 @@ class MarketResult(Contract):
     summary: str = Field(max_length=2000)
     limits: list[str] = Field(max_length=10)
     model: str
+    market_analysis: dict | None = None
+    tax_analysis: None = None
     measurements: dict[str, int | float | str] = Field(default_factory=dict)
 
     @model_validator(mode='after')
@@ -104,6 +106,8 @@ class TaxEvidence(Contract):
 
 class TaxResult(MarketResult):
     evidence: TaxEvidence | AdeEvidence | None = None
+    market_analysis: None = None
+    tax_analysis: dict | None = None
 
 
 class MarketEvidence:

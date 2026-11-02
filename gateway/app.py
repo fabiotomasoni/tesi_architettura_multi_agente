@@ -280,6 +280,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "policy_version": POLICY_VERSION,
                 "gateway_boot_id": gateway_boot_id,
                 "trace_version": TRACE_VERSION, "budgets": BUDGETS.public(),
+                "market_analysis_version": "market-selection-1", "tax_analysis_version": "tax-selection-1", "runtime_protocol": runtime.EXPERIMENT_PROTOCOL,
                 "market_tool_implementation": MARKET_TOOL_IMPLEMENTATION, "tool_catalog_version": TOOL_CATALOG_VERSION,
                 "runtime_mode": runtime.MODE, "experiment": runtime.EXPERIMENT, "minimization": runtime.MINIMIZATION, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
@@ -441,7 +442,7 @@ def create_app() -> FastAPI:
         request_outcome(result['status'])
         if runtime.EXPERIMENT!='off':
             result['workflow']=('single' if runtime.SINGLE else 'multi')+'-experiment-v1'
-            result['experiment']={'protocol':'financial-profile-2x2-v1','organization':runtime.EXPERIMENT,'policy':runtime.MINIMIZATION,'sources':'fixed_local_fixtures','model':'llama3.2:3b','schedule':'sequential','session_budget_seconds':120,'model_calls_max':len(scenarios),'num_ctx':4096,'num_predict':200,'temperature':0,'keep_alive':0,'corpus':'synthetic-financial-v1'}
+            result['experiment']={'protocol':runtime.EXPERIMENT_PROTOCOL,'organization':runtime.EXPERIMENT,'policy':runtime.MINIMIZATION,'sources':'fixed_local_fixtures','model':'llama3.2:3b','schedule':'sequential','session_budget_seconds':120,'model_calls_max':len(scenarios),'num_ctx':4096,'num_predict_by_scenario':{'S-01':768,'S-02':200},'market_analysis':'market-selection-1','tax_analysis':'tax-selection-1','temperature':0,'keep_alive':0,'corpus':'synthetic-financial-v1'}
             if batch is not None:result['coordination_measurements']=batch.measurements
         result['trace_id'] = trace_id()
         # Presentazione ricavata dallo stesso JSON, senza inferenze e senza storico.

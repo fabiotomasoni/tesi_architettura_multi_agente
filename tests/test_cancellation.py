@@ -49,7 +49,7 @@ def setup(monkeypatch, tmp_path):
             reply = await broker.infer(inference, 'Bearer '+task.inference_token)
             result_type = MarketResult if task.scenario=='S-01' else TaxResult
             return result_type(correlation_id=task.correlation_id, status='completed', evidence=evidence,
-                summary=reply.summary, limits=[], model=MODELS[task.scenario],measurements={'agent_boot_id':'controlled-test-'+task.scenario})
+                summary=reply.summary, limits=[], model=MODELS[task.scenario],market_analysis=reply.market_analysis,tax_analysis=reply.tax_analysis,measurements={'agent_boot_id':'controlled-test-'+task.scenario})
         finally:
             stopped.add(task.correlation_id)
     monkeypatch.setattr('gateway.market_client.delegate', remote)

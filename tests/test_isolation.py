@@ -109,8 +109,10 @@ def test_bridge_rejects_arbitrary_prompt_and_options():
     from gateway.inference import MODELS,PROMPTS
     from gateway.market_evidence import expected_evidence
     from gateway.agent_contracts import MarketView
-    evidence=expected_evidence(MarketView(mortgage_type='other',rate_type='fixed',remaining_years_band={'lower_exclusive':0,'upper_inclusive':5})).model_dump(mode='json')
-    payload={'model':MODELS['S-01'],'stream':False,'keep_alive':0,'options':{'num_ctx':4096,'num_predict':200,'temperature':0},'messages':[{'role':'system','content':PROMPTS['S-01']},{'role':'user','content':json.dumps(evidence)}]}
+    view=MarketView(mortgage_type='other',rate_type='fixed',remaining_years_band={'lower_exclusive':0,'upper_inclusive':5})
+    evidence=expected_evidence(view)
+    from gateway.market_analysis import build_analysis_input,market_payload
+    payload=market_payload(MODELS['S-01'],build_analysis_input(view,evidence))
     assert validate_payload(payload)==payload
     for field,value in [('model','unconfigured'),('options',{}),('url','http://example.invalid/')]:
         with pytest.raises(ValueError):validate_payload({**payload,field:value})

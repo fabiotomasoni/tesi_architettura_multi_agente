@@ -10,6 +10,8 @@ from .mortgage import compare_mortgage, analyze_contract
 from .tax_application import apply_tax_scenario
 from .tax_review import build_tax_review
 from .comparisons import evaluate, report_observations
+from .market_analysis import report_analysis
+from .tax_analysis import report_analysis as tax_report_analysis
 
 
 def build_report(profile, scenarios, activities, status, *, comparison_observations=None):
@@ -19,6 +21,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
     outcomes=[]
     faithful=[]
     evaluation=[]
+    model_analyses=[]
     completeness=[]
     limits=[
         'Le fonti simulate non attestano quotazioni o norme reali; ogni fonte è classificata separatamente.',
@@ -69,9 +72,18 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
                     sources[-1].pop('real_world_verified',None)
                     sources[-1]['institutional_retrieval_verified']=True
                 sources[-1]['source_sha256']=checked['source_sha256']
+                from . import runtime
+                from .lab_profile import full_view
+                generated=tax_report_analysis(result,full_view(profile) if runtime.UNMINIMIZED else view,result['evidence'])
+                model_analyses.append(generated)
+                included=generated['status']=='available'
+                selection_included=generated['status'] in {'available','selection_only'}
                 evaluation.append({'scenario':scenario,'model':result['model'],
-                    'free_text_included':False,'reason':'Prosa del modello non verificata; esclusa dalla sintesi fiscale.',
-                    'output_sha256':hashlib.sha256(result['summary'].encode()).hexdigest()})
+                    'free_text_included':included,'selection_included':selection_included,'semantic_verified':False,
+                    'reason':'Condizioni selezionate da verificare, commento separato non verificato.' if included else 'Commento fiscale escluso; nessuna conclusione di spettanza.',
+                    'output_sha256':generated.get('output_sha256')})
+                if not included:
+                    limits.append('S-02: commento LLM assente o escluso; eventuale selezione valida conservata. Nessuna spettanza accertata.')
             else:
                 view=MarketView.model_validate(domain_view(profile,Scenario.MORTGAGE))
                 real=is_ecb_evidence(result['evidence'])
@@ -85,9 +97,19 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
                     sources[-1].pop('real_world_verified',None)
                     sources[-1]['institutional_retrieval_verified']=True
                 sources[-1]['source_sha256']=checked['source_sha256']
+                from . import runtime
+                from .lab_profile import full_view
+                analysis_view=full_view(profile) if runtime.UNMINIMIZED else view
+                generated=report_analysis(result,analysis_view,result['evidence'])
+                model_analyses.append(generated)
+                included=generated['status']=='available'
+                selection_included=generated['status'] in {'available','selection_only'}
                 evaluation.append({'scenario':scenario,'model':result['model'],
-                    'free_text_included':False,'reason':'Prosa del modello non verificata; esclusa dalla sintesi mercati.',
-                    'output_sha256':hashlib.sha256(result['summary'].encode()).hexdigest()})
+                    'free_text_included':included,'selection_included':selection_included,'semantic_verified':False,
+                    'reason':'Selezione controllata e commento separato non verificato semanticamente.' if included else 'Selezione conservata; commento escluso, senza sostituti.' if selection_included else 'Selezione del modello assente o esclusa; nessuna sostituzione inventata.',
+                    'output_sha256':generated.get('output_sha256')})
+                if not included:
+                    limits.append('S-01: commento LLM assente o escluso; eventuale selezione valida conservata. Completamento tecnico distinto dalla qualità della selezione e della spiegazione.')
         # Le note libere dell’agente non sono fonti: i limiti del documento
         # provengono dai controlli locali e dai modelli di calcolo verificati.
         if activity['status']!='completed':
@@ -103,7 +125,7 @@ def build_report(profile, scenarios, activities, status, *, comparison_observati
     mortgage=compare_mortgage(profile,activities['S-01'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-01' in scenarios else None
     tax_review=build_tax_review(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
     tax_application=apply_tax_scenario(profile,activities['S-02'],has_conflicts=bool(consistency['unresolved_conflicts'])) if 'S-02' in scenarios else None
-    return {'tax_review':tax_review,'mortgage_contract_analysis':contract,'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.12.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
+    return {'model_analyses':model_analyses,'tax_review':tax_review,'mortgage_contract_analysis':contract,'tax_application':tax_application,'mortgage_comparison':mortgage,'report_version':'0.15.0','policy_version':POLICY_VERSION,'title':'Report locale di esecuzione — dati sintetici',
         'consistency':consistency,'analysis_status':'unresolved_conflict' if consistency['unresolved_conflicts'] else 'no_conflict_in_registered_observations','completeness':completeness,'status':status,'requested_scenarios':scenarios,'document_data':document_data,'simulated_sources':[s for s in sources if s['evidence'].get('simulated') is True],
         'external_sources':[s for s in sources if s['evidence'].get('simulated') is False],
         'faithful_summaries':faithful,'model_evaluation':evaluation,'unverified_summaries':summaries,'outcomes':outcomes,'limits':list(dict.fromkeys(limits))}

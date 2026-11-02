@@ -270,9 +270,9 @@ def test_host_http_observation_retains_failed_response_without_payload(monkeypat
     from gateway.agent_contracts import MarketView
     from gateway.market_evidence import expected_evidence
     evidence=expected_evidence(MarketView(mortgage_type='not_specified',rate_type='fixed',remaining_years_band={'lower_exclusive':5,'upper_inclusive':10}))
-    request={'model':'llama3.2:3b','stream':False,'keep_alive':0,
-             'options':{'num_ctx':4096,'num_predict':200,'temperature':0},
-             'messages':[{'role':'system','content':PROMPTS['S-01']},{'role':'user','content':json.dumps(evidence.model_dump(mode='json'))}]}
+    from gateway.market_analysis import build_analysis_input,market_payload
+    view=MarketView(mortgage_type='not_specified',rate_type='fixed',remaining_years_band={'lower_exclusive':5,'upper_inclusive':10})
+    request=market_payload('llama3.2:3b',build_analysis_input(view,evidence))
     async def exercise():
         async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r:httpx.Response(502,text='MODEL_BODY_SECRET'))) as client:
             with observe_execution() as observation:

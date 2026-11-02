@@ -1,5 +1,6 @@
 """Inferenza locale autorizzata per incarico; nessuna URL o prompt dal chiamante."""
 import asyncio
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
@@ -17,20 +18,19 @@ from . import runtime
 from .privacy import SensitiveContext, check, PRIVACY_VERSION, view_paths
 from .a2a_egress import authorized_task, EgressDenied
 from .market_evidence import verify_evidence as verify_market
-from .ecb_source import REAL_MARKET_PROMPT, public_prompt_data
+from .ecb_source import public_prompt_data
 from .agent_contracts import is_ecb_evidence
 from .tax_evidence import verify_evidence as verify_tax
-from .ade_source import is_ade, REAL_TAX_PROMPT, prompt_data as tax_prompt_data
+from .ade_source import is_ade
 from .tracing import context, Span, callback_trace, AGENT_METRICS
 from .budgets import BUDGETS
+from .market_analysis import build_analysis_input, market_payload, review_for_display, MARKET_ANALYSIS_PROMPT
+from .tax_analysis import build_analysis_input as tax_input, tax_payload, review_for_display as review_tax, TAX_ANALYSIS_PROMPT
 
 OLLAMA_ENDPOINT = 'http://127.0.0.1:11434/api/chat'
-INFERENCE_CATALOG_VERSION = '0.1.0'
+INFERENCE_CATALOG_VERSION = '0.5.0'
 MODELS = MappingProxyType({'S-01': 'llama3.2:3b', 'S-02': 'llama3.2:3b' if runtime.EXPERIMENT!='off' else 'qwen3:1.7b'})
-PROMPTS = {
-    'S-01': 'Scrivi in italiano due frasi che descrivono la fixture simulata. Non dare consigli, non dichiarare convenienza e non inventare informazioni. Specifica che non sono dati di mercato reali.',
-    'S-02': 'Scrivi in italiano due frasi che descrivono la fixture simulata. Non dare consigli, non dichiarare convenienza e non inventare informazioni. Specifica che sono riferimenti fiscali inventati per test, non normativa reale. Non dichiarare diritti a detrazioni. /no_think',
-}
+PROMPTS = {'S-01': MARKET_ANALYSIS_PROMPT, 'S-02': TAX_ANALYSIS_PROMPT}
 
 
 class InferenceRequest(Contract):
@@ -46,6 +46,8 @@ class InferenceResponse(Contract):
     prompt_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     model_load_ms: float = Field(ge=0)
+    market_analysis: dict | None = None
+    tax_analysis: dict | None = None
 
 
 @dataclass
@@ -63,6 +65,8 @@ class Grant:
     source_ms: float | None = None
     used: bool = False
     completed: bool = False
+    market_analysis: dict | None = None
+    tax_analysis: dict | None = None
     bridge_roundtrip_ms: float | None = None
     trace_context: object = field(default=None, repr=False)
 
@@ -101,8 +105,17 @@ class InferenceBroker:
             if getattr(result,'status',None)=='completed' and ((checked.scenario=='S-01' and (MARKET_SOURCE=='ecb' or is_ecb_evidence(getattr(result,'evidence',None)))) or (checked.scenario=='S-02' and (TAX_SOURCE=='ade' or is_ade(getattr(result,'evidence',None))))):
                 if (not grant.source_completed or grant.source_evidence is None or result.evidence is None
                         or result.evidence.model_dump(mode='json') != grant.source_evidence):
-                    raise EgressDenied('Risultato BCE difforme dalla ricevuta del gateway')
+                    raise EgressDenied('Risultato della fonte difforme dalla ricevuta del gateway')
             received_evidence=getattr(result,'evidence',None)
+            analysis_field = 'market_analysis' if checked.scenario == 'S-01' else 'tax_analysis'
+            returned_analysis = getattr(result, analysis_field, None)
+            saved_analysis = getattr(grant, analysis_field)
+            matched = grant.completed and saved_analysis is not None and returned_analysis == saved_analysis
+            if (returned_analysis is not None or (getattr(result, 'status', None) == 'completed' and saved_analysis is not None)) and not matched:
+                raise EgressDenied('Analisi specialista difforme dalla risposta del gateway')
+            if matched and getattr(result, 'model', None) != MODELS[checked.scenario]:
+                raise EgressDenied('Modello specialista difforme')
+            result.measurements['gateway_analysis_receipt_verified'] = int(matched)
             if runtime.EXPERIMENT!='off':
                 from .disclosure import view_metrics
                 result.measurements['view_metric_scope']='canonical_authorized_financial_content_not_wire_delivery_proof'
@@ -172,25 +185,29 @@ class InferenceBroker:
             real_tax=request.scenario=='S-02' and is_ade(evidence)
             real = request.scenario=='S-01' and is_ecb_evidence(evidence)
             if (real or real_tax) and (not grant.source_completed or evidence.model_dump(mode='json') != grant.source_evidence):
-                raise EgressDenied('Evidenza BCE non recuperata dal gateway')
-            inspected=tax_prompt_data(evidence) if real_tax else public_prompt_data(evidence) if real else evidence.model_dump(mode='json')
+                raise EgressDenied('Evidenza istituzionale non recuperata dal gateway')
+            packet = tax_input(task.view, evidence) if request.scenario == 'S-02' else build_analysis_input(task.view, evidence)
+            inspected = packet['evidence']
             # Solo dopo verifica esatta del catalogo: origine pubblica simulata,
             # anche se il numero/data coincide con un valore della sessione.
             # Gli estratti pubblici sono già confrontati esattamente con catalogo e ricevuta.
             # Non sono testo del fascicolo: sottostringhe come Riva/rivalutazione non sono divulgazioni.
-            privacy_payload={k:v for k,v in inspected.items() if k!='quotes'} if real_tax else inspected
+            privacy_payload={k:v for k,v in inspected.items() if k!='rule_quotes'} if request.scenario == 'S-02' else inspected
             check(self._privacy.get(grant.session_id,SensitiveContext()),privacy_payload,
                   allowed_paths=view_paths(),
                   public_paths=frozenset({('reference_date',),('annual_rate_percent',),('observation_period',),('series_key',),('tax_year',),('publication_year',),('quotes',0,'text'),('quotes',1,'text'),('quotes',2,'text'),('quotes',0,'page'),('quotes',1,'page'),('quotes',2,'page')}))
             # Anche un timeout consuma l'autorizzazione: nessun retry implicito.
             grant.used = True
-        prompt_input={'evidence':inspected,'context':task.view.model_dump(mode='json')} if runtime.EXPERIMENT!='off' else inspected
-        payload = {'model': MODELS[task.scenario], 'stream': False, 'keep_alive': 0,
-                   'options': {'num_ctx': 4096, 'num_predict': 200, 'temperature': 0},
-                   'messages': [{'role': 'system', 'content': REAL_TAX_PROMPT if real_tax else REAL_MARKET_PROMPT if real else PROMPTS[task.scenario]},
-                                {'role': 'user', 'content': json.dumps(prompt_input)}]}
-        if task.scenario == 'S-02' and runtime.EXPERIMENT=='off':
-            payload['think'] = False
+        # Ripetere il controllo della vista prima di entrambe le inferenze.
+        if runtime.UNMINIMIZED:
+            if self._lab_profiles.get(grant.session_id) != task.view.model_dump(mode='json'):
+                raise EgressDenied('Contesto laboratorio non autorizzato')
+        else:
+            check(self._privacy.get(grant.session_id, SensitiveContext()), task.view.model_dump(mode='json'), allowed_paths=view_paths())
+        if task.scenario == 'S-01':
+            payload = market_payload(MODELS[task.scenario], packet)
+        else:
+            payload = tax_payload(MODELS[task.scenario], packet)
         seconds = min(BUDGETS.model_seconds, (task.deadline - datetime.now(timezone.utc)).total_seconds())
         started = perf_counter()
         if runtime.ISOLATED:
@@ -216,7 +233,14 @@ class InferenceBroker:
             if self._grants.get(token) is not grant:
                 raise EgressDenied('Autorizzazione inferenza revocata')
             authorized_task(task)
-        result = InferenceResponse(model=MODELS[task.scenario], summary=body['message']['content'],
+        raw_summary = body['message']['content']
+        analysis = (review_for_display if task.scenario == 'S-01' else review_tax)(raw_summary, task.view, evidence)
+        summary = ('Selezione e commento generati; leggere le qualifiche nel report.' if analysis['status'] == 'available'
+                   else 'Selezione del modello disponibile; commento escluso.' if analysis['status'] == 'selection_only'
+                   else 'Selezione del modello non utilizzabile; nessuna interpretazione sostitutiva.')
+        result = InferenceResponse(model=MODELS[task.scenario], summary=summary,
+                                 market_analysis=analysis if task.scenario == 'S-01' else None,
+                                 tax_analysis=analysis if task.scenario == 'S-02' else None,
                                  ollama_ms=ollama_ms, prompt_tokens=body['prompt_eval_count'], output_tokens=body['eval_count'],
                                  model_load_ms=round(body['load_duration']/1e6, 3))
 
@@ -224,4 +248,5 @@ class InferenceBroker:
             if self._grants.get(token) is not grant:
                 raise EgressDenied('Autorizzazione inferenza revocata')
             grant.completed = True
+            setattr(grant, 'market_analysis' if task.scenario == 'S-01' else 'tax_analysis', deepcopy(analysis))
         return result

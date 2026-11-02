@@ -13,7 +13,7 @@ import pytest
 from gateway.ecb_source import (EcbRateEvidence, SOURCE_URL, SOURCE_ID, SERIES_KEY, BRIDGE_JOB,
     REAL_MARKET_PROMPT, PublicObservation, parse_csv, verify_ecb, fetch_ecb, public_prompt_data)
 from gateway.agent_contracts import MarketTask, MarketResult, MarketEvidence
-from gateway.inference import InferenceBroker, InferenceRequest
+from gateway.inference import InferenceBroker, InferenceRequest, MODELS
 from gateway.a2a_egress import EgressDenied
 from gateway.result_validation import MissingProvenanceError
 
@@ -104,8 +104,9 @@ class FakeBridge:
     async def infer(self,payload,seconds,*,owner=None):
         if payload==BRIDGE_JOB:return {'body':evidence().model_dump(mode='json'),'ollama_ms':None,'source_ms':1}
         self.model_calls+=1
-        assert payload['messages'][0]['content']==REAL_MARKET_PROMPT
-        projected=json.loads(payload['messages'][1]['content'])
+        from gateway.market_analysis import MARKET_ANALYSIS_PROMPT
+        assert payload['messages'][0]['content'].startswith(MARKET_ANALYSIS_PROMPT)
+        projected=json.loads(payload['messages'][1]['content'])['evidence']
         assert 'source_csv' not in projected and 'retrieved_at' not in projected
         assert set(projected)==set(PublicObservation.model_fields)
         return {'body':{'message':{'content':'Sintesi non verificata'},'prompt_eval_count':1,'eval_count':1,'load_duration':0},'ollama_ms':1}
@@ -130,9 +131,10 @@ def test_gateway_attests_actual_receipt_not_agent_claims(monkeypatch,fault):
             raw=deepcopy(raw);raw['annual_rate_percent']='3.56';raw['source_csv']=raw['source_csv'].replace(',3.55,',',3.56,')
             raw['response_sha256']=hashlib.sha256(raw['source_csv'].encode()).hexdigest()
             verify_ecb(raw)  # Auto-coerenza e hash non sono prova di origine.
+        inference=None
         if fault in (None,'changed_for_model'):
-            await broker.infer(InferenceRequest(correlation_id=t.correlation_id,scenario=t.scenario,evidence=raw),'Bearer '+t.inference_token)
-        return MarketResult(correlation_id=t.correlation_id,status='completed',evidence=MarketEvidence.model_validate(raw),summary='Demo',limits=[],model='test')
+            inference=await broker.infer(InferenceRequest(correlation_id=t.correlation_id,scenario=t.scenario,evidence=raw),'Bearer '+t.inference_token)
+        return MarketResult(correlation_id=t.correlation_id,status='completed',evidence=MarketEvidence.model_validate(raw),summary='Demo',limits=[],model=MODELS['S-01'],market_analysis=inference.market_analysis if inference else None)
     if fault:
         with pytest.raises(EgressDenied):asyncio.run(broker.delegate(uuid4(),task(),remote))
         assert broker.bridge.model_calls==0
@@ -194,11 +196,10 @@ def test_host_bridge_opt_in_and_exact_template(monkeypatch,variant):
 def test_real_model_projection_prompt_is_explicit_and_bounded():
     from scripts.run_ollama_bridge import validate_payload
     from gateway.inference import MODELS
-    projected=public_prompt_data(evidence())
-    payload={'model':MODELS['S-01'],'stream':False,'keep_alive':0,
-        'options':{'num_ctx':4096,'num_predict':200,'temperature':0},
-        'messages':[{'role':'system','content':REAL_MARKET_PROMPT},{'role':'user','content':json.dumps(projected)}]}
+    from gateway.market_analysis import build_analysis_input, market_payload
+    projected=build_analysis_input(task().view,evidence())
+    payload=market_payload(MODELS['S-01'],projected)
     assert validate_payload(payload)==payload
-    projected['source_csv']='untrusted text'
+    projected['evidence']['source_csv']='untrusted text'
     payload['messages'][1]['content']=json.dumps(projected)
     with pytest.raises(ValueError):validate_payload(payload)

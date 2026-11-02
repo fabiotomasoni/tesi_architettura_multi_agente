@@ -37,6 +37,13 @@ def main():
                     activities={s:{'status':r['status'],'error_code':r.get('error_code'),'phases':r['phases'],'measurements':r.get('result',{}).get('measurements',{})} for s,r in body['activities'].items()}
                     n=int(case[1:]);expected={s:('blocked' if (s=='S-01' and (6<=n<=10 or 16<=n<=20)) or (s=='S-02' and 11<=n<=15) else 'completed') for s in args.scenarios}
                     row.update(report_present=body.get('report') is not None,report_ms=body.get('report_ms'),status=body['status'],activities=activities,total_ms=body['total_ms'],automatic_session_closed=body['session_closed'],passed=set(activities)==set(expected) and all(activities[s]['status']==v for s,v in expected.items()))
+                    generated=(body.get('report') or {}).get('model_analyses',[])
+                    for scenario,label in [('S-01','market'),('S-02','tax')]:
+                        if expected.get(scenario)!='completed':continue
+                        item=next((item for item in generated if item.get('scenario')==scenario),{})
+                        row[label+'_analysis_status']=item.get('status','unavailable')
+                        row['passed']=row['passed'] and item.get('status') in {'available','selection_only'}
+                    row['model_analysis_quality']='not_automatically_assessed'
                 except httpx.HTTPError:row.update(status='transport_error',passed=False)
                 finally:
                     record_trace(client,row,trace_identifier)
