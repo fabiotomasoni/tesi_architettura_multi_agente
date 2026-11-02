@@ -88,7 +88,7 @@ Riportare confronti appaiati +P/−P sullo stesso caso e distinguere perdita di 
 | V-03 input | Test su 25 casi, PDF corrotti, duplicati e non supportati | Istanze controllate di scansione/protezione e loro esecuzione finale; il corpus vincolato può rifiutare prima del parser: distinguere i due controlli |
 | V-04 guasto fonte | Test MCP, timeout, ponte assente e recupero già osservato | Harness finale compatibile con tutte le celle; i profili comparativi attuali ammettono solo fixture nominali |
 | V-05 contenuto ostile | Controlli di catalogo, payload e isolamento esistenti | S04 non autorizzato: nessun nuovo attacco eseguito; fissare sonde e controlli positivi dopo consenso |
-| V-06 sostituzione | Contratti e adattatori separati | Prova positiva di agente/tool equivalente con sola configurazione, senza modificare estrazione; baseline non la dimostra da sola |
+| V-06 sostituzione | Sostituzione positiva del server MCP mercati con contratto equivalente, A2A/MCP reali e report completi invariati sui cinque casi pilota | Istanze/ripetizioni finali; conferma manuale Docker raccolta per un server MCP, non è una prova generale di sostituzione di agenti arbitrari |
 | V-07 utilità | Contrasto finanziario dei quattro piloti; riferimento e funzione del valutatore | Prova integrata di generalizzazione eccessiva e giudizi sui report; riferimento, rubrica e soglie approvati |
 | V-08 provenienza | Test dedicati e prove manuali pregresse di risultati non verificati | Istanze finali riproducibili nelle quattro celle, senza riammettere il risultato tramite default |
 | V-09 conflitti | Test agente–agente/agente–documento, unità convertibili e periodi distinti | Istanze finali collegate a report ed esiti, senza creare falsi conflitti fra scenari eterogenei |
@@ -143,6 +143,73 @@ Entrambe le prove manuali richiedono demo isolata base aggiornata, fonti simulat
 ```
 
 La modalità crash esegue SIGKILL/start del gateway in modo esplicito e prova a riavviarlo anche se il controllo fallisce. Usare file nuovi; tutti i controlli, incluso `passed`, devono essere True. Queste prove non congelano il protocollo né avviano S04 o la campagna finale.
+
+## V-06 — Sostituzione equivalente del server MCP mercati
+
+La tesi (§3.5, V-06; RNF-05) richiede un agente **o** uno strumento equivalente. Questo incremento sceglie soltanto lo strumento mercati: `services.rates_mcp` (FastMCP) e `services.rates_mcp_equivalent` (API low-level MCP) sono implementazioni distinte dello stesso `lookup_rates`. Il sostitutivo dichiara esplicitamente lo schema, senza importare il server standard; entrambi accedono alla stessa fonte esclusivamente tramite il proxy. Nessun valore della fixture viene ricostruito dal nuovo server. È una prova circoscritta di interoperabilità, non compatibilità universale o sostituzione di qualunque agente.
+
+Il catalogo strumenti 0.4.0 seleziona un solo modulo tramite `TESI_MARKET_TOOL_IMPLEMENTATION=standard|equivalent`, configurazione fidata all’avvio. La policy dei dati resta 0.3.0. Nomi di modulo arbitrari e combinazioni con profili comparativi, fonti reali o fixture negative sono rifiutati; nessuna selezione del modulo dal modello. `compose.substitution.yaml` cambia solo questa variabile nel gateway. Gli agenti continuano a seguire il permesso ottenuto dal gateway: non cambiano estrazione, viste, topologia, identità, fonte, agente o modello.
+
+I test confrontano i contratti completi di `tools/list` via stdio e verificano rifiuto senza proxy e configurazioni non ammesse. La prova positiva nativa esegue i cinque casi C001/C024/C006/C011/C016 in tre avvii del gateway (standard, equivalente, standard), con veri SDK A2A e server MCP, agenti invariati e risposta modello controllata. Non è una verifica dell’isolamento Docker: le destinazioni loopback e il ponte al modello appartengono alla fixture di test. I test del driver verificano anche ripristino della configurazione e pulizia se la prova fallisce.
+
+`check_substitution.py` prepara la prova manuale corrispondente sulla demo isolata aggiornata. Prima confronta i contratti MCP delle due implementazioni nell’ambiente host del valutatore; nei container controlla il server inizializzato dall’agente, il modulo autorizzato dal gateway, le ricevute delle fonti e i conteggi attesi. Il nome del server è autodescrizione MCP, non autenticazione o prova autonoma: è confrontato con catalogo, identità e risultati verificati. La selezione del modulo registrata dal gateway attesta il permesso emesso, non da sola l’esecuzione. Le evidenze sono complementari.
+
+Il driver esegue tutte e tre le fasi, cinque casi ciascuna, riconfigurando **solo il gateway** con Compose; agenti e reti restano attivi. Verifica gli stessi digest delle immagini applicative, del codice e dei PDF, impostazioni uguali salvo avvio e implementazione selezionata, esiti completi/parziali attesi, pulizia e identità di avvio degli agenti. Confronta profilo estratto e intero report JSON più documento HTML: sostituisce soltanto gli ID documentali allocati alla sessione con i digest dei PDF, conservando valori, unità, periodi, citazioni, fonti, calcoli, completezza e limiti. Un cambiamento a questi contenuti deve fallire il confronto. Gli output salvati contengono controlli, hash e metadati, senza report, prompt, token segreti o valori finanziari.
+
+Prerequisiti: demo base con immagine aggiornata, fonti simulate, nessun’altra analisi e **ponte ordinario fermo**. Le risposte del modello sono simulate; si verificano chiamate e coordinamento, non prestazioni/qualità di Ollama. Le tre fasi sono un pilota, non le dieci ripetizioni della campagna. Lo script ripristina la configurazione standard e tenta il ripristino anche in caso di errore. **Conferma manuale Docker raccolta e controllata** in `runs/substitution_manual.json`: 15 esecuzioni positive (cinque casi × tre fasi), 42 controlli True e `passed: true`. Moduli e nomi dei server coerenti con ciascuna fase, tre nuovi avvii del gateway e agenti invariati, stessi PDF/profili/report completi JSON+HTML/fonti/codice/immagini. Ricalcolati i 39 confronti tra le fasi, oltre ai tre controlli di contratto salvati; configurazione finale standard. È chiuso il pilota V-06 per questo componente e corpus, non la campagna finale.
+
+```bash
+# macOS, dopo la preparazione guidata dei servizi
+.venv/bin/python scripts/check_substitution.py --output runs/substitution_manual.json
+```
+
+```powershell
+# Windows PowerShell: procedura prevista, non ancora verificata su questo host
+.\.venv\Scripts\python.exe scripts/check_substitution.py --output runs/substitution_manual.json
+```
+
+Tutti i casi/fasi e i confronti devono risultare True, incluso `passed`; controllare il JSON. Il driver non avvia nuove prove S04, non modifica il corpus né congela il protocollo.
+
+## Tracciamento e budget del prototipo
+
+Riferimenti: RF-05/RF-10, RNF-06, §§4.3–4.5. Ogni acquisizione riceve un `trace_id`, restituito anche nell’intestazione `X-Trace-ID`. `GET /traces/{trace_id}` permette di consultare metadati durante l’attività e dopo la cancellazione del profilo. Gli agenti non possono accedere a questo percorso. Nessun corpo HTTP, documento, citazione, valore finanziario, nome file, URL, credenziale, prompt, sintesi o testo di eccezione entra nella traccia. Sono ammesse solo categorie/versioni chiuse, ID opachi, durate e conteggi numerici. Nessuna esportazione LangSmith.
+
+Il deposito è limitato in RAM: 128 tracce, 1.024 fasi per traccia, un’ora dall’acquisizione; nessun volume o database aggiunto. Riavvio, scadenza o superamento del numero di tracce possono rendere una traccia indisponibile. Il superamento del limite delle fasi marca la traccia come troncata e impedisce di presentare il campione come totale completo. La cancellazione del profilo revoca accessi e job senza eliminare questi soli metadati; `profile_created`, `profile_closed` e `trace_complete` distinguono ingresso rifiutato, sessione aperta, pulizia e conclusione della traccia. Un crash non conserva una prova positiva inventata della pulizia: lo stato volatile si perde e la prova di crash rimane esterna al processo.
+
+Fasi separate per ingresso HTTP/multipart, lettura/prevalidazione/estrazione PDF, preparazione del contesto privacy e controlli del profilo, viste, scansioni dei payload, preparazione LangGraph, A2A, autorizzazione MCP, proxy fonte e modello, verifica risultati, report, impaginazione, pulizia e invio ASGI. ID di correlazione collegano incarichi e callback: l’associazione usa la capacità conservata dal gateway, non l’ID dichiarato dal client. Il costo MCP e il numero di chiamate restano misure dichiarate dall’agente; quando possibile sono restituiti anche dopo un errore. Se manca la risposta dell’agente, la metrica resta non disponibile.
+
+Le durate sono inclusive: **non sommare fasi annidate o rami concorrenti**. `backend_request_union_ms` è l’unione degli intervalli HTTP di upload, viste, analisi e chiusura; esclude le pause tra richieste dell’utente. `elapsed_to_last_event_ms` include invece tali pause. Il precedente `total_ms` del risultato conserva il suo perimetro di sola analisi. La consegna ASGI attesta l’invio applicativo al trasporto, non la ricezione da parte dell’utente: resta valida la prova separata del relay con consegna troncata.
+
+Distinguere permessi emessi, tentativi HTTP e risposte osservate. A2A conta i tentativi nel trasporto del gateway; MCP conta il tentativo di `call_tool` nell’agente, separato dal permesso. Il ponte restituisce contatori chiusi del tentativo verso Ollama/fonte pubblica e della risposta HTTP osservata, anche se questa non supera i controlli. Sono dichiarazioni del ponte autenticato, non catture di pacchetti. Le fixture controllate dichiarano esplicitamente zero richieste host; i vecchi risultati senza osservazione o i job annullati prima della ricevuta lasciano i contatori non disponibili. Una fonte simulata non viene contata come richiesta Internet. I token provengono solo dalla risposta valida del runtime/ponte: timeout e guasti senza ricevuta producono `null`, non zero. Nessun costo API o consumo hardware stimato viene presentato come misura osservata.
+
+`trace_complete` attesta fasi concluse e profilo chiuso (o mai creato), non disponibilità di tutti i consumi né copertura completa della rete. `callback_denials` conta soltanto i dinieghi associabili a una capacità esistente del gateway; richieste senza capacità valida o rifiutate prima dal controllo d’identità/schema non sono attribuite al fascicolo dichiarato dal chiamante. Zero dinieghi in questa traccia non dimostra zero trasmissioni vietate: restano distinti i controlli HTTP, d’isolamento e le istanze finali autorizzate. Una capacità riutilizzata non riconta la ricevuta della precedente chiamata fonte.
+
+Budget fidati all’avvio, esposti in `/health` e nella configurazione della traccia:
+
+| Variabile | Predefinito | Perimetro |
+|---|---:|---|
+| `TESI_ACTIVITY_TIMEOUT_SECONDS` | 120 s | Attività; sessione comune nei profili sperimentali |
+| `TESI_MODEL_TIMEOUT_SECONDS` | 90 s | Chiamata al modello entro la scadenza dell’incarico |
+| `TESI_SOURCE_TIMEOUT_SECONDS` | 30 s | Proxy fonte entro la stessa scadenza |
+| `TESI_TRANSPORT_GRACE_SECONDS` | 5 s | Margine dei trasporti A2A e callback modello/fonte |
+
+Valori finiti positivi, massimo 3.600 secondi; modello/fonte non oltre il budget dell’attività. Configurazione Compose propagata ai componenti e al sottoprocesso MCP; il ponte host legge le stesse variabili di ambiente. Restano limiti più stretti per connessioni, permessi e controlli del ponte; recupero BCE massimo 20 secondi e AdE 25, ridotti ulteriormente se il budget fonte è inferiore. Nessun retry implicito aggiunto. Il confronto 2×2 rifiuta budget diversi dai predefiniti: nessuna modifica silenziosa al protocollo approvato.
+
+`run_multi_pilot.py` e `run_baseline_pilot.py` esportano esplicitamente la traccia nei nuovi JSONL; una traccia mancante/incompleta non supera il nuovo controllo `trace_verified`. Le vecchie evidenze restano riferite alla versione precedente e non vengono riscritte. `check_trace.py` verifica sei elaborazioni/ingressi sulla demo base: C001 completo, C006 parziale, timeout modello **iniettato** per S-01, annullamento, recupero C001 e PDF non utilizzabile. A2A/MCP sono reali, le risposte modello sono controllate: è un pilota della strumentazione, non una misura Ollama/Internet o una campagna finale. Fermare il ponte ordinario e usare l’immagine aggiornata; lo script non riconfigura o arresta container.
+
+```bash
+# macOS, dalla repository, dopo l'avvio della demo isolata base aggiornata
+.venv/bin/python scripts/check_trace.py --output runs/trace_manual.json
+```
+
+```powershell
+# Windows PowerShell: procedura prevista, non ancora verificata direttamente
+.\.venv\Scripts\python.exe scripts/check_trace.py --output runs/trace_manual.json
+```
+
+Usare un file nuovo e controllare tutti i valori, incluso `passed`, oltre alle sei tracce effettivamente esportate. Se il driver si interrompe, salva le sole evidenze già raccolte con `passed: false` e una categoria chiusa della fase fallita; non esporta testi di eccezioni o corpi HTTP. Non confondere le verifiche precedenti positive con il completamento dell’intero pilota.
+
+La prova nativa automatica usa gli stessi agenti durante guasti e recupero; è isolata dagli altri test per evitare di riutilizzare lock ADK/A2A appartenenti a event loop già chiusi. Il primo tentativo manuale non è concluso: ha evidenziato una condizione di concorrenza nella finalizzazione SDK, riprodotta ripetendo il ciclo in un container temporaneo separato. Il produttore A2A poteva rimanere in `EventQueue.close()`/`queue.join()` dopo il ritorno di `execute`, quando non era più seguito dalla richiesta. La proprietà del produttore ora termina soltanto alla conclusione effettiva del task, mediante callback; annullamento e disconnessione possono quindi arrestare anche la chiusura della coda e liberare l’agente. Il test deterministico `tests/test_request_lifecycle.py` riproduce il difetto prima della correzione e verifica la richiesta successiva sullo stesso oggetto; vale anche per il generalista. Nessuna modifica all’SDK, al trattamento dei documenti o ai budget. Dieci cicli consecutivi positivi nell’ambiente temporaneo Python 3.12 con il modulo corretto, A2A/MCP reali e modello controllato; non sono dieci ripetizioni della campagna della tesi. **Conferma manuale sui servizi aggiornati raccolta e verificata** in `runs/trace_manual_retry.json`: 62 controlli True, `passed: true`, sei tracce valide e non troncate; tutti i riepiloghi ricalcolati dagli eventi coincidono. C001 completo, C006 parziale, timeout S-01 con risultato complessivo parziale, annullamento e recupero C001, PDF rifiutato senza creazione del profilo. I token complessivi restano `null` nel timeout/annullamento; dopo annullamento sono non disponibili anche metriche MCP e richieste host prive di ricevuta. Due dinieghi durante annullamento corrispondono alla revoca degli incarichi, non ad attacchi. Recupero attestato dal driver con gli stessi avvii degli agenti; tutte le tracce riportano lo stesso avvio gateway. Pilota del blocco concluso; rimosso il solo impedimento relativo alla strumentazione delle fasi, senza congelare il protocollo o autorizzare S04/campagna finale. Nell’evidenza originale la sottofase policy di C006 usa ancora il codice generico `not_authorized` per HTTP 409; il grafo riporta correttamente `input_not_ready`. Corretta nel codice la sottofase e l’attribuzione dello scenario anche prima della creazione dell’incarico, con verifiche automatiche su C001/C006/C011/C016. Il file originale rimane invariato; la rifinitura diagnostica sarà inclusa nella prossima immagine.
 
 ## Prima del congelamento
 

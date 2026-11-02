@@ -19,12 +19,14 @@ from .privacy import SensitiveContext, check, view_paths
 from .a2a_egress import EgressDenied, authorized_task
 from .market_evidence import expected_evidence as market
 from .tax_evidence import expected_evidence as tax
+from .tracing import callback_trace
+from .budgets import BUDGETS
 
 from .ade_source import DESTINATION as ADE_DESTINATION, source_job, publication, AdeEvidence, verify_ade, selected_quotes
 TAX_SOURCE=os.environ.get('TESI_TAX_SOURCE','simulated')
 if TAX_SOURCE not in {'simulated','ade'} or TAX_SOURCE=='ade' and not runtime.ISOLATED:
     raise RuntimeError('Fonte fiscale non autorizzata per questa modalità')
-TOOL_CATALOG_VERSION = '0.3.0'
+TOOL_CATALOG_VERSION = '0.4.0'
 MARKET_SOURCE = os.environ.get('TESI_MARKET_SOURCE','simulated')
 if runtime.EXPERIMENT!='off' and (MARKET_SOURCE!='simulated' or TAX_SOURCE!='simulated' or os.environ.get('TESI_MCP_PROFILE','nominal')!='nominal'):
     raise RuntimeError('Il profilo comparativo ammette soltanto fixture nominali fissate')
@@ -32,6 +34,13 @@ if MARKET_SOURCE not in {'simulated','ecb'}:
     raise RuntimeError('Fonte mercati non riconosciuta')
 if MARKET_SOURCE=='ecb' and not runtime.ISOLATED:
     raise RuntimeError('La fonte reale richiede la modalità isolata')
+
+# Due implementazioni fissate, non un nome modulo scelto dal chiamante.
+MARKET_TOOL_IMPLEMENTATION = os.environ.get('TESI_MARKET_TOOL_IMPLEMENTATION','standard')
+if MARKET_TOOL_IMPLEMENTATION not in {'standard','equivalent'}:
+    raise RuntimeError('Implementazione MCP mercati non autorizzata')
+if MARKET_TOOL_IMPLEMENTATION=='equivalent' and (runtime.EXPERIMENT!='off' or MARKET_SOURCE!='simulated' or TAX_SOURCE!='simulated' or os.environ.get('TESI_MCP_PROFILE','nominal')!='nominal'):
+    raise RuntimeError('La sostituzione V-06 richiede la demo nominale con fonti simulate, fuori dal confronto 2x2')
 
 
 @dataclass(frozen=True)
@@ -43,7 +52,7 @@ class ToolRoute:
 
 
 TOOL_ROUTES = MappingProxyType({
-    'S-01': ToolRoute('services.rates_mcp', 'lookup_rates', ECB_DESTINATION if MARKET_SOURCE=='ecb' else 'fixture://simulated-rates-v1'),
+    'S-01': ToolRoute('services.rates_mcp_equivalent' if MARKET_TOOL_IMPLEMENTATION=='equivalent' else 'services.rates_mcp', 'lookup_rates', ECB_DESTINATION if MARKET_SOURCE=='ecb' else 'fixture://simulated-rates-v1'),
     'S-02': ToolRoute('services.tax_mcp', 'lookup_tax', ADE_DESTINATION if TAX_SOURCE=='ade' else 'fixture://simulated-tax-v1'),
 })
 
@@ -89,6 +98,7 @@ class SourceRequest(ToolRequest):
     headers: dict[str, str]
 
 
+@callback_trace('tool_authorization')
 def authorize_tool(broker, request, authorization):
     token = authorization[7:] if authorization and authorization.startswith('Bearer ') else None
     with broker._lock:
@@ -111,11 +121,13 @@ def authorize_tool(broker, request, authorization):
         if module not in (route.module, *route.test_modules):
             raise EgressDenied('Server MCP non autorizzato')
         grant.tool_used = True
+        grant.tool_module = module
         grant.source_token = token_hex(32)
         return ToolPermit(module=module, tool=route.tool, destination=route.destination,
                           source_token=grant.source_token, arguments=expected)
 
 
+@callback_trace('source_proxy', source=True)
 async def source_request(broker, request, authorization):
     token = authorization[7:] if authorization and authorization.startswith('Bearer ') else None
     with broker._lock:
@@ -147,7 +159,7 @@ async def source_request(broker, request, authorization):
         p=publication(task.view.tax_year)
         wire={'method':'GET','url':p['source_url'],'headers':{'accept':'application/pdf','accept-encoding':'identity'}}
         check(broker._privacy.get(grant.session_id,SensitiveContext()),wire,public_paths=frozenset({('url',),('headers','accept'),('headers','accept-encoding')}))
-        seconds=min(30,(task.deadline-datetime.now(timezone.utc)).total_seconds())
+        seconds=min(BUDGETS.source_seconds,(task.deadline-datetime.now(timezone.utc)).total_seconds())
         reply=await broker.bridge.infer(source_job(task.view.tax_year),seconds,owner=grant_token)
         body=reply['body']
         if set(body)!=set(p)|{'retrieved_at'} or any(body[k]!=v for k,v in p.items()):
@@ -161,7 +173,7 @@ async def source_request(broker, request, authorization):
         # Template pubblico fisso: nessun valore del fascicolo entra nella richiesta.
         context=broker._privacy.get(grant.session_id,SensitiveContext())
         check(context,WIRE_REQUEST,public_paths=frozenset({('url',),('headers','accept'),('headers','accept-encoding')}))
-        seconds=min(30,(task.deadline-datetime.now(timezone.utc)).total_seconds())
+        seconds=min(BUDGETS.source_seconds,(task.deadline-datetime.now(timezone.utc)).total_seconds())
         reply=await broker.bridge.infer(BRIDGE_JOB,seconds,owner=grant_token)
         parsed,_=verify_ecb(reply['body'])
         evidence=parsed.model_dump(mode='json')
@@ -173,7 +185,7 @@ async def source_request(broker, request, authorization):
         url = httpx.URL(route.destination)
         if url.scheme not in {'http', 'https'} or url.userinfo or url.query or url.fragment:
             raise EgressDenied('Endpoint fonte non configurabile')
-        seconds = min(30, (task.deadline - datetime.now(timezone.utc)).total_seconds())
+        seconds = min(BUDGETS.source_seconds, (task.deadline - datetime.now(timezone.utc)).total_seconds())
         async with asyncio.timeout(max(0, seconds)):
             async with httpx.AsyncClient(timeout=seconds, trust_env=False, follow_redirects=False) as client:
                 response = await client.post(route.destination, json=expected)

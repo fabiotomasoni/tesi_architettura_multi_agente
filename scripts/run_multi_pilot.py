@@ -4,6 +4,11 @@ from pathlib import Path
 from importlib.metadata import version
 import httpx
 
+if __package__:
+    from .trace_export import record_trace
+else:
+    from trace_export import record_trace
+
 ROOT=Path(__file__).resolve().parents[1]
 
 def main():
@@ -20,12 +25,12 @@ def main():
     with httpx.Client(base_url=args.gateway_url,timeout=135,trust_env=False) as client:
         for case in args.cases:
             for repetition in range(1,args.repetitions+1):
-                sid=None
+                sid=None;trace_identifier=None
                 row={'case':case,'repetition':repetition,'policy_version':'0.2.0','workflow':'multi-langgraph-v1','langgraph':version('langgraph'),'scenarios':args.scenarios,'cleanup_verified':False}
                 try:
                     files=[('files',(kind+'.pdf',(ROOT/'dataset'/'Documents'/f'{case}_{kind}.pdf').read_bytes(),'application/pdf')) for kind in ['mutuo','interessi']]
                     response=client.post('/sessions/pdf',files=files,data={'scenarios':args.scenarios});response.raise_for_status()
-                    sid=response.json()['session_id'];row['policy_version']=response.json()['policy_version']
+                    sid=response.json()['session_id'];trace_identifier=response.json().get('trace_id');row['policy_version']=response.json()['policy_version']
                     response=client.post(f'/sessions/{sid}/analysis');response.raise_for_status()
                     body=response.json()
                     # Esportare solo metadati, senza sintesi o contenuto fiscale.
@@ -34,6 +39,8 @@ def main():
                     row.update(report_present=body.get('report') is not None,report_ms=body.get('report_ms'),status=body['status'],activities=activities,total_ms=body['total_ms'],automatic_session_closed=body['session_closed'],passed=set(activities)==set(expected) and all(activities[s]['status']==v for s,v in expected.items()))
                 except httpx.HTTPError:row.update(status='transport_error',passed=False)
                 finally:
+                    record_trace(client,row,trace_identifier)
+                    row['passed']=row.get('passed',False) and row['trace_verified']
                     if sid:
                         try:row['cleanup_verified']=client.delete(f'/sessions/{sid}').status_code==404
                         except httpx.HTTPError:pass

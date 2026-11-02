@@ -67,7 +67,8 @@ class ControlledDemo:
 
     async def deliver(self, job):
         return await self.client.post('/_bridge/result/'+job['job_id'],headers=self.headers,
-            json={'body':BODY,'error':None,'ollama_ms':0,'source_ms':None})
+            json={'body':BODY,'error':None,'ollama_ms':0,'source_ms':None,
+                  'execution':{'kind':'controlled_fixture','dispatch_attempts':0,'responses_observed':0}})
 
     async def complete_two(self):
         jobs = []

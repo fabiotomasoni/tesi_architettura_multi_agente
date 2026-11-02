@@ -66,9 +66,15 @@ def prompt_data(evidence):
 
 async def fetch_ade(year):
     p=publication(year);started=perf_counter()
-    async with asyncio.timeout(25):
-        async with httpx.AsyncClient(timeout=25,trust_env=False,follow_redirects=False) as client:
+    from . import http_observation
+    from .budgets import BUDGETS
+    http_observation.select('ade')
+    seconds=min(25,BUDGETS.source_seconds)
+    async with asyncio.timeout(seconds):
+        async with httpx.AsyncClient(timeout=seconds,trust_env=False,follow_redirects=False) as client:
+            http_observation.dispatch()
             async with client.stream('GET',p['source_url'],headers={'accept':'application/pdf','accept-encoding':'identity'}) as response:
+                http_observation.response()
                 if response.status_code!=200 or str(response.url)!=p['source_url'] or 'application/pdf' not in response.headers.get('content-type','').lower():
                     raise ValueError('Recupero AdE non conforme')
                 if response.headers.get('content-encoding','identity').lower() not in ('','identity'):raise ValueError('Codifica AdE non supportata')

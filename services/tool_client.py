@@ -26,6 +26,8 @@ def server_environment(task, permit):
     environment = {'TESI_SOURCE_TOKEN':permit.source_token, 'TESI_CORRELATION_ID':str(task.correlation_id),
             'TESI_SCENARIO':task.scenario, 'TESI_SOURCE_DESTINATION':permit.destination,
             'TESI_SOURCE_GATEWAY':(runtime.GATEWAY_ENDPOINTS[task.scenario] if runtime.ISOLATED else GATEWAY_BASE) + '/internal/sources'}
+    from gateway.budgets import BUDGETS, ENV_KEYS
+    environment.update({key:str(getattr(BUDGETS,name)) for name,key in ENV_KEYS.items()})
     if runtime.ISOLATED:
         import os
         environment.update(TESI_RUNTIME='isolated', TESI_IDENTITY_FILE=os.environ['TESI_IDENTITY_FILE'])

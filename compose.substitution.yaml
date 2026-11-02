@@ -1,0 +1,5 @@
+# V-06: cambia solo il modulo autorizzato dal gateway. Agenti/reti restano quelli base.
+services:
+  gateway:
+    environment:
+      TESI_MARKET_TOOL_IMPLEMENTATION: equivalent

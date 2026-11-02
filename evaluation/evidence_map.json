@@ -29,7 +29,12 @@
         "tests/test_cancellation.py::test_fresh_gateway_rejects_previously_valid_capabilities_and_bridge_results",
         "tests/test_gateway_restart.py::test_actual_sigkill_discards_sessions_jobs_and_open_upload_spool_then_recovers",
         "tests/test_gateway_restart.py::test_docker_crash_preflight_refuses_unexpected_storage_without_killing",
-        "scripts/check_finalization.py"
+        "scripts/check_finalization.py",
+        "tests/test_tracing.py::test_pdf_to_closed_profile_trace_survives_cleanup_without_values",
+        "tests/test_tracing.py::test_model_failure_usage_unknown_then_recovery_same_gateway",
+        "tests/test_tracing.py::test_manual_checker_with_real_a2a_mcp_and_injected_model_faults",
+        "scripts/check_trace.py",
+        "tests/test_request_lifecycle.py::test_disconnect_cancels_producer_after_execute_while_sdk_queue_is_closing"
       ],
       "final_campaign_complete": false
     },
@@ -58,11 +63,17 @@
       "final_campaign_complete": false
     },
     "V-06": {
-      "status": "supporting_code_only_positive_substitution_missing",
+      "status": "positive_native_and_docker_pilot_final_instances_pending",
       "references": [
         "gateway/agent_contracts.py",
         "gateway/a2a_egress.py",
-        "gateway/tool_egress.py"
+        "gateway/tool_egress.py",
+        "services/rates_mcp_equivalent.py",
+        "compose.substitution.yaml",
+        "tests/test_substitution.py::test_configuration_only_substitution_through_real_a2a_and_mcp_preserves_complete_reports",
+        "tests/test_substitution.py::test_real_stdio_servers_have_same_contract_and_do_not_invent_without_proxy",
+        "tests/test_substitution.py::test_selected_catalog_authorizes_only_its_implementation",
+        "scripts/check_substitution.py"
       ],
       "final_campaign_complete": false
     },

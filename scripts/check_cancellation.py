@@ -44,7 +44,8 @@ async def check(client, key):
 
     async def deliver(job):
         return await client.post('/_bridge/result/'+job['job_id'],headers=headers,
-            json={'body':BODY,'error':None,'ollama_ms':0,'source_ms':None})
+            json={'body':BODY,'error':None,'ollama_ms':0,'source_ms':None,
+                  'execution':{'kind':'controlled_fixture','dispatch_attempts':0,'responses_observed':0}})
 
     async def nominal(label):
         sid = await upload()

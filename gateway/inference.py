@@ -1,6 +1,6 @@
 """Inferenza locale autorizzata per incarico; nessuna URL o prompt dal chiamante."""
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
 from secrets import token_hex
@@ -21,6 +21,8 @@ from .ecb_source import REAL_MARKET_PROMPT, public_prompt_data
 from .agent_contracts import is_ecb_evidence
 from .tax_evidence import verify_evidence as verify_tax
 from .ade_source import is_ade, REAL_TAX_PROMPT, prompt_data as tax_prompt_data
+from .tracing import context, Span, callback_trace, AGENT_METRICS
+from .budgets import BUDGETS
 
 OLLAMA_ENDPOINT = 'http://127.0.0.1:11434/api/chat'
 INFERENCE_CATALOG_VERSION = '0.1.0'
@@ -51,6 +53,7 @@ class Grant:
     session_id: UUID
     task: object
     tool_used: bool = False
+    tool_module: str | None = None
     source_token: str | None = None
     source_used: bool = False
     source_evidence: dict | None = None
@@ -61,6 +64,7 @@ class Grant:
     used: bool = False
     completed: bool = False
     bridge_roundtrip_ms: float | None = None
+    trace_context: object = field(default=None, repr=False)
 
 
 class InferenceBroker:
@@ -84,14 +88,16 @@ class InferenceBroker:
         with self._lock:
             if self.require_session and session_id not in self._privacy:
                 raise EgressDenied('Sessione già chiusa; nessuna nuova delega autorizzata')
-            grant = Grant(session_id, checked)
+            grant = Grant(session_id, checked, trace_context=context())
             self._grants[token] = grant
+        agent_metrics = None
         try:
             result = await remote(checked)
+            agent_metrics = getattr(result, 'measurements', {})
             with self._lock:
                 if self._grants.get(token) is not grant:
                     raise EgressDenied('Delega revocata; risultato tardivo escluso')
-            from .tool_egress import MARKET_SOURCE, TAX_SOURCE
+            from .tool_egress import MARKET_SOURCE, TAX_SOURCE, TOOL_CATALOG_VERSION
             if getattr(result,'status',None)=='completed' and ((checked.scenario=='S-01' and (MARKET_SOURCE=='ecb' or is_ecb_evidence(getattr(result,'evidence',None)))) or (checked.scenario=='S-02' and (TAX_SOURCE=='ade' or is_ade(getattr(result,'evidence',None))))):
                 if (not grant.source_completed or grant.source_evidence is None or result.evidence is None
                         or result.evidence.model_dump(mode='json') != grant.source_evidence):
@@ -114,14 +120,23 @@ class InferenceBroker:
                                         'privacy_version':PRIVACY_VERSION,
                                         'runtime_mode':runtime.MODE,
                                         'workload_identity_enforced':int(runtime.ISOLATED),
-                                        'tool_catalog_version':'0.3.0',
+                                        'tool_catalog_version':TOOL_CATALOG_VERSION,
                                         'inference_catalog_version': INFERENCE_CATALOG_VERSION})
+            if grant.tool_module is not None:
+                result.measurements['gateway_tool_module'] = grant.tool_module
             if grant.source_ms is not None:
                 result.measurements['gateway_source_ms']=grant.source_ms
             if grant.bridge_roundtrip_ms is not None:
                 result.measurements['gateway_bridge_roundtrip_ms']=grant.bridge_roundtrip_ms
             return result
         finally:
+            # Dichiarazioni dell'agente, non misure indipendenti del gateway.
+            # Un guasto prima del risultato lascia le metriche non disponibili.
+            with Span('agent_measurements', checked.scenario, checked.correlation_id) as observation:
+                for name in AGENT_METRICS:
+                    value = (agent_metrics or {}).get(name)
+                    import math
+                    observation.metric(**{name:value if type(value) in (int,float) and math.isfinite(value) and value >= 0 else None})
             with self._lock:
                 self._grants.pop(token, None)
                 if self.bridge is not None:
@@ -141,6 +156,7 @@ class InferenceBroker:
                     if self.bridge is not None:
                         self.bridge.revoke(key)
 
+    @callback_trace('model_proxy')
     async def infer(self, request, authorization):
         token = authorization.removeprefix('Bearer ') if authorization and authorization.startswith('Bearer ') else None
         with self._lock:
@@ -175,7 +191,7 @@ class InferenceBroker:
                                 {'role': 'user', 'content': json.dumps(prompt_input)}]}
         if task.scenario == 'S-02' and runtime.EXPERIMENT=='off':
             payload['think'] = False
-        seconds = min(90, (task.deadline - datetime.now(timezone.utc)).total_seconds())
+        seconds = min(BUDGETS.model_seconds, (task.deadline - datetime.now(timezone.utc)).total_seconds())
         started = perf_counter()
         if runtime.ISOLATED:
             if self.bridge is None:
@@ -186,7 +202,10 @@ class InferenceBroker:
         else:
             async with asyncio.timeout(max(0, seconds)):
                 async with httpx.AsyncClient(timeout=seconds, trust_env=False, follow_redirects=False) as client:
-                    response = await client.post(OLLAMA_ENDPOINT, json=payload)
+                    with Span('local_model_http', task.scenario, task.correlation_id) as observed:
+                        observed.metric(dispatch_attempts=1, responses_observed=0)
+                        response = await client.post(OLLAMA_ENDPOINT, json=payload)
+                        observed.metric(responses_observed=1, http_status=response.status_code)
                     if 300 <= response.status_code < 400:
                         raise EgressDenied('Redirect inferenza non autorizzato')
                     response.raise_for_status()

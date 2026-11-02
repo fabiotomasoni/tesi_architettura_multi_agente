@@ -11,6 +11,8 @@ from langsmith import tracing_context
 
 from .agent_contracts import MarketTask, MarketView, MarketResult
 from .a2a_egress import EgressDenied
+from .tracing import measured
+from .budgets import BUDGETS
 
 
 class State(TypedDict, total=False):
@@ -30,6 +32,7 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
     def phase(name, began, status):
         phases.append({'phase':name, 'duration_ms':round((perf_counter()-began)*1000,3), 'status':status})
 
+    @measured('prepare_task', scenario=task_type.model_fields['scenario'].default)
     def prepare(state):
         began = perf_counter()
         try:
@@ -40,7 +43,7 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
                 from .lab_profile import FullFinancialView
                 selected_view=FullFinancialView
             else:selected_view=view_type
-            task = task_type(purpose=scope,correlation_id=uuid4(),deadline=deadline or datetime.now(timezone.utc)+timedelta(seconds=120),
+            task = task_type(purpose=scope,correlation_id=uuid4(),deadline=deadline or datetime.now(timezone.utc)+timedelta(seconds=BUDGETS.activity_seconds),
                               view=selected_view.model_validate(permitted['data']))
         except TimeoutError:
             phase('request_view',began,'failed')
@@ -52,11 +55,12 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
         phase('request_view',began,'completed')
         return {'task':task,'status':'ready','error_code':None}
 
+    @measured('delegate')
     async def dispatch(state):
         began=perf_counter()
         try:
             # Limite globale: include Card e delega, non solo la fase del modello.
-            async with asyncio.timeout(125 if deadline is None else min(125,max(0,(state['task'].deadline-datetime.now(timezone.utc)).total_seconds()))):
+            async with asyncio.timeout(BUDGETS.a2a_seconds if deadline is None else min(BUDGETS.a2a_seconds,max(0,(state['task'].deadline-datetime.now(timezone.utc)).total_seconds()))):
                 result=await delegate(state['task'])
         except EgressDenied:
             phase('delegate_a2a',began,'blocked')
@@ -70,6 +74,7 @@ async def run_workflow(request_view, delegate, cleanup, *, task_type=MarketTask,
         phase('delegate_a2a',began,'completed')
         return {'result':result}
 
+    @measured('verify_result')
     def verify(state):
         began=perf_counter()
         try:

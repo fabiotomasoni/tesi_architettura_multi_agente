@@ -1,5 +1,6 @@
 """Adattatore gateway: verifica Card e delega solo all'endpoint locale fissato."""
 from uuid import uuid4
+from gateway.budgets import BUDGETS
 import json
 from time import perf_counter
 import httpx
@@ -15,7 +16,7 @@ ENDPOINT = ROUTES['S-01'].endpoint
 
 
 async def delegate(task: MarketTask) -> MarketResult:
-    async with httpx.AsyncClient(timeout=125, trust_env=False, follow_redirects=False, transport=A2AEgressTransport(task)) as client:
+    async with httpx.AsyncClient(timeout=BUDGETS.a2a_seconds, trust_env=False, follow_redirects=False, transport=A2AEgressTransport(task)) as client:
         started = perf_counter()
         response = await client.get(ENDPOINT + '.well-known/agent-card.json')
         response.raise_for_status()

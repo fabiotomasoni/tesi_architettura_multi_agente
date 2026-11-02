@@ -1,5 +1,6 @@
 """Una sola delega A2A al generalista, con capability distinte per attività."""
 import asyncio,json
+from gateway.budgets import BUDGETS
 from time import perf_counter
 from uuid import uuid4
 import httpx
@@ -40,7 +41,7 @@ class BatchDelegate:
         self.measurements['a2a_delegations_attempted']+=1
         route=ROUTES['BATCH'];began=perf_counter()
         transport=A2AEgressTransport(batch)
-        async with httpx.AsyncClient(timeout=125,trust_env=False,follow_redirects=False,transport=transport) as client:
+        async with httpx.AsyncClient(timeout=BUDGETS.a2a_seconds,trust_env=False,follow_redirects=False,transport=transport) as client:
             response=await client.get(route.endpoint+'.well-known/agent-card.json');response.raise_for_status()
             card=AgentCard.model_validate(response.json())
             if card.name!=route.agent_name or card.url!=route.endpoint or card.version!='0.1.0' or {s.id for s in card.skills}!={route.skill} or card.capabilities.streaming:

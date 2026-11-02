@@ -17,11 +17,13 @@ from .identity import HEADER, load_identity, matching_key, SCENARIO_ROLES
 from .ollama_bridge import OllamaBridge
 from .privacy import SensitiveContext, PRIVACY_VERSION, ENTITY_RECOGNIZER_VERSION
 from .inference import InferenceBroker, InferenceRequest
-from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request, MARKET_SOURCE, TAX_SOURCE
+from .tool_egress import ToolRequest, SourceRequest, authorize_tool, source_request, MARKET_SOURCE, TAX_SOURCE, MARKET_TOOL_IMPLEMENTATION, TOOL_CATALOG_VERSION
 from .a2a_egress import EgressDenied
 from .models import SessionInput, ViewRequest, Scenario
 from .pdf_input import extract_profile, PDFInputError
 from .policy import POLICY_VERSION, issues, make_view
+from .tracing import TraceStore, TraceMiddleware, Span, measured, trace_id, context, use_trace, request_outcome, TRACE_VERSION
+from .budgets import BUDGETS
 
 SESSION_TTL_SECONDS = 1800
 SESSION_SWEEP_SECONDS = 30
@@ -33,6 +35,7 @@ def create_app() -> FastAPI:
         raise RuntimeError('La sperimentazione richiede i container isolati')
     sessions = {}
     gateway_boot_id = uuid4().hex
+    traces = TraceStore(gateway_boot_id)
     broker = InferenceBroker()
     broker.require_session = True
     if runtime.ISOLATED:
@@ -43,9 +46,13 @@ def create_app() -> FastAPI:
     active = {}
 
     def finish_session(session_id):
-        with lock:
-            sessions.pop(session_id, None)
-            broker.revoke(session_id)
+        selected = context() or traces.for_session(session_id, include_closed=True)
+        with use_trace(selected), Span('cleanup') as observation:
+            with lock:
+                observation.metric(sessions_removed=int(session_id in sessions))
+                sessions.pop(session_id, None)
+                broker.revoke(session_id)
+                traces.closed(session_id)
 
     def stop_session(session_id, reason):
         with lock:
@@ -78,6 +85,7 @@ def create_app() -> FastAPI:
 
         watcher = asyncio.create_task(disconnected())
         def cancelled_response():
+            request_outcome('cancelled')
             return JSONResponse(status_code=409, content={
                 'status':'cancelled', 'error_code':'analysis_cancelled',
                 'session_closed':True, 'reason':operation['reason'],
@@ -138,6 +146,14 @@ def create_app() -> FastAPI:
                     broker.bridge.close()
 
     app = FastAPI(title="Gateway locale sperimentale", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(TraceMiddleware, store=traces)
+
+    @app.get('/traces/{identifier}')
+    def read_trace(identifier: UUID):
+        result = traces.snapshot(identifier)
+        if result is None:
+            raise HTTPException(404, 'Traccia assente, scaduta o persa dopo il riavvio.')
+        return result
 
     @app.middleware('http')
     async def verify_workload_identity(request: Request, call_next):
@@ -191,7 +207,8 @@ def create_app() -> FastAPI:
         try:
             import json
             result = json.loads(data)
-            if set(result) not in ({'body','error','ollama_ms'}, {'body','error','ollama_ms','source_ms'}) or result['error'] not in (None,'timeout','unavailable'):
+            base = set(result)-{'execution'}
+            if base not in ({'body','error','ollama_ms'}, {'body','error','ollama_ms','source_ms'}) or result['error'] not in (None,'timeout','unavailable'):
                 raise ValueError()
             if (result['body'] is None) == (result['error'] is None):
                 raise ValueError()
@@ -199,6 +216,8 @@ def create_app() -> FastAPI:
             kind=broker.bridge.kind(job_id)
             if kind is None:
                 return JSONResponse(status_code=409,content={'detail':'Incarico del ponte assente o terminato.'})
+            from .http_observation import validate_execution
+            validate_execution(result.get('execution'),kind)
             field='source_ms' if kind in {'ecb_market_source','ade_tax_source'} else 'ollama_ms'
             ms=result.get(field)
             if result['error'] is None and (type(ms) not in (int,float) or not math.isfinite(ms) or ms < 0):
@@ -260,13 +279,17 @@ def create_app() -> FastAPI:
     def health():
         return {"status": "ok", "policy_version": POLICY_VERSION,
                 "gateway_boot_id": gateway_boot_id,
+                "trace_version": TRACE_VERSION, "budgets": BUDGETS.public(),
+                "market_tool_implementation": MARKET_TOOL_IMPLEMENTATION, "tool_catalog_version": TOOL_CATALOG_VERSION,
                 "runtime_mode": runtime.MODE, "experiment": runtime.EXPERIMENT, "minimization": runtime.MINIMIZATION, "market_source": MARKET_SOURCE, "tax_source": TAX_SOURCE, "identity_version": runtime.IDENTITY_VERSION,
                 "privacy_version": PRIVACY_VERSION, "entity_recognizer_version": ENTITY_RECOGNIZER_VERSION}
 
     @app.post("/sessions", status_code=201)
     def create_session(payload: SessionInput):
         if runtime.EXPERIMENT!='off':raise HTTPException(403,'Nel laboratorio usare solo i PDF del corpus sintetico fissato.')
-        return register_session(payload, SensitiveContext.from_profile(payload.profile))
+        with Span('privacy_context'):
+            context = SensitiveContext.from_profile(payload.profile)
+        return register_session(payload, context)
 
     def register_session(payload, context):
         with lock:
@@ -277,8 +300,11 @@ def create_app() -> FastAPI:
                 from .lab_profile import full_view
                 broker._lab_profiles[sid]=full_view(payload.profile)
             sessions[sid] = (deepcopy(payload), monotonic() + SESSION_TTL_SECONDS)
-            return {"session_id": str(sid), "policy_version": POLICY_VERSION,
-                    "scenarios": {s.value: {"ready": not issues(payload.profile, s), "issues": issues(payload.profile, s)} for s in set(payload.scenarios)}}
+            traces.bind_session(sid)
+            with Span('profile_validation'):
+                readiness = {s.value: {"ready": not issues(payload.profile, s), "issues": issues(payload.profile, s)} for s in set(payload.scenarios)}
+            return {"session_id": str(sid), "trace_id": trace_id(), "policy_version": POLICY_VERSION,
+                    "scenarios": readiness}
 
     @app.get("/", include_in_schema=False)
     def home():
@@ -293,7 +319,8 @@ def create_app() -> FastAPI:
             lab_cases=set()
             rejected_documents = []
             for index, file in enumerate(files, 1):
-                content = await file.read(5 * 1024 * 1024 + 1)
+                with Span('input_read'):
+                    content = await file.read(5 * 1024 * 1024 + 1)
                 if len(content) > 5 * 1024 * 1024:
                     raise HTTPException(413, "Ogni PDF deve essere inferiore a 5 MiB.")
                 if runtime.EXPERIMENT!='off':
@@ -305,7 +332,8 @@ def create_app() -> FastAPI:
                     if len(lab_cases)>1:raise HTTPException(400,'Nel laboratorio caricare un solo fascicolo per sessione.')
                 try:
                     # Prevalidazione separata: un file rifiutato non entra nell'aggregazione.
-                    extract_profile([content])
+                    with Span('pdf_prevalidation'):
+                        extract_profile([content])
                 except PDFInputError as exc:
                     rejected_documents.append({'upload_index': index, 'reason': str(exc)})
                     continue
@@ -313,12 +341,15 @@ def create_app() -> FastAPI:
             if not contents:
                 raise HTTPException(400, {'message': 'Nessun PDF utilizzabile.', 'rejected_documents': rejected_documents})
             try:
-                profile, documents = extract_profile(contents)
+                with Span('extraction') as extraction:
+                    profile, documents = extract_profile(contents)
+                    extraction.metric(documents=len(documents), rejected_documents=len(rejected_documents))
             except PDFInputError as exc:
                 raise HTTPException(400, str(exc)) from None
-            context = SensitiveContext.from_profile(profile)
             try:
-                context.add_documents(contents)
+                with Span('privacy_context'):
+                    context = SensitiveContext.from_profile(profile)
+                    context.add_documents(contents)
             except Exception:
                 raise HTTPException(400, 'Impossibile completare il controllo privacy locale dei PDF.') from None
             result = register_session(SessionInput(scenarios=scenarios, profile=profile), context)
@@ -328,6 +359,7 @@ def create_app() -> FastAPI:
                 await file.close()
 
     @app.post("/sessions/{session_id}/views")
+    @measured('policy_view', scenario_parameter='request')
     def view(session_id: UUID, request: ViewRequest):
         with lock:
             session = get_session(session_id)
@@ -353,7 +385,7 @@ def create_app() -> FastAPI:
         started = perf_counter()
         permitted = view(session_id, ViewRequest(scenario=Scenario.MORTGAGE, recipient="markets"))
         view_ms = (perf_counter()-started)*1000
-        task = MarketTask(correlation_id=uuid4(), deadline=datetime.now(timezone.utc) + timedelta(seconds=120),
+        task = MarketTask(correlation_id=uuid4(), deadline=datetime.now(timezone.utc) + timedelta(seconds=BUDGETS.activity_seconds),
                           view=MarketView.model_validate(permitted["data"]))
         try:
             result = await broker.delegate(session_id, task, delegate)
@@ -406,15 +438,18 @@ def create_app() -> FastAPI:
             return await broker.delegate(session_id, task, tax)
         result = await run_analysis(scenarios, request_view, {"S-01":authorized_markets,"S-02":authorized_tax}, cleanup,
                                     lambda activities,status:build_report(session.profile,scenarios,activities,status))
+        request_outcome(result['status'])
         if runtime.EXPERIMENT!='off':
             result['workflow']=('single' if runtime.SINGLE else 'multi')+'-experiment-v1'
             result['experiment']={'protocol':'financial-profile-2x2-v1','organization':runtime.EXPERIMENT,'policy':runtime.MINIMIZATION,'sources':'fixed_local_fixtures','model':'llama3.2:3b','schedule':'sequential','session_budget_seconds':120,'model_calls_max':len(scenarios),'num_ctx':4096,'num_predict':200,'temperature':0,'keep_alive':0,'corpus':'synthetic-financial-v1'}
             if batch is not None:result['coordination_measurements']=batch.measurements
+        result['trace_id'] = trace_id()
         # Presentazione ricavata dallo stesso JSON, senza inferenze e senza storico.
         # Un guasto di impaginazione non deve perdere il risultato strutturato valido.
         from .report_document import render_report_document
         try:
-            result['report_document_html'] = render_report_document(result['report'])
+            with Span('presentation'):
+                result['report_document_html'] = render_report_document(result['report'])
         except Exception:
             result['report_document_html'] = None
             result['presentation_warning'] = 'Documento leggibile non disponibile; il report JSON rimane utilizzabile.'

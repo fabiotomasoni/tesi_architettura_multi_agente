@@ -8,6 +8,8 @@ import json
 from time import perf_counter
 from pathlib import Path
 import httpx
+from gateway.budgets import BUDGETS
+from gateway import http_observation
 from gateway.inference import MODELS, PROMPTS
 from gateway.agent_contracts import MarketView, TaxView
 from gateway.ecb_source import (BRIDGE_JOB, REAL_MARKET_PROMPT, PublicObservation, fetch_ecb)
@@ -75,16 +77,21 @@ async def execute_payload(payload, model, enable_ecb=False, enable_ade=False):
     if payload.get('kind')=='ade_tax_source':
         if not enable_ade or payload!=source_job(payload.get('tax_year')):
             raise ValueError('Richiesta AdE non autorizzata')
+        http_observation.select('ade')
         body,source_ms=await fetch_ade(payload['tax_year'])
         return body,None,source_ms
     if payload.get('kind')=='ecb_market_source':
         if not enable_ecb or payload!=BRIDGE_JOB:
             raise ValueError('Fonte BCE non abilitata o richiesta difforme')
+        http_observation.select('ecb')
         evidence,source_ms=await fetch_ecb()
         return evidence.model_dump(mode='json'),None,source_ms
     payload=validate_payload(payload)
+    http_observation.select('ollama')
     started=perf_counter()
+    http_observation.dispatch()
     response=await model.post(OLLAMA,json=payload)
+    http_observation.response()
     response.raise_for_status()
     if len(response.content)>60000:raise ValueError('Risposta troppo grande')
     return response.json(),round((perf_counter()-started)*1000,3),None
@@ -92,7 +99,7 @@ async def execute_payload(payload, model, enable_ecb=False, enable_ade=False):
 
 async def worker(key, enable_ecb=False, enable_ade=False):
     async with httpx.AsyncClient(trust_env=False,follow_redirects=False,timeout=25,headers={'x-tesi-service-key':key}) as gateway:
-        async with httpx.AsyncClient(trust_env=False,follow_redirects=False,timeout=90) as model:
+        async with httpx.AsyncClient(trust_env=False,follow_redirects=False,timeout=BUDGETS.model_seconds) as model:
             while True:
                 try:
                     response=await gateway.get(BASE+'/_bridge/poll')
@@ -104,15 +111,16 @@ async def worker(key, enable_ecb=False, enable_ade=False):
                     await asyncio.sleep(3)
                     continue
                 body=None;error=None;ollama_ms=None;source_ms=None
+                with http_observation.observe_execution() as execution:
+                    try:
+                        result=await execute_live_job(job,gateway,model,enable_ecb,enable_ade)
+                        if result is None:
+                            continue
+                        body,ollama_ms,source_ms=result
+                    except (TimeoutError,httpx.TimeoutException):error='timeout'
+                    except Exception:error='unavailable'
                 try:
-                    result=await execute_live_job(job,gateway,model,enable_ecb,enable_ade)
-                    if result is None:
-                        continue
-                    body,ollama_ms,source_ms=result
-                except (TimeoutError,httpx.TimeoutException):error='timeout'
-                except Exception:error='unavailable'
-                try:
-                    response=await gateway.post(BASE+'/_bridge/result/'+job['job_id'],json={'body':body,'error':error,'ollama_ms':ollama_ms,'source_ms':source_ms})
+                    response=await gateway.post(BASE+'/_bridge/result/'+job['job_id'],json={'body':body,'error':error,'ollama_ms':ollama_ms,'source_ms':source_ms,'execution':execution})
                     if response.status_code not in (200,409):
                         print('Risultato non consegnato; nessun retry dell’inferenza.',flush=True)
                 except httpx.HTTPError:

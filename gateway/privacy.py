@@ -161,6 +161,10 @@ class SensitiveContext:
         return found
 
 
+from .tracing import measured
+
+
+@measured('privacy_scan')
 def check(context,value,*,allowed_paths=frozenset(),public_paths=frozenset()):
     categories=context.findings(value,allowed_paths=allowed_paths,public_paths=public_paths)
     if categories:raise EgressDenied('Payload con dati vietati: '+','.join(sorted(categories)))

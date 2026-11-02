@@ -15,6 +15,8 @@ from .runtime import AGENT_ENDPOINTS, SINGLE
 from . import runtime
 from .lab_profile import FullFinancialView
 from .identity import a2a_headers
+from .tracing import Span
+from .budgets import BUDGETS
 
 
 class EgressDenied(ValueError):
@@ -111,9 +113,15 @@ class A2AEgressTransport(httpx.AsyncBaseTransport):
         outbound = httpx.Request(request.method, url, json=payload) if payload is not None else httpx.Request('GET', url)
         outbound.headers.update(a2a_headers(task.scenario))
         # Timeout locali fissati dal gateway; nessuna estensione arbitraria inoltrata.
-        outbound.extensions = {'timeout': {'connect': 5.0, 'read': 125.0, 'write': 5.0, 'pool': 5.0}}
+        outbound.extensions = {'timeout': {'connect': 5.0, 'read': BUDGETS.a2a_seconds, 'write': 5.0, 'pool': 5.0}}
         if request.method=='POST':self.message_sends+=1
-        response = await self.inner.handle_async_request(outbound)
+        with Span('a2a_message' if request.method=='POST' else 'a2a_card', task.scenario, task.correlation_id) as observed:
+            observed.metric(dispatch_attempts=1, responses_observed=0)
+            response = await self.inner.handle_async_request(outbound)
+            observed.metric(responses_observed=1, http_status=response.status_code)
+            if response.status_code>=400:
+                observed.outcome='blocked' if response.status_code==403 else 'failed'
+                observed.error('not_authorized' if response.status_code==403 else 'http_error')
         if 300 <= response.status_code < 400:
             await response.aclose()
             raise EgressDenied('Redirect A2A non autorizzato')

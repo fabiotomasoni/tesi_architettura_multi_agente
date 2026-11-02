@@ -205,7 +205,8 @@ def test_direct_delivery_write_error_still_removes_profile_grants_jobs_and_recov
         async def broken_send(message):
             if scope['path'].endswith('/analysis') and message['type']=='http.response.body' and message.get('body'):
                 result=json.loads(message['body'])
-                observed.append(result.get('status')=='completed' and result.get('report') is not None)
+                observed.append({'completed':result.get('status')=='completed' and result.get('report') is not None,
+                                 'trace_id':result.get('trace_id')})
                 raise BrokenPipeError('Controlled ASGI write failure')
             await send(message)
         await app(scope,receive,broken_send)
@@ -217,7 +218,10 @@ def test_direct_delivery_write_error_still_removes_profile_grants_jobs_and_recov
                     sid=await lab.upload();request=lab.start(sid,broken)
                     jobs=await lab.complete_two()
                     with pytest.raises(BrokenPipeError):await request
-                assert observed==[True]
+                assert len(observed)==1 and observed[0]['completed']
+                trace=(await client.get('/traces/'+observed[0]['trace_id'])).json()
+                assert trace['profile_closed'] and trace['summary']['trace_complete']
+                assert any(s['phase']=='asgi_delivery' and s['outcome']=='failed' and s['metrics']['asgi_body_complete']==0 for s in trace['spans'])
                 assert not broker._privacy and not broker._lab_profiles and not broker._grants
                 assert not broker.bridge.pending and broker.bridge.queue.empty()
                 checks={};await lab.closed(sid,checks,'old');await lab.stale(jobs,checks,'old')

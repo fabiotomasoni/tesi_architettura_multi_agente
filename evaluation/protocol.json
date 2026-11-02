@@ -32,8 +32,6 @@
   "freeze_blockers": [
     "complete_controlled_instances_for_V01_V10",
     "approve_remaining_S04_scope",
-    "positive_equivalent_agent_tool_substitution_evidence",
-    "complete_phase_metrics_including_upload_extraction_and_policy_cost",
     "model_weights_runtime_environment_manifest",
     "human_rating_blinded_registry_and_final_runner"
   ],

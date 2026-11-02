@@ -123,7 +123,13 @@ Durante l’elaborazione puoi premere **Annulla analisi e cancella sessione**. I
 
 Se la consegna del report fallisce, il gateway non lo conserva per un successivo recupero. Dopo un arresto del gateway, caricare nuovamente i PDF per una nuova analisi: la sessione interrotta non riprende automaticamente. Le prove guidate di questi percorsi sono descritte nel [protocollo di valutazione](PROTOCOLLO_VALUTAZIONE.md).
 
+È disponibile anche una prova guidata di sostituzione dello strumento mercati: confronta lo stesso report prima, durante e dopo il cambio del server MCP, mantenendo gli agenti. Usa fonti e risposte del modello simulate; istruzioni e limiti sono nel protocollo, senza cambiare l’avvio ordinario della demo.
+
 ## Documentazione del progetto
+
+I nuovi piloti salvano anche una traccia di soli tempi, conteggi ed esiti, senza documenti o prompt. La procedura guidata per verificarla è nel [protocollo di valutazione](PROTOCOLLO_VALUTAZIONE.md#tracciamento-e-budget-del-prototipo); il report per l’utente conserva gli stessi dati e contenuti.
+
+Se il controllo delle tracce si interrompe, il file indica `passed: false` e la fase interessata, conservando le sole evidenze raccolte. Per riprovare usare un nome di output nuovo: le prove precedenti non vengono sovrascritte.
 
 - [Diario di progetto](DIARIO_PROGETTO.md): sintesi delle modifiche e delle verifiche.
 - [Attività da completare](DA_IMPLEMENTARE.md): lavori residui, priorità e criteri di completamento.

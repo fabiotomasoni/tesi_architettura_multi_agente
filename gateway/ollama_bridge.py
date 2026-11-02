@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from secrets import token_hex
 from .a2a_egress import EgressDenied
+from .tracing import Span
 
 
 @dataclass
@@ -12,6 +13,7 @@ class Pending:
     future: asyncio.Future
     claimed: bool = False
     owner: str | None = None
+    observation: object = None
 
 
 class OllamaBridge:
@@ -33,16 +35,20 @@ class OllamaBridge:
             raise RuntimeError('Budget del ponte esaurito')
         job_id = token_hex(32)
         future = asyncio.get_running_loop().create_future()
-        self.pending[job_id] = Pending(deepcopy(payload), future, owner=owner)
-        try:
-            self.queue.put_nowait(job_id)
-            async with asyncio.timeout(max(0, seconds)):
-                return await future
-        finally:
-            self.pending.pop(job_id, None)
-            self.purge_queue()
-            if not future.done():
-                future.cancel()
+        with Span('bridge_wait') as observation:
+            observation.metric(bridge_claimed=0, host_http_dispatch_attempts=None, host_http_responses_observed=None,
+                               public_source_http_dispatch_attempts=None, local_model_http_dispatch_attempts=None,
+                               execution_controlled_fixture=None)
+            self.pending[job_id] = Pending(deepcopy(payload), future, owner=owner, observation=observation)
+            try:
+                self.queue.put_nowait(job_id)
+                async with asyncio.timeout(max(0, seconds)):
+                    return await future
+            finally:
+                self.pending.pop(job_id, None)
+                self.purge_queue()
+                if not future.done():
+                    future.cancel()
 
     async def poll(self):
         try:
@@ -52,6 +58,8 @@ class OllamaBridge:
                     job = self.pending.get(job_id)
                     if job is not None and not job.claimed and not job.future.done():
                         job.claimed = True
+                        if job.observation is not None:
+                            job.observation.metric(bridge_claimed=1)
                         return {'job_id': job_id, 'payload': deepcopy(job.payload)}
         except TimeoutError:
             return None
@@ -82,10 +90,18 @@ class OllamaBridge:
                     job.future.set_exception(EgressDenied('Incarico del ponte revocato'))
         self.purge_queue()
 
-    def complete(self, job_id, *, body=None, error=None, ollama_ms=None, source_ms=None):
+    def complete(self, job_id, *, body=None, error=None, ollama_ms=None, source_ms=None, execution=None):
         job = self.pending.get(job_id)
         if job is None or not job.claimed or job.future.done():
             return False
+        from .http_observation import validate_execution
+        validate_execution(execution,job.payload.get('kind','inference'))
+        if job.observation is not None and execution is not None:
+            job.observation.metric(host_http_dispatch_attempts=execution['dispatch_attempts'],
+                host_http_responses_observed=execution['responses_observed'],
+                public_source_http_dispatch_attempts=execution['dispatch_attempts'] if execution['kind'] in {'ecb','ade'} else 0,
+                local_model_http_dispatch_attempts=execution['dispatch_attempts'] if execution['kind']=='ollama' else 0,
+                execution_controlled_fixture=int(execution['kind']=='controlled_fixture'))
         if error:
             job.future.set_exception(TimeoutError('Timeout del ponte') if error == 'timeout'
                                      else RuntimeError('Inferenza del ponte non completata'))

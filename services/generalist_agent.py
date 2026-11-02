@@ -24,14 +24,22 @@ async def execute(task):
         if task.deadline<=datetime.now(timezone.utc):raise TimeoutError()
         authorized_task(task)
         result=await (market_work if task.scenario=='S-01' else tax_work)(task)
-    except MissingProvenanceError:status,code='unverified','missing_provenance'
-    except EgressDenied:status,code='blocked','not_authorized'
-    except TimeoutError:status,code='failed','timeout'
-    except Exception:status,code='failed','execution_failed'
+    except MissingProvenanceError as error:
+        partial_metrics = getattr(error,'work_metrics',{})
+        status,code='unverified','missing_provenance'
+    except EgressDenied as error:
+        partial_metrics = getattr(error,'work_metrics',{})
+        status,code='blocked','not_authorized'
+    except TimeoutError as error:
+        partial_metrics = getattr(error,'work_metrics',{})
+        status,code='failed','timeout'
+    except Exception as error:
+        partial_metrics = getattr(error,'work_metrics',{})
+        status,code='failed','execution_failed'
     else:
         result.measurements['agent_boot_id']=BOOT_ID
         return result
-    return result_type(correlation_id=task.correlation_id,status=status,error_code=code,summary='Attività non completata; nessuna conclusione verificata.',limits=[],model=MODELS[task.scenario],measurements={'agent_boot_id':BOOT_ID})
+    return result_type(correlation_id=task.correlation_id,status=status,error_code=code,summary='Attività non completata; nessuna conclusione verificata.',limits=[],model=MODELS[task.scenario],measurements={'agent_boot_id':BOOT_ID,**partial_metrics})
 
 
 class GeneralistAgent(BaseAgent):

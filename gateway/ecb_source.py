@@ -108,9 +108,15 @@ def public_prompt_data(evidence):
 async def fetch_ecb():
     """Nessun argomento del chiamante e nessun redirect/retry/cookie/credenziale."""
     started = perf_counter()
-    async with asyncio.timeout(20):
-        async with httpx.AsyncClient(timeout=20,trust_env=False,follow_redirects=False) as client:
+    from . import http_observation
+    from .budgets import BUDGETS
+    http_observation.select('ecb')
+    seconds=min(20,BUDGETS.source_seconds)
+    async with asyncio.timeout(seconds):
+        async with httpx.AsyncClient(timeout=seconds,trust_env=False,follow_redirects=False) as client:
+            http_observation.dispatch()
             async with client.stream('GET',SOURCE_URL,headers=WIRE_REQUEST['headers']) as response:
+                http_observation.response()
                 if response.status_code != 200 or str(response.url) != SOURCE_URL:
                     raise ValueError('Risposta o destinazione BCE non autorizzata')
                 if 'text/csv' not in response.headers.get('content-type','').lower():

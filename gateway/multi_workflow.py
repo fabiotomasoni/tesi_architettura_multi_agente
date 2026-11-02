@@ -4,12 +4,14 @@ from time import perf_counter
 from langsmith import tracing_context
 from .workflow import run_workflow
 from .agent_contracts import TaxTask, TaxView, TaxResult
+from .tracing import Span
+from .budgets import BUDGETS
 
 
 async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=None):
     from . import runtime
     from datetime import datetime,timedelta,timezone
-    shared_deadline=datetime.now(timezone.utc)+timedelta(seconds=120) if runtime.EXPERIMENT!='off' else None
+    shared_deadline=datetime.now(timezone.utc)+timedelta(seconds=BUDGETS.activity_seconds) if runtime.EXPERIMENT!='off' else None
     started=perf_counter()
     async def branch(scenario):
         options={} if scenario=='S-01' else {'task_type':TaxTask,'view_type':TaxView,'result_type':TaxResult,'scope':'tax_context'}
@@ -34,7 +36,8 @@ async def run_analysis(scenarios, request_view, delegates, cleanup, make_report=
         report_ms=0.0
         if make_report is not None:
             began=perf_counter()
-            report=make_report(tasks,status)
+            with Span('report'):
+                report=make_report(tasks,status)
             report_ms=(perf_counter()-began)*1000
             # I riepiloghi tecnici non riespongono prosa esclusa dal report.
             for activity in tasks.values():

@@ -20,21 +20,27 @@ class TaxAgent(BaseAgent):
     async def _run_async_impl(self, ctx):
         text = ''.join(part.text or '' for part in ctx.user_content.parts)
         task = TaxTask.model_validate_json(text)
+        partial_metrics = {}
         try:
             result = await perform(task)
-        except MissingProvenanceError:
+        except MissingProvenanceError as error:
+            partial_metrics = getattr(error,'work_metrics',{})
             result = TaxResult(correlation_id=task.correlation_id,status='unverified',error_code='missing_provenance',evidence=None,
                 summary='Fonte MCP non verificata; contenuto escluso.',limits=['Provenienza MCP obbligatoria mancante; nessun dato utilizzabile per conclusioni.'],model=MODEL,measurements={'provenance_verified':0})
-        except EgressDenied:
+        except EgressDenied as error:
+            partial_metrics = getattr(error,'work_metrics',{})
             result = TaxResult(correlation_id=task.correlation_id,status='blocked',error_code='not_authorized',evidence=None,
                 summary='Inferenza bloccata dal gateway.',limits=['Nessuna inferenza autorizzata disponibile.'],model=MODEL)
-        except TimeoutError:
+        except TimeoutError as error:
+            partial_metrics = getattr(error,'work_metrics',{})
             result = TaxResult(correlation_id=task.correlation_id, status='failed', error_code='timeout',
                 summary='Tempo massimo di elaborazione superato.', limits=['Nessun risultato disponibile entro la scadenza.'], model=MODEL)
-        except Exception:
+        except Exception as error:
+            partial_metrics = getattr(error,'work_metrics',{})
             result = TaxResult(correlation_id=task.correlation_id, status='failed',
                 error_code='execution_failed', summary='Attività non completata: verificare MCP e Ollama locali.',
                 limits=['Nessun risultato verificato disponibile.'], model=MODEL)
+        result.measurements.update(partial_metrics)
         result.measurements['agent_boot_id'] = BOOT_ID
         yield Event(author=self.name, content=types.Content(role='model', parts=[types.Part(text=result.model_dump_json())]))
 

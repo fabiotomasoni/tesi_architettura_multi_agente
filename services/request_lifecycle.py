@@ -12,11 +12,11 @@ class RequestExecutor(A2aAgentExecutor):
         task = asyncio.current_task()
         if owned is not None:
             owned.add(task)
-        try:
-            await super().execute(context, event_queue)
-        finally:
-            if owned is not None:
-                owned.discard(task)
+            # Il task SDK continua dopo execute, anche nella chiusura della
+            # coda. Rimuoverlo qui in finally lasciava producer non più
+            # cancellabili dalla richiesta e poteva bloccare queue.join().
+            task.add_done_callback(owned.discard)
+        await super().execute(context, event_queue)
 
 
 class SingleRequestApp:
