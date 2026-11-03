@@ -184,7 +184,7 @@ asyncio.run(test())
 def test_baseline_checker_rejects_mismatched_results_and_duplicate_runs():
     from copy import deepcopy
     from scripts.check_baseline_pilot import verify
-    common={'case':'C001','repetition':1,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'sha-model','semantic_result_sha256':'sha-result','experiment':{'policy':'active','sources':'fixed_local_fixtures','schedule':'sequential','protocol':'financial-profile-2x2-v6','shared_reference':True,'mcp_calls_per_activity':2,'model':'llama3.2:3b'}}
+    common={'case':'C001','repetition':1,'passed':True,'cleanup_verified':True,'automatic_session_closed':True,'model_digest':'sha-model','semantic_result_sha256':'sha-result','experiment':{'policy':'active','sources':'fixed_local_fixtures','schedule':'sequential','protocol':'financial-profile-2x2-v7','shared_reference':True,'mcp_calls_per_activity':2,'model':'llama3.2:3b'}}
     def activity(boot):return {'status':'completed','measurements':{'agent_boot_id':boot,'mcp_tool_calls':2,'ollama_calls':1,'a2a_requests':1}}
     s={**common,'organization':'single','coordination':{'a2a_message_sends':1},'activities':{'S-01':activity('generalist'),'S-02':activity('generalist')}}
     m={**common,'organization':'multi','activities':{'S-01':activity('markets'),'S-02':activity('tax')}}

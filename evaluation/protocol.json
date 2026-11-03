@@ -7,7 +7,7 @@
     "3.5",
     "4.6"
   ],
-  "runtime_protocol": "financial-profile-2x2-v6",
+  "runtime_protocol": "financial-profile-2x2-v7",
   "evaluators": {
     "count": 1,
     "independent_agreement_estimated": false,
@@ -124,5 +124,18 @@
     "version": "v01-v10-registry-draft-v2",
     "status": "implemented_pending_pilot_and_freeze",
     "authorizes_execution": false
+  },
+  "supplemental_document_context": {
+    "version": "monthly-document-context-1",
+    "base_pdf_kinds": [
+      "mutuo",
+      "interessi",
+      "conto",
+      "paga"
+    ],
+    "scope": "optional_single_month_income_and_account_context_not_affordability_or_tax_entitlement",
+    "utility_annotation_scope": "existing_required_S01_S02_facts_only_supplemental_context_excluded",
+    "verification": "independent_pdf_provenance_and_check_financial_context",
+    "previous_pilot": "campaign_v1_applies_to_previous_source_snapshot_only"
   }
 }

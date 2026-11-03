@@ -51,7 +51,7 @@ def authorized_task(task):
         if isinstance(checked,BatchTask):
             if not SINGLE:raise ValueError()
             for item in checked.tasks:authorized_task(item)
-        if checked.policy_version != '0.3.0' or checked.deadline <= datetime.now(timezone.utc):
+        if checked.policy_version != '0.4.0' or checked.deadline <= datetime.now(timezone.utc):
             raise ValueError()
     except Exception:
         raise EgressDenied('Incarico A2A non autorizzato') from None

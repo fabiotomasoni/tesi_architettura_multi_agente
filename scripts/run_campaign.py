@@ -40,7 +40,7 @@ async def base_cases(folder,block):
             for case in block['cases']:
                 collector.context={'case':case,'variant':'nominal'};sid=None;row=None
                 try:
-                    files=[('files',(kind+'.pdf',(ROOT/f'dataset/Documents/{case}_{kind}.pdf').read_bytes(),'application/pdf')) for kind in ('mutuo','interessi')]
+                    files=[('files',(kind+'.pdf',(ROOT/f'dataset/Documents/{case}_{kind}.pdf').read_bytes(),'application/pdf')) for kind in ('mutuo','interessi','conto','paga')]
                     r=await client.post('/sessions/pdf',files=files,data={'scenarios':['S-01','S-02']});r.raise_for_status();sid=r.json()['session_id'];row=collector.sessions[sid]
                     for scenario,recipient in [('S-01','markets'),('S-02','tax')]:
                         view=await client.post('/sessions/'+sid+'/views',json={'scenario':scenario,'recipient':recipient})
@@ -51,6 +51,8 @@ async def base_cases(folder,block):
                     report=body['report']
                     checks=verify_report(report,expected,real_sources=False,minimization=policy)
                     checks.update(reference_checks(report,collector.annotations[case]))
+                    from scripts.check_financial_context import verify as context_checks
+                    checks.update({'financial_context/'+k:v for k,v in context_checks(report).items()})
                     row['deterministic_financial_sha256']=digest({k:report.get(k) for k in ('status','mortgage_comparison','mortgage_contract_analysis','tax_application')})
                     checks['outcomes']={s:a['status'] for s,a in body['activities'].items()}==expected
                     checks['same_model']=all(a.get('result',{}).get('model')=='llama3.2:3b' for a in body['activities'].values() if a['status']=='completed')

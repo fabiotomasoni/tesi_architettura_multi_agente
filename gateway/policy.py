@@ -2,7 +2,7 @@
 from decimal import Decimal, InvalidOperation
 from .models import Profile, Scenario
 
-POLICY_VERSION = "0.3.0"
+POLICY_VERSION = "0.4.0"
 REQUIRED = {
     Scenario.MORTGAGE: ("rate_type", "remaining_principal", "remaining_months", "annual_rate", "payment_amount", "payment_frequency"),
     Scenario.TAX: ("tax_year", "purpose", "annual_interest", "ownership_share"),
@@ -14,7 +14,7 @@ CATEGORIES = {
     "payment_frequency": {"monthly", "quarterly", "semiannual", "annual"},
     "purpose": {"primary_home_purchase", "primary_home_construction", "renovation", "other"},
 }
-UNITS = {"remaining_principal": "EUR", "remaining_months": "month", "annual_rate": "percent_per_year", "payment_amount": "EUR", "tax_year": "year", "annual_interest": "EUR", "ownership_share": "fraction"}
+UNITS = {"payslip_net": "EUR", "account_opening_balance": "EUR", "account_closing_balance": "EUR", "remaining_principal": "EUR", "remaining_months": "month", "annual_rate": "percent_per_year", "payment_amount": "EUR", "tax_year": "year", "annual_interest": "EUR", "ownership_share": "fraction"}
 
 
 def issues(profile: Profile, scenario: Scenario) -> list[dict]:
@@ -77,10 +77,13 @@ def make_view(profile: Profile, scenario: Scenario) -> dict:
 
 
 def domain_view(profile: Profile, scenario: Scenario) -> dict:
+    from .financial_context import summarize
+    summary = summarize(profile)
+    context = {"document_context": summary.model_dump(mode="json")} if summary else {}
     if scenario == Scenario.MORTGAGE:
         months = int(str(profile.remaining_months.value))
         # Fasce (0,60], (60,120], ...: nessun valore esatto nella vista.
         lower = ((months - 1) // 60) * 5
-        return {"mortgage_type": profile.mortgage_type.value if profile.mortgage_type and profile.mortgage_type.status=='validated' and profile.mortgage_type.value in CATEGORIES['mortgage_type'] else 'not_specified', "rate_type": profile.rate_type.value,
+        return {**context, "mortgage_type": profile.mortgage_type.value if profile.mortgage_type and profile.mortgage_type.status=='validated' and profile.mortgage_type.value in CATEGORIES['mortgage_type'] else 'not_specified', "rate_type": profile.rate_type.value,
                 "remaining_years_band": {"lower_exclusive": lower, "upper_inclusive": lower + 5}}
-    return {"tax_year": int(str(profile.tax_year.value)), "expense_category": "mortgage_interest", "purpose": profile.purpose.value}
+    return {**context, "tax_year": int(str(profile.tax_year.value)), "expense_category": "mortgage_interest", "purpose": profile.purpose.value}

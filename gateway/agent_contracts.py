@@ -4,6 +4,7 @@ from typing import Literal
 from uuid import UUID
 from pydantic import Field, model_validator
 from .models import Contract
+from .financial_context import ContextView
 from .ecb_source import EcbRateEvidence
 from .ade_source import AdeEvidence
 from .lab_profile import FullFinancialView
@@ -20,7 +21,7 @@ class DurationBand(Contract):
         return self
 
 
-class MarketView(Contract):
+class MarketView(ContextView):
     mortgage_type: Literal['residential', 'other', 'not_specified']
     rate_type: Literal['fixed', 'variable', 'mixed']
     remaining_years_band: DurationBand
@@ -30,7 +31,7 @@ class MarketTask(Contract):
     correlation_id: UUID
     scenario: Literal['S-01'] = 'S-01'
     purpose: Literal['market_rate_context'] = 'market_rate_context'
-    policy_version: Literal['0.1.0', '0.2.0', '0.3.0'] = '0.3.0'
+    policy_version: Literal['0.1.0', '0.2.0', '0.3.0', '0.4.0'] = '0.4.0'
     deadline: datetime
     inference_token: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$', repr=False)
     view: MarketView | FullFinancialView
@@ -74,7 +75,7 @@ class MarketResult(Contract):
         return self
 
 
-class TaxView(Contract):
+class TaxView(ContextView):
     tax_year: int = Field(ge=1900, le=2100)
     expense_category: Literal['mortgage_interest'] = 'mortgage_interest'
     purpose: Literal['primary_home_purchase', 'primary_home_construction', 'renovation', 'other']
@@ -84,7 +85,7 @@ class TaxTask(Contract):
     correlation_id: UUID
     scenario: Literal['S-02'] = 'S-02'
     purpose: Literal['tax_context'] = 'tax_context'
-    policy_version: Literal['0.2.0', '0.3.0'] = '0.3.0'
+    policy_version: Literal['0.2.0', '0.3.0', '0.4.0'] = '0.4.0'
     deadline: datetime
     inference_token: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$', repr=False)
     view: TaxView | FullFinancialView
@@ -128,7 +129,7 @@ class BatchTask(Contract):
     correlation_id: UUID
     scenario: Literal['BATCH']='BATCH'
     purpose: Literal['financial_analysis']='financial_analysis'
-    policy_version: Literal['0.3.0']='0.3.0'
+    policy_version: Literal['0.4.0']='0.4.0'
     deadline: datetime
     tasks: list[MarketTask | TaxTask] = Field(min_length=1,max_length=2)
 

@@ -1,6 +1,8 @@
 """Verifica locale report/PDF senza modelli e senza stampare valori finanziari."""
 import argparse,hashlib,json
-from datetime import datetime
+from datetime import datetime, date
+from calendar import monthrange
+import re
 from decimal import Decimal
 from pathlib import Path
 from pypdf import PdfReader
@@ -18,9 +20,13 @@ def verify(report, directory):
     actual=[s['scenario'] for s in report['document_data']]
     if set(actual)!=expected_scenarios or len(actual)!=len(expected_scenarios):
         problems.append('Sezioni documentali mancanti, duplicate o non richieste')
-    labels={'rate_type':'Tipo tasso','remaining_principal':'Capitale residuo','remaining_months':'Durata residua','annual_rate':'Tasso annuo nominale','payment_amount':'Rata mensile','payment_frequency':'Rata mensile','tax_year':'Anno imposta','purpose':'Finalita','annual_interest':'Interessi annui documentati','ownership_share':'Quota intestazione'}
-    for section in report['document_data']:
-        expected_fields=required[section['scenario']] | ({'mortgage_type'} if section['scenario']=='S-01' else set())
+    labels={'rate_type':'Tipo tasso','remaining_principal':'Capitale residuo','remaining_months':'Durata residua','annual_rate':'Tasso annuo nominale','payment_amount':'Rata mensile','payment_frequency':'Rata mensile','tax_year':'Anno imposta','purpose':'Finalita','annual_interest':'Interessi annui documentati','ownership_share':'Quota intestazione','payslip_net':'Netto','account_opening_balance':'Saldo iniziale','account_closing_balance':'Saldo finale'}
+    sections=list(report['document_data'])
+    context=report.get('financial_context')
+    if context is not None:
+        sections.append({'scenario':'CONTEXT','facts':context['facts']})
+    for section in sections:
+        expected_fields={'payslip_net','account_opening_balance','account_closing_balance'} if section['scenario']=='CONTEXT' else required[section['scenario']] | ({'mortgage_type'} if section['scenario']=='S-01' else set())
         if set(section['facts'])!=expected_fields:
             problems.append(section['scenario']+': inventario campi incompleto o inatteso')
         for name,fact in section['facts'].items():
@@ -66,8 +72,19 @@ def verify(report, directory):
                 page=PdfReader(period_path).pages[period['page']-1].extract_text() or ''
                 if hashlib.sha256(page.encode()).hexdigest()!=period['page_text_sha256']:raise ValueError('testo periodo diverso')
                 quote=page[period['start']:period['end']]
-                if quote!=period['quote'] or not page[:period['start']].rstrip().endswith(period['label']):raise ValueError('riferimento periodo non coerente')
-                expected_period=datetime.strptime(quote,'Situazione al %d/%m/%Y').date().isoformat() if period['label']=='Riferimento' else f'{int(quote):04}-12-31'
+                if quote!=period['quote']:raise ValueError('citazione periodo diversa')
+                if period['label']=='document_title':
+                    if period['document_sha256']!=source['document_sha256']:raise ValueError('periodo da documento diverso')
+                    if fact.get('period_granularity')!='month':raise ValueError('granularità mensile non dichiarata')
+                    title = 'Prospetto retribuzione' if name=='payslip_net' else 'Estratto conto'
+                    match=re.fullmatch(title+r' ([a-z]+) (\d{4})',quote)
+                    if not match:raise ValueError('titolo periodo non valido')
+                    months=('gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre')
+                    month=months.index(match[1])+1;year=int(match[2])
+                    expected_period=date(year,month,monthrange(year,month)[1]).isoformat()
+                else:
+                    if not page[:period['start']].rstrip().endswith(period['label']):raise ValueError('riferimento periodo non coerente')
+                    expected_period=datetime.strptime(quote,'Situazione al %d/%m/%Y').date().isoformat() if period['label']=='Riferimento' else f'{int(quote):04}-12-31'
                 if expected_period!=fact['period']:raise ValueError('periodo non coerente')
                 checked+=1
             except (ValueError,KeyError,TypeError,IndexError,ArithmeticError):

@@ -33,9 +33,9 @@ def main():
             for repetition in range(1,a.repetitions+1):
                 sid=None;trace_identifier=None;row={'scope':'baseline_pilot_not_final_campaign','case':case,'repetition':repetition,'organization':a.organization,'minimization':a.minimization,'model_digest':digest,'langgraph':version('langgraph'),'cleanup_verified':False}
                 try:
-                    files=[('files',(k+'.pdf',(ROOT/'dataset/Documents'/f'{case}_{k}.pdf').read_bytes(),'application/pdf')) for k in ('mutuo','interessi')]
+                    files=[('files',(k+'.pdf',(ROOT/'dataset/Documents'/f'{case}_{k}.pdf').read_bytes(),'application/pdf')) for k in ('mutuo','interessi','conto','paga')]
                     r=c.post('/sessions/pdf',files=files,data={'scenarios':['S-01','S-02']});r.raise_for_status();sid=r.json()['session_id'];trace_identifier=r.json().get('trace_id')
-                    row['input_financial_amount_fields']=sum(r.json()['profile'].get(k) is not None for k in ('remaining_principal','payment_amount','annual_interest'))
+                    row['input_financial_amount_fields']=sum(r.json()['profile'].get(k) is not None for k in ('remaining_principal','payment_amount','annual_interest','payslip_net','account_opening_balance','account_closing_balance'))
                     r=c.post(f'/sessions/{sid}/analysis');r.raise_for_status();body=r.json()
                     n=int(case[1:]);expected={'S-01':'blocked' if 6<=n<=10 or 16<=n<=20 else 'completed','S-02':'blocked' if 11<=n<=15 else 'completed'}
                     activities={s:{'status':x['status'],'error_code':x.get('error_code'),'phases':x['phases'],'model':(x.get('result') or {}).get('model'),'measurements':(x.get('result') or {}).get('measurements',{})} for s,x in body['activities'].items()}

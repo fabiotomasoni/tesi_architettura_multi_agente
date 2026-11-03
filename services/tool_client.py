@@ -4,6 +4,7 @@ from gateway.tool_egress import ToolPermit, TOOL_ROUTES
 import httpx
 from gateway.identity import callback_headers
 from gateway import runtime
+from gateway.financial_context import source_arguments
 
 GATEWAY_BASE = 'http://127.0.0.1:8000'
 
@@ -15,7 +16,7 @@ async def request_tool(task, *, mcp_module=None):
         response = await client.post((runtime.GATEWAY_ENDPOINTS[task.scenario] if runtime.ISOLATED else GATEWAY_BASE) + '/internal/tools/authorize',
             headers={**callback_headers(task.scenario),'Authorization':'Bearer ' + task.inference_token}, json={
                 'correlation_id':str(task.correlation_id), 'scenario':task.scenario,
-                'tool':TOOL_ROUTES[task.scenario].tool, 'server_module':mcp_module, 'arguments':task.view.model_dump(mode='json')})
+                'tool':TOOL_ROUTES[task.scenario].tool, 'server_module':mcp_module, 'arguments':source_arguments(task.view)})
         if response.status_code == 403 or 300 <= response.status_code < 400:
             raise EgressDenied('Strumento rifiutato dal gateway')
         response.raise_for_status()

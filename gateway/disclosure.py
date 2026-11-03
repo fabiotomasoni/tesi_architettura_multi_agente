@@ -1,7 +1,7 @@
 """Solo conteggi/categorie/byte: nessun valore finanziario nelle metriche."""
 import json
 
-AMOUNTS={'remaining_principal','payment_amount','annual_interest'}
+AMOUNTS={'remaining_principal','payment_amount','annual_interest','payslip_net','account_opening_balance','account_closing_balance'}
 
 
 def view_metrics(view,prefix):

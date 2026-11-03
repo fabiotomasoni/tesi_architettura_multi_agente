@@ -33,6 +33,11 @@ class FullFinancialView(Contract):
         return self
 
     @property
+    def document_context(self):
+        from .financial_context import summarize
+        return summarize(self.financial_profile)
+
+    @property
     def rate_type(self):return self.financial_profile['rate_type'].value
     @property
     def tax_year(self):return int(self.financial_profile['tax_year'].value)

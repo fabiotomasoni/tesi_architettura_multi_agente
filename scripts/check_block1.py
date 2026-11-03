@@ -44,12 +44,14 @@ def verify_report(report, expected, *, real_sources=True, minimization='active')
     checks={'documentary_provenance':checked>0 and not problems,
             'requested_scenarios':set(report['requested_scenarios'])==set(expected),
             ('no_simulated_fallback' if real_sources else 'no_external_sources'):not report.get('simulated_sources') if real_sources else not report.get('external_sources'),
-            'report_version':report.get('report_version')=='0.16.0',
+            'report_version':report.get('report_version')=='0.17.0',
             'source_inventory':sorted(x['scenario'] for x in report.get('external_sources' if real_sources else 'simulated_sources',[]))==sorted(s for s,v in expected.items() if v=='completed')}
     for prefix,verify in [('mortgage',mortgage),('tax_application',tax_application),('tax_review',tax_review)]:
         checks.update({prefix+'/'+key:value for key,value in verify(report).items()})
     facts={key:value for section in report['document_data'] for key,value in section['facts'].items()
            if value.get('status') not in {'missing','not_specified'}}
+    facts.update({key:value for key,value in report.get('financial_context',{}).get('facts',{}).items()
+                  if value.get('status') not in {'missing','not_specified'}})
     p=Profile.model_validate({key:{k:v for k,v in fact.items() if k in Fact.model_fields}
                               for key,fact in facts.items()})
     analyses=report.get('model_analyses',[])
@@ -94,7 +96,7 @@ def main():
             response=client.get('/health');response.raise_for_status();health=response.json()
             required={'runtime_mode':'isolated','experiment':'off','minimization':'active',
                       'market_source':'ecb','tax_source':'ade','market_analysis_version':'market-selection-1',
-                      'tax_analysis_version':'tax-selection-1','runtime_protocol':'financial-profile-2x2-v6'}
+                      'tax_analysis_version':'tax-selection-1','runtime_protocol':'financial-profile-2x2-v7'}
             if any(health.get(k)!=v for k,v in required.items()):
                 parser.error('Servono la demo aggiornata e le fonti BCE/AdE attive. Ricostruire immagine e riavviare i tre servizi e il ponte.')
             for case in CASES:
@@ -134,7 +136,7 @@ def main():
     except httpx.HTTPError:
         parser.error('Gateway non raggiungibile; avviare la demo aggiornata.')
     payload={'scope':'real_source_demo_pilot_not_final_campaign_or_semantic_certification',
-             'runtime_protocol':'financial-profile-2x2-v6','cases':rows,'passed':all(r['passed'] for r in rows)}
+             'runtime_protocol':'financial-profile-2x2-v7','cases':rows,'passed':all(r['passed'] for r in rows)}
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(payload,indent=2,ensure_ascii=False),encoding='utf-8')
     print('passed:',payload['passed'])

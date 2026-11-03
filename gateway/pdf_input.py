@@ -1,5 +1,7 @@
 """Estrazione deterministica dei soli prospetti sintetici del dataset v1."""
 from datetime import date, datetime
+from calendar import monthrange
+from .financial_context import MONTHS
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 import re
@@ -50,9 +52,9 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
             kind = 'mutuo'
         elif 'Certificazione interessi mutuo' in text:
             kind = 'interessi'
-        elif 'Estratto conto dicembre' in text:
+        elif 'Estratto conto ' in text:
             kind = 'conto'
-        elif 'Prospetto retribuzione novembre' in text:
+        elif 'Prospetto retribuzione ' in text:
             kind = 'paga'
         else:
             raise PDFInputError('Tipo di prospetto non riconosciuto.')
@@ -61,7 +63,7 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
         seen.add(kind)
         document_id = 'doc-' + uuid4().hex
         summaries.append({'document_id': document_id, 'type': kind, 'pages': len(pages),
-                          'document_sha256':hashlib.sha256(content).hexdigest(), 'used_for_scenarios': kind in {'mutuo', 'interessi'}})
+                          'document_sha256':hashlib.sha256(content).hexdigest(), 'used_for_scenarios': True})
 
         def field(label):
             matches = []
@@ -80,7 +82,7 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
                 raise PDFInputError('Etichetta ripetuta nel prospetto: estrazione ambigua.')
             return matches[0] if matches else None
 
-        def add(name, label, unit, period, transform=lambda value: value, rule="identity", period_source=None):
+        def add(name, label, unit, period, transform=lambda value: value, rule="identity", period_source=None, period_granularity="day"):
             found = field(label)
             if not found:
                 return
@@ -92,7 +94,7 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
                 # Non conservare testo arbitrario come valore di un campo finanziario.
                 value, status = 'ambiguous', 'ambiguous'
             setattr(profile, name, Fact(value=value, unit=unit, period=period,
-                    source=source, period_source=period_source, origin='extracted' if rule=='identity' else 'transformed', transformation=rule, status=status))
+                    source=source, period_source=period_source, period_granularity=period_granularity, origin='extracted' if rule=='identity' else 'transformed', transformation=rule, status=status))
 
         def number(value):
             cleaned = value.removesuffix(' EUR').removesuffix('%').strip()
@@ -100,7 +102,32 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
                 raise ValueError()
             return Decimal(cleaned.replace('.', '').replace(',', '.'))
 
-        if kind == 'mutuo':
+        if kind in {'conto', 'paga'}:
+            title = 'Estratto conto' if kind == 'conto' else 'Prospetto retribuzione'
+            found = []
+            for page_number, page in enumerate(pages, 1):
+                for match in re.finditer(r'^\s*(' + title + r' ([a-z]+) (\d{4}))\s*$', page, re.M):
+                    found.append((page_number, page, match))
+            if len(found) != 1:
+                raise PDFInputError('Periodo del documento di contesto mancante o ambiguo.')
+            page_number, page, match = found[0]
+            try:
+                month, year = MONTHS[match[2]], int(match[3])
+                if not 1900 <= year <= 2100:
+                    raise ValueError()
+                period = date(year, month, monthrange(year, month)[1])
+            except (KeyError, ValueError):
+                raise PDFInputError('Periodo del documento di contesto non valido.') from None
+            period_source = Source(document_id=document_id, page=page_number,
+                document_sha256=hashlib.sha256(content).hexdigest(),
+                page_text_sha256=hashlib.sha256(page.encode()).hexdigest(),
+                label='document_title', start=match.start(1), end=match.end(1), quote=match[1],
+                extraction_method='pypdf-'+version('pypdf')+'-extract_text')
+            fields = [('payslip_net', 'Netto')] if kind == 'paga' else [
+                ('account_opening_balance', 'Saldo iniziale'), ('account_closing_balance', 'Saldo finale')]
+            for name, label in fields:
+                add(name, label, 'EUR', period, number, rule='italian_number', period_source=period_source, period_granularity='month')
+        elif kind == 'mutuo':
             reference = field('Riferimento')
             try:
                 period = datetime.strptime(reference[0], 'Situazione al %d/%m/%Y').date()
@@ -124,4 +151,7 @@ def extract_profile(documents: list[bytes]) -> tuple[Profile, list[dict]]:
             add('purpose', 'Finalita', 'category', period, lambda v: {'acquisto abitazione principale':'primary_home_purchase', 'ristrutturazione':'renovation'}[v], rule='category_mapping', period_source=year[2])
             add('annual_interest', 'Interessi annui documentati', 'EUR', period, number, rule='italian_number', period_source=year[2])
             add('ownership_share', 'Quota intestazione', 'fraction', period, lambda v: number(v) / 100, rule='percentage_to_fraction', period_source=year[2])
+        if kind in {'conto', 'paga'}:
+            names = ('payslip_net',) if kind == 'paga' else ('account_opening_balance', 'account_closing_balance')
+            summaries[-1]['used_for_scenarios'] = any(getattr(profile, name) is not None for name in names)
     return profile, summaries

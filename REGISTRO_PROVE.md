@@ -33,10 +33,12 @@ Il timeout fonte attende il budget comune di 30 secondi; restano 120/90/30/5 sec
 
 Il selettore chiuso `TESI_VERIFICATION_PROFILE` è configurazione fidata del laboratorio, mai una scelta di Card, modello o API pubblica. I profili negativi accettano solo C001. I tre PDF negativi sono ammessi per digest, poi sottoposti al parser; modifiche ai loro byte restano rifiutate dal corpus. Non si montano documenti o ground truth nei servizi.
 
-Il runtime è `financial-profile-2x2-v6`: due consultazioni MCP e una inferenza per attività completata, uguali fra celle; strumenti 0.5.0 e report 0.16.0. I vecchi piloti non verificano questa versione. Il contatore MCP comprende anche il riferimento comune; le metriche del contenuto finanziario restano misure della vista canonica, non catture dei byte trasmessi.
+Il pilota confermato sotto riguarda il runtime `financial-profile-2x2-v6`: due consultazioni MCP e una inferenza per attività completata, uguali fra celle; strumenti 0.5.0 e report 0.16.0. I vecchi piloti non verificano questa versione. Il contatore MCP comprende anche il riferimento comune; le metriche del contenuto finanziario restano misure della vista canonica, non catture dei byte trasmessi.
 
 ## Stato della campagna
 
 Restano previste 25 × 4 × 10 = 1.000 esecuzioni di base e dieci ripetizioni di ogni variante aggiuntiva per cella. I dieci cicli e le 29 varianti restano quelli concordati. I controlli prima/dopo non diventano ripetizioni indipendenti né vengono deduplicati arbitrariamente. Totali fisici, manifest e registro cieco saranno fissati prima del congelamento; qualità e utilità della selezione richiedono l’unico valutatore concordato.
 
 La verifica statica `scripts/check_test_registry.py` controlla definizioni, file/digest e collegamenti. Non esegue procedure e non autorizza una campagna. **Pilota tecnico Docker corrente confermato dai file `runs/block2_manual*`: quattro celle positive, venti esecuzioni Ollama e 259 controlli di confronto senza problemi. Congelamento e campagna finale restano pendenti.** Comandi completi nel [protocollo](PROTOCOLLO_VALUTAZIONE.md#verifica-del-secondo-blocco).
+
+Il contesto facoltativo conto/paga richiesto successivamente è nel runtime v7 (policy 0.4.0, report 0.17.0). Le prove storiche v6 non vengono rinominate o attribuite alla nuova versione. Le verifiche specifiche sono in `tests/test_financial_context.py` e `scripts/check_financial_context.py`; nessuna famiglia V, agente o fonte aggiunta. Per la campagna corrente occorre un nuovo snapshot/pilota.

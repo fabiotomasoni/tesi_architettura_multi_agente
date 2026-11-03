@@ -121,7 +121,8 @@ def authorize_tool(broker, request, authorization):
             if inspectable_view(request.arguments)!=task.view.model_dump(mode='json'):raise EgressDenied('Profilo finanziario MCP difforme')
             inspected.pop('arguments')
         check(broker._privacy.get(grant.session_id,SensitiveContext()),inspected,allowed_paths=view_paths(('arguments',)))
-        expected = task.view.model_dump(mode='json')
+        from .financial_context import source_arguments
+        expected = source_arguments(task.view)
         # Confronto canonico: niente coercizioni che nascondano testo aggiuntivo.
         if request.tool != route.tool or json.dumps(request.arguments, sort_keys=True) != json.dumps(expected, sort_keys=True):
             raise EgressDenied('Argomenti MCP non autorizzati')
@@ -154,7 +155,8 @@ async def source_request(broker, request, authorization):
             if inspectable_view(request.arguments)!=task.view.model_dump(mode='json'):raise EgressDenied('Profilo finanziario MCP difforme')
             inspected.pop('arguments')
         check(broker._privacy.get(grant.session_id,SensitiveContext()),inspected,allowed_paths=view_paths(('arguments',)))
-        expected = task.view.model_dump(mode='json')
+        from .financial_context import source_arguments
+        expected = source_arguments(task.view)
         if (request.server_module is not None or request.tool != route.tool or request.destination != route.destination or request.method != 'POST'
                 or request.headers != {} or json.dumps(request.arguments, sort_keys=True) != json.dumps(expected, sort_keys=True)):
             raise EgressDenied('Richiesta fonte fuori catalogo')

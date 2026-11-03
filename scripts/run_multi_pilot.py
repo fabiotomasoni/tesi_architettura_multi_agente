@@ -28,7 +28,7 @@ def main():
                 sid=None;trace_identifier=None
                 row={'case':case,'repetition':repetition,'policy_version':'0.2.0','workflow':'multi-langgraph-v1','langgraph':version('langgraph'),'scenarios':args.scenarios,'cleanup_verified':False}
                 try:
-                    files=[('files',(kind+'.pdf',(ROOT/'dataset'/'Documents'/f'{case}_{kind}.pdf').read_bytes(),'application/pdf')) for kind in ['mutuo','interessi']]
+                    files=[('files',(kind+'.pdf',(ROOT/'dataset'/'Documents'/f'{case}_{kind}.pdf').read_bytes(),'application/pdf')) for kind in ['mutuo','interessi','conto','paga']]
                     response=client.post('/sessions/pdf',files=files,data={'scenarios':args.scenarios});response.raise_for_status()
                     sid=response.json()['session_id'];trace_identifier=response.json().get('trace_id');row['policy_version']=response.json()['policy_version']
                     response=client.post(f'/sessions/{sid}/analysis');response.raise_for_status()

@@ -16,7 +16,7 @@ def verify(single,multi):
     for key in sorted(set(s)&set(m)):
         a,b=s[key],m[key];label=key[0]+'/'+str(key[1])
         checks[label+'/runs_passed']=all(r.get('passed') and r.get('cleanup_verified') and r.get('automatic_session_closed') for r in (a,b))
-        checks[label+'/current_reference_contract']=all(r['experiment'].get('protocol')=='financial-profile-2x2-v6' and r['experiment'].get('shared_reference') is True and r['experiment'].get('mcp_calls_per_activity')==2 for r in (a,b))
+        checks[label+'/current_reference_contract']=all(r['experiment'].get('protocol')=='financial-profile-2x2-v7' and r['experiment'].get('shared_reference') is True and r['experiment'].get('mcp_calls_per_activity')==2 for r in (a,b))
         checks[label+'/same_weights']=a.get('model_digest')==b.get('model_digest') and bool(a.get('model_digest'))
         x={k:v for k,v in a['experiment'].items() if k!='organization'};y={k:v for k,v in b['experiment'].items() if k!='organization'}
         checks[label+'/same_settings']=x==y and x['sources']=='fixed_local_fixtures' and x['policy'] in {'active','disabled'} and x['schedule']=='sequential'

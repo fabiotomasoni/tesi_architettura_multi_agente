@@ -10,7 +10,7 @@ from urllib.parse import unquote
 from pypdf import PdfReader
 from .a2a_egress import EgressDenied
 
-PRIVACY_VERSION='0.2.0'
+PRIVACY_VERSION='0.3.0'
 ENTITY_RECOGNIZER_VERSION='it-context-rules-0.1.0'
 
 
@@ -74,7 +74,8 @@ def recognize_entities(text):
 # Eccezioni solo per numeri in campi autorizzati da contratti/template fidati.
 # Non applicare a testo libero, chiavi, URL o intestazioni.
 VIEW_NUMERIC_PATHS=frozenset({('tax_year',),
-    ('remaining_years_band','lower_exclusive'),('remaining_years_band','upper_inclusive')})
+    ('remaining_years_band','lower_exclusive'),('remaining_years_band','upper_inclusive')} | {
+    ('document_context',kind,'period',part) for kind in ('payslip','account') for part in ('year','month')})
 
 
 def view_paths(prefix=()):

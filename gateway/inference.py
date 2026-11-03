@@ -28,7 +28,7 @@ from .market_analysis import build_analysis_input, market_payload, review_for_di
 from .tax_analysis import build_analysis_input as tax_input, tax_payload, review_for_display as review_tax, TAX_ANALYSIS_PROMPT
 
 OLLAMA_ENDPOINT = 'http://127.0.0.1:11434/api/chat'
-INFERENCE_CATALOG_VERSION = '0.5.0'
+INFERENCE_CATALOG_VERSION = '0.6.0'
 MODELS = MappingProxyType({'S-01': 'llama3.2:3b', 'S-02': 'llama3.2:3b' if runtime.EXPERIMENT!='off' else 'qwen3:1.7b'})
 PROMPTS = {'S-01': MARKET_ANALYSIS_PROMPT, 'S-02': TAX_ANALYSIS_PROMPT}
 
@@ -131,7 +131,9 @@ class InferenceBroker:
                 from .disclosure import view_metrics
                 result.measurements['view_metric_scope']='canonical_authorized_financial_content_not_wire_delivery_proof'
                 result.measurements.update(view_metrics(checked.view,'a2a_view'))
-                if grant.tool_used:result.measurements.update(view_metrics(checked.view,'mcp_arguments'))
+                if grant.tool_used:
+                    from .financial_context import source_arguments
+                    result.measurements.update(view_metrics(source_arguments(checked.view),'mcp_arguments'))
                 if grant.used:result.measurements.update(view_metrics(checked.view,'model_context'))
             result.measurements['gateway_source_receipt_verified']=int(grant.source_completed and received_evidence is not None and received_evidence.model_dump(mode='json')==grant.source_evidence)
             if grant.external_http_ms is not None:

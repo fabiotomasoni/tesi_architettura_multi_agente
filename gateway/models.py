@@ -33,6 +33,7 @@ class Fact(Contract):
     value: str | Decimal | int
     unit: str
     period: date
+    period_granularity: Literal['day', 'month', 'year'] = 'day'
     source: Source
     period_source: Source | None = None
     origin: Literal['extracted', 'transformed', 'derived', 'declared'] = 'declared'
@@ -41,6 +42,9 @@ class Fact(Contract):
 
 
 class Profile(Contract):
+    payslip_net: Fact | None = None
+    account_opening_balance: Fact | None = None
+    account_closing_balance: Fact | None = None
     mortgage_type: Fact | None = None
     rate_type: Fact | None = None
     remaining_principal: Fact | None = None

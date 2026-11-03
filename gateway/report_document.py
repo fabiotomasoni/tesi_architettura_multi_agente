@@ -8,6 +8,8 @@ LABELS = {
     'payment_frequency': 'Periodicità della rata', 'tax_year': 'Anno d’imposta',
     'purpose': 'Finalità dichiarata', 'annual_interest': 'Interessi annui documentati',
     'ownership_share': 'Quota di intestazione',
+    'payslip_net': 'Netto della busta paga', 'account_opening_balance': 'Saldo iniziale del conto',
+    'account_closing_balance': 'Saldo finale del conto',
 }
 CATEGORIES = {
     'fixed': 'Fisso', 'variable': 'Variabile', 'mixed': 'Misto', 'monthly': 'Mensile',
@@ -114,7 +116,7 @@ def render_report_document(report):
         paragraph('Documenti del dataset sintetico. Le fonti istituzionali recuperate e le eventuali fonti simulate sono distinte nelle citazioni. Nessuna offerta personale o spettanza fiscale attestata.')
     else:
         paragraph('Dati del dataset sintetico. Le fonti di questa versione sono simulate o non disponibili: questo documento non verifica offerte di mercato o normative reali.')
-    paragraph('Perimetro: PDF nativi dei template sintetici; nessun OCR. Conto e busta paga non alimentano i due approfondimenti attuali. La validazione non certifica l’autenticità dei documenti.')
+    paragraph('Perimetro: PDF nativi dei template sintetici; nessun OCR. Conto e busta paga forniscono un contesto mensile facoltativo, senza accertare reddito stabile, sostenibilità o diritti fiscali. La validazione non certifica l’autenticità dei documenti.')
     parts.append('<ul class="report-legend"><li>Dati documentali con provenienza</li><li>Fonti istituzionali o simulate</li><li>Calcoli locali con ipotesi</li><li>Selezioni e commenti LLM separati</li></ul>')
     for tone,title,details in report_alerts(report):
         parts.append('<div class="report-alert tone-'+tone+'" role="note"><p><strong>'+('! ' if tone=='error' else 'Nota — ')+text(title)+'</strong></p>')
@@ -131,8 +133,13 @@ def render_report_document(report):
          REASONS.get(item.get('error_code'), item.get('interpretation', ''))]
         for item in report.get('outcomes', [])],tones=['error' if item.get('status')!='completed' else None for item in report.get('outcomes',[])])
     heading('2. Dati documentali e provenienza')
-    for section in report.get('document_data', []):
-        paragraph('Mutuo' if section.get('scenario') == 'S-01' else 'Interessi e fiscalità')
+    sections = list(report.get('document_data', []))
+    context = report.get('financial_context')
+    if context:
+        sections.append({'scenario': 'CONTEXT', 'facts': context['facts']})
+    for section in sections:
+        optional_context = section.get('scenario') == 'CONTEXT'
+        paragraph('Conto e busta paga — contesto facoltativo' if optional_context else 'Mutuo' if section.get('scenario') == 'S-01' else 'Interessi e fiscalità')
         rows = [];row_tones=[]
         for name, fact in section.get('facts', {}).items():
             source = fact.get('source') or {}
@@ -143,11 +150,13 @@ def render_report_document(report):
             quote = source.get('quote')
             if quote is not None:
                 reference += ' — «' + str(quote) + '»'
-            problematic=fact.get('status') in {'missing','ambiguous','unvalidated'} or bool(fact.get('validation_issues'))
-            optional=fact.get('status')=='not_specified'
+            problematic=(fact.get('status') in {'missing','ambiguous','unvalidated'} or bool(fact.get('validation_issues'))) and not optional_context
+            optional=fact.get('status')=='not_specified' or (optional_context and (fact.get('status') in {'missing','ambiguous','unvalidated'} or bool(fact.get('validation_issues'))))
             row_tones.append('error' if problematic else 'warning' if optional else None)
-            rows.append([('! ' if problematic else '')+LABELS.get(name, name), value(fact), fact.get('period', '—'), reference])
+            rows.append([('! ' if problematic else '')+LABELS.get(name, name), value(fact), str(fact.get('period', '—'))[:7] if fact.get('period_granularity')=='month' else fact.get('period', '—'), reference])
         table(['Informazione', 'Valore', 'Periodo', 'Documento e citazione'], rows, tones=row_tones)
+    if context:
+        listing(context['limits'])
     contract = report.get('mortgage_contract_analysis')
     if contract:
         heading('3. Analisi locale del contratto e confronto orientativo')

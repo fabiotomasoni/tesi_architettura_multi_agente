@@ -1,6 +1,6 @@
 # Protocollo di valutazione — soglie approvate, congelamento pendente
 
-Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota tecnico corrente 2×2 è confermato dai file del blocco 2; la campagna finale resta distinta. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali; S04 è autorizzato solo nel perimetro locale concordato**. La configurazione corrente nel codice è `financial-profile-2x2-v6` (pilota tecnico confermato, campagna finale non autorizzata); il file controllabile è `evaluation/protocol.json`.
+Riferimenti: tesi §§3.5 e 4.6, RNF-08, RQ1–RQ3. Il pilota tecnico corrente 2×2 è confermato dai file del blocco 2; la campagna finale resta distinta. L’aggiunta del contesto mensile conto/paga porta il codice a **v7**: i piloti v6 sotto riportati sono evidenze storiche, non verifiche della nuova versione; `campaign_v1` va conservato senza riuso per la finale. Questo documento prepara la campagna: **ha soglie e rubrica approvate dall’utente, ma non certifica tutti i requisiti e non avvia esperimenti finali; S04 è autorizzato solo nel perimetro locale concordato**. La configurazione corrente nel codice è `financial-profile-2x2-v7` (aggiunta facoltativa conto/paga, campagna finale non autorizzata); il file controllabile è `evaluation/protocol.json`.
 
 ## Disegno e materiale di riferimento
 
@@ -141,7 +141,7 @@ La modalità crash esegue SIGKILL/start del gateway in modo esplicito e prova a 
 
 La tesi (§3.5, V-06; RNF-05) richiede un agente **o** uno strumento equivalente. Questo incremento sceglie soltanto lo strumento mercati: `services.rates_mcp` (FastMCP) e `services.rates_mcp_equivalent` (API low-level MCP) sono implementazioni distinte dello stesso `lookup_rates`. Il sostitutivo dichiara esplicitamente lo schema, senza importare il server standard; entrambi accedono alla stessa fonte esclusivamente tramite il proxy. Nessun valore della fixture viene ricostruito dal nuovo server. È una prova circoscritta di interoperabilità, non compatibilità universale o sostituzione di qualunque agente.
 
-Il catalogo strumenti 0.5.0 seleziona un solo modulo tramite `TESI_MARKET_TOOL_IMPLEMENTATION=standard|equivalent`, configurazione fidata all’avvio. La policy dei dati resta 0.3.0. Nomi di modulo arbitrari e combinazioni con profili comparativi, fonti reali o fixture negative sono rifiutati; nessuna selezione del modulo dal modello. `compose.substitution.yaml` cambia solo questa variabile nel gateway. Gli agenti continuano a seguire il permesso ottenuto dal gateway: non cambiano estrazione, viste, topologia, identità, fonte, agente o modello.
+Il catalogo strumenti 0.5.0 seleziona un solo modulo tramite `TESI_MARKET_TOOL_IMPLEMENTATION=standard|equivalent`, configurazione fidata all’avvio. La policy corrente dei dati è 0.4.0; il contesto mensile non entra negli argomenti delle ricerche pubbliche. Nomi di modulo arbitrari e combinazioni con profili comparativi, fonti reali o fixture negative sono rifiutati; nessuna selezione del modulo dal modello. `compose.substitution.yaml` cambia solo questa variabile nel gateway. Gli agenti continuano a seguire il permesso ottenuto dal gateway: non cambiano estrazione, viste, topologia, identità, fonte, agente o modello.
 
 I test confrontano i contratti completi di `tools/list` via stdio e verificano rifiuto senza proxy e configurazioni non ammesse. La prova positiva nativa esegue i cinque casi C001/C024/C006/C011/C016 in tre avvii del gateway (standard, equivalente, standard), con veri SDK A2A e server MCP, agenti invariati e risposta modello controllata. Non è una verifica dell’isolamento Docker: le destinazioni loopback e il ponte al modello appartengono alla fixture di test. I test del driver verificano anche ripristino della configurazione e pulizia se la prova fallisce.
 
@@ -213,13 +213,13 @@ La prova nativa automatica usa gli stessi agenti durante guasti e recupero; è i
 
 ## Selezione degli specialisti e commento opzionale
 
-Perimetro ristretto confermato dall’autore dopo l’esito negativo di report-locale-36 e la diagnosi dei modelli. Il runtime corrente è `financial-profile-2x2-v6`, contratto `market-selection-1`, generazione `market-selection-generation-1`, catalogo `market-statements-1`. Il mercati sceglie uno/due enunciati sulla fonte e uno sul contesto fra quelli ricevuti; può aggiungere una breve spiegazione collegata alla selezione. Il gateway costruisce il catalogo da fonte validata e vista già autorizzata, conserva il profilo finanziario completo nel laboratorio senza minimizzazione e ricontrolla la risposta. Nessuna selezione viene inventata se il modello manca o propone identificativi non ammessi.
+Perimetro ristretto confermato dall’autore dopo l’esito negativo di report-locale-36 e la diagnosi dei modelli. Il runtime corrente è `financial-profile-2x2-v7`, contratto `market-selection-1`, generazione `market-selection-generation-2`, catalogo `market-statements-2`. Il mercati sceglie uno/due enunciati sulla fonte e uno sul contesto fra quelli ricevuti; può aggiungere una breve spiegazione collegata alla selezione. Il gateway costruisce il catalogo da fonte validata e vista già autorizzata, conserva il profilo finanziario completo nel laboratorio senza minimizzazione e ricontrolla la risposta. Nessuna selezione viene inventata se il modello manca o propone identificativi non ammessi.
 
 Il report ricostruisce i testi dal catalogo dopo la scelta, non dal testo fornito dal modello. Sono definizioni/trasformazioni controllate con riferimenti ai campi della fonte/vista; non citazioni letterali delle pubblicazioni. Verifica di identificativi/testi/riferimenti distinta dalla pertinenza della scelta: `selection_relevance_verified` e `semantic_verified` restano falsi. Una selezione valida sopravvive al commento escluso (`selection_only`), senza spiegazione sostitutiva. I fatti documentali, le fonti e i calcoli locali restano indipendenti dalla selezione. Una prova controllata dimostra che scelte diverse del modello cambiano il focus del report a parità di risultati finanziari, senza attribuire questo effetto a una scelta autonoma degli strumenti o delle destinazioni.
 
 Numeri/date confrontati con i soli riferimenti degli enunciati scelti; non basta che un numero sia altrove nell’input. Controlli lessicali su alcune raccomandazioni, confusioni di fonte, proprietà non selezionate e frasi apparentemente incomplete: possibili falsi positivi e copertura incompleta, nessuna certificazione semantica generale. Il valutatore giudica pertinenza, completezza, fedeltà e utilità; commento assente/escluso resta un limite da valutare, anche se il pilota tecnico accetta una selezione valida. Le soglie e la rubrica approvate non cambiano. Nei JSONL del pilota si registrano stato, conteggi e disponibilità del commento, senza testi o identificativi degli enunciati scelti.
 
-Restano gli stessi modelli (llama3.2:3b mercati e pesi comuni nel laboratorio; qwen3:1.7b fiscale della demo), contesto 4096, temperatura zero, limiti 768 token S-01/200 S-02, una inferenza per attività e le deadline concordate. Non si adottano qwen3:4b, retry o nuovi provider. Il fiscale usa tax-selection-1, generazione tax-selection-generation-1 e catalogo tax-statements-1, con lo stesso compito circoscritto. I risultati delle versioni precedenti e le prove iterative di sviluppo non costituiscono la valutazione del runtime v6: ripetere il pilota a quattro celle dopo gli incrementi sugli agenti, prima del congelamento.
+Restano gli stessi modelli (llama3.2:3b mercati e pesi comuni nel laboratorio; qwen3:1.7b fiscale della demo), contesto 4096, temperatura zero, limiti 768 token S-01/200 S-02, una inferenza per attività e le deadline concordate. Non si adottano qwen3:4b, retry o nuovi provider. Il fiscale usa tax-selection-1, generazione tax-selection-generation-2 e catalogo tax-statements-2, con lo stesso compito circoscritto. I risultati delle versioni precedenti e le prove iterative di sviluppo non costituiscono la valutazione del runtime v7: ripetere il pilota a quattro celle dopo gli incrementi sugli agenti, prima del congelamento.
 
 Quattro riproduzioni con il modello locale attuale tramite broker su viste sintetiche fisse/variabili e ricevuta BCE archiviata/fixture hanno prodotto selezioni valide. Il testo dei commenti ha evidenziato anche incompletezza e proprietà non selezionate, coperte da nuove regressioni; non viene dichiarata verificata l’intera prosa. Nessun PDF, ground truth o dato originale al modello, nessun nuovo recupero BCE e nessuna prova dell’isolamento Docker in queste riproduzioni. Le verifiche automatiche con modello controllato coprono anche MCP, ciclo di vita, guardie e report. **Pilota manuale della selezione mercati confermato sulla demo aggiornata:** report-locale (3).json/C001 fisso e report-locale (4).json/C024 variabile. Testi e riferimenti selezionati ricostruibili dal catalogo, digest fonte coerente, ricevuta modello presente; in entrambi selection_only, con prosa esclusa rispettivamente per proprietà non selezionata e possibile frase incompleta. Conferma del percorso e delle guardie, non della correttezza dei commenti o di qualità umana già misurata. Restano la conferma fiscale della demo aggiornata, i nuovi piloti a quattro celle e la valutazione finale. S04 locale circoscritto autorizzato dall’autore; campagna finale non autorizzata.
 
@@ -319,7 +319,7 @@ Windows PowerShell: stessi comandi Docker; comandi Python corrispondenti:
 
 Il ponte va nel secondo terminale anche su Windows. Le 76 integrazioni lunghe del blocco 2 restano separate: questa verifica esegue le regressioni, senza ripetere la campagna Docker. Verifica di sviluppo corrente: 826 test passati, 127 warning delle dipendenze. Atteso sulla propria installazione: test passati; i warning delle dipendenze non vanno nascosti. Nessun nuovo programma o pacchetto grafico da installare per la demo.
 
-Aprire http://127.0.0.1:8080/ e ricaricare completamente la pagina (Cmd+Shift+R su macOS, Ctrl+F5 su Windows). Scegliere entrambi gli approfondimenti. Per ogni caso selezionare almeno mutuo e interessi dello stesso fascicolo, poi **Carica e verifica → Avvia analisi**. Conto e paga facoltativi non alimentano i due scenari. Non modificare manualmente i dati estratti.
+Aprire http://127.0.0.1:8080/ e ricaricare completamente la pagina (Cmd+Shift+R su macOS, Ctrl+F5 su Windows). Scegliere entrambi gli approfondimenti. Per ogni caso selezionare almeno mutuo e interessi dello stesso fascicolo, poi **Carica e verifica → Avvia analisi**. Caricare anche conto e paga per verificare il contesto mensile aggiuntivo: restano facoltativi e non sostituiscono i campi obbligatori dei due scenari. Non modificare manualmente i dati estratti.
 
 | Caso | Esito atteso con fonti/modelli disponibili | Controllo visivo |
 |---|---|---|
@@ -382,9 +382,9 @@ Fermare con Ctrl+C tutti i ponti già aperti, ordinari o sperimentali. Lasciare 
 docker build -f deployment/Dockerfile -t tesi-s03-app:local .
 .venv/bin/python scripts/setup_isolation.py
 .venv/bin/python scripts/setup_baseline.py
-.venv/bin/python scripts/prepare_campaign.py prepare --directory runs/campaign_v1
-.venv/bin/python scripts/prepare_campaign.py check --directory runs/campaign_v1
-.venv/bin/python scripts/run_campaign.py --directory runs/campaign_v1 --pilot
+.venv/bin/python scripts/prepare_campaign.py prepare --directory runs/campaign_v2
+.venv/bin/python scripts/prepare_campaign.py check --directory runs/campaign_v2
+.venv/bin/python scripts/run_campaign.py --directory runs/campaign_v2 --pilot
 ```
 
 La seconda immagine netguard è quella già usata nei blocchi precedenti; per una prima installazione seguire il README. Il preparatore controlla che i file runtime nell’immagine coincidano con i sorgenti. Registra immagini, versioni host/container, pesi del modello comune, configurazione, PDF/fixture, annotazioni e rubriche, senza nomi utente, percorsi personali, credenziali o prompt delle sessioni. Usa i parametri esistenti (4096 token di contesto, temperatura zero, 768/200 token di risposta, `keep_alive=0`, budget 120/90/30/5). L’ambiente viene controllato prima e dopo ogni blocco. L’analisi non riceve mai annotazioni o voti.
@@ -398,9 +398,9 @@ La cartella deve essere nuova. Manifest o file cambiati bloccano l’esecuzione;
 Dopo il completamento:
 
 ```bash
-.venv/bin/python scripts/review_campaign.py export --directory runs/campaign_v1 --pilot
-.venv/bin/python scripts/review_campaign.py summary --directory runs/campaign_v1 --pilot --output runs/campaign_v1/pilot/summary.json
-open runs/campaign_v1/pilot/public/index.html
+.venv/bin/python scripts/review_campaign.py export --directory runs/campaign_v2 --pilot
+.venv/bin/python scripts/review_campaign.py summary --directory runs/campaign_v2 --pilot --output runs/campaign_v2/pilot/summary.json
+open runs/campaign_v2/pilot/public/index.html
 ```
 
 Atteso: 240 report nel registro se tutti i percorsi hanno gli esiti previsti; **punteggi assegnati automaticamente: 0**. I campi di `public/ratings.csv` devono essere vuoti. Il riepilogo senza `--ratings` ha qualità non disponibile, nessuna media/voto simulato. Non serve assegnare 240 voti al pilota per provare il funzionamento del registro: controllare qualche documento, riferimenti e campi della scheda. I voti della campagna finale restano distinti.
@@ -417,12 +417,12 @@ Stessi comandi Docker. Procedura prevista, non ancora verificata direttamente:
 docker build -f deployment/Dockerfile -t tesi-s03-app:local .
 .\.venv\Scripts\python.exe scripts/setup_isolation.py
 .\.venv\Scripts\python.exe scripts/setup_baseline.py
-.\.venv\Scripts\python.exe scripts/prepare_campaign.py prepare --directory runs/campaign_v1
-.\.venv\Scripts\python.exe scripts/prepare_campaign.py check --directory runs/campaign_v1
-.\.venv\Scripts\python.exe scripts/run_campaign.py --directory runs/campaign_v1 --pilot
-.\.venv\Scripts\python.exe scripts/review_campaign.py export --directory runs/campaign_v1 --pilot
-.\.venv\Scripts\python.exe scripts/review_campaign.py summary --directory runs/campaign_v1 --pilot --output runs/campaign_v1/pilot/summary.json
-Start-Process "runs\campaign_v1\pilot\public\index.html"
+.\.venv\Scripts\python.exe scripts/prepare_campaign.py prepare --directory runs/campaign_v2
+.\.venv\Scripts\python.exe scripts/prepare_campaign.py check --directory runs/campaign_v2
+.\.venv\Scripts\python.exe scripts/run_campaign.py --directory runs/campaign_v2 --pilot
+.\.venv\Scripts\python.exe scripts/review_campaign.py export --directory runs/campaign_v2 --pilot
+.\.venv\Scripts\python.exe scripts/review_campaign.py summary --directory runs/campaign_v2 --pilot --output runs/campaign_v2/pilot/summary.json
+Start-Process "runs\campaign_v2\pilot\public\index.html"
 ```
 
 Eseguire la build Docker prima di `prepare`, come su macOS. Usare sempre un nome nuovo per ripetere una prova; non sovrascrivere snapshot o giudizi.
@@ -434,9 +434,9 @@ Eseguire la build Docker prima di `prepare`, come su macOS. Usare sempre un nome
 I comandi seguenti sono la procedura futura, **non istruzioni per avviare subito la campagna**. Dopo pilota positivo e conferma dell’autore del manifest concreto:
 
 ```bash
-.venv/bin/python scripts/prepare_campaign.py approve --directory runs/campaign_v1 --approve-final-campaign
-.venv/bin/python scripts/run_campaign.py --directory runs/campaign_v1
-.venv/bin/python scripts/review_campaign.py export --directory runs/campaign_v1
+.venv/bin/python scripts/prepare_campaign.py approve --directory runs/campaign_v2 --approve-final-campaign
+.venv/bin/python scripts/run_campaign.py --directory runs/campaign_v2
+.venv/bin/python scripts/review_campaign.py export --directory runs/campaign_v2
 ```
 
 Senza approvazione del manifest il secondo comando si rifiuta prima di modificare i servizi. L’approvazione richiede anche l’integrità delle evidenze del pilota corrente; non viene scritta dal pilota stesso. Nella campagna ogni sessione parte da zero; i controlli di recupero richiamano intenzionalmente gli identificativi vecchi per verificarne il diniego.
@@ -444,9 +444,21 @@ Senza approvazione del manifest il secondo comando si rifiuta prima di modificar
 L’unico valutatore compila `final/public/ratings.csv` secondo la rubrica approvata: correttezza, copertura, provenienza e limiti, ciascuno 0–2; `critical_error` yes/no, note obbligatorie per errore critico. Poi:
 
 ```bash
-.venv/bin/python scripts/review_campaign.py summary --directory runs/campaign_v1 --ratings runs/campaign_v1/final/public/ratings.csv --output runs/campaign_v1/final/summary_rated.json
+.venv/bin/python scripts/review_campaign.py summary --directory runs/campaign_v2 --ratings runs/campaign_v2/final/public/ratings.csv --output runs/campaign_v2/final/summary_rated.json
 ```
 
 Windows: sostituire solo l’eseguibile Python come sopra. I riepiloghi mantengono medie e varianze campionarie per caso/cella/replica e controlli distinti, conteggi di stato, disponibilità dei campioni e differenze appaiate +P/−P, singolo/multi e interazione descrittiva. Non sono test di significatività o prova di superiorità. Le fasi annidate sono inclusive: non vengono sommate per fabbricare un totale. Le due letture diagnostiche delle viste per misurare utilità sono uguali in tutte le celle e distinte dal tempo della sola analisi; l’unione dei tempi backend comprende queste richieste. Byte e categorie sono misure del JSON canonico, non catture del traffico.
 
 Consumi sconosciuti rimangono null; i costi di energia/hardware non misurati e tariffe API non sostenute non vengono inventati. I dinieghi non sono divulgazioni. Il riepilogo non converte l’assenza di osservazioni in zero violazioni e non dichiara automaticamente soddisfatta la privacy: per il vincolo assoluto occorre leggere le prove di isolamento e le sonde autorizzate, senza compensare un’eventuale violazione con le medie. Il contenuto del modello resta soggetto a valutazione umana anche quando schema e riferimenti passano.
+
+## Contesto facoltativo conto e paga — runtime v7
+
+Riferimenti: tesi §3.1, RF-02/RF-03/RF-08. Il parser legge soltanto netto della busta paga e saldi iniziale/finale dell’estratto conto, con importo, mese e citazioni di valore/titolo. Il periodo mensile è codificato a fine mese (`period_granularity=month`); non è la data di accredito o di un movimento. Sono osservazioni di un mese e di un conto, non reddito stabile/annuo, patrimonio complessivo, sostenibilità del mutuo o attestazione fiscale. Movimenti, datore e trattenute simulate non vengono interpretati. Nessuna nuova fonte normativa è necessaria per leggere questi dati; BCE e AdE restano i connettori già autorizzati, senza inviare loro il nuovo contesto personale.
+
+Le viste ridotte contengono segno del netto, segno/andamento del saldo e anno/mese. I due modelli possono selezionare i nuovi enunciati di contesto; la scelta non viene forzata o sostituita. Un dato assente/ambiguo è escluso dai segnali, saldi di periodi diversi non vengono confrontati; gli errori obbligatori S-01/S-02 restano bloccanti. Nel laboratorio senza minimizzazione il profilo strutturato comprende i tre nuovi campi esatti, con gli stessi ingressi e calcoli locali. Il contesto aggiuntivo è escluso dagli argomenti MCP nelle viste ridotte; la misura dei byte MCP usa ora gli argomenti effettivamente autorizzati.
+
+Versioni: policy 0.4.0, privacy 0.3.0, report 0.17.0, inferenza 0.6.0, runtime `financial-profile-2x2-v7`, cataloghi `market-statements-2` e `tax-statements-2`, generazioni `market-selection-generation-2` e `tax-selection-generation-2`. Schemi di selezione, modelli, budget e numero di agenti restano quelli concordati.
+
+Controllo automatico: `.venv/bin/python -m pytest -q tests/test_financial_context.py`. Controllo del report scaricato: `.venv/bin/python scripts/check_financial_context.py "PERCORSO_DEL_REPORT.json"`, poi `check_report_provenance.py` sullo stesso file. Su C001/C024 con quattro PDF: 13 fatti verificati e zero problemi; tutti i controlli del contesto devono essere veri. Per Windows usare `.\.venv\Scripts\python.exe` al posto del comando Python. La prova guidata completa è dettata in chat; avviare il ponte ordinario solo dopo aver ricostruito l’immagine e riavviato i servizi.
+
+Il pilota `runs/campaign_v1` resta riferito al precedente codice: non modificarne manifest, evidenze, schede o punteggi. Per v7 usare una nuova cartella, per esempio `runs/campaign_v2`, con `prepare_campaign.py prepare/check`, poi `run_campaign.py --pilot`, esportazione e riesame. Le basi del nuovo runner caricano i quattro PDF in tutte le celle; i cicli controllati conservano i propri ingressi dichiarati. Le annotazioni approvate e il rapporto di utilità rimangono riferiti ai fatti necessari S-01/S-02; il contesto supplementare è controllato separatamente contro i PDF e considerato nella lettura umana del report. Nessun punteggio, nuova approvazione delle annotazioni o avvio finale è implicito.
