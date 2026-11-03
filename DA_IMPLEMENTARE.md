@@ -39,19 +39,19 @@ Riferimenti: RF-01/RF-02/RF-08/RF-09, RNF-07, sezione 4.2.
 
 **Da confermare dall’autore:** demo Docker/Ollama aggiornata e anteprima/salvataggio PDF nel proprio browser, con i casi e i comandi nel protocollo. Le prove UI con modello controllato non attestano qualità LLM o una nuova acquisizione Internet. Esportazione esplicita, nessuno storico dei profili; un guasto di presentazione conserva il risultato strutturato.
 
-## 4. Completare la valutazione riproducibile
+## 4. Valutazione riproducibile — pilota confermato, approvazione finale pendente
 
 Riferimenti: RNF-08, RQ1–RQ3, sezioni 3.5/4.6.
 
 - Conservare il confronto singolo/multi × minimizzazione attiva/disattivata, con dati, pesi, impostazioni, fonti fissate e budget comparabili. Senza minimizzazione si condivide il profilo finanziario strutturato concordato, mai PDF, testo grezzo o identificativi; nessun servizio reale è raggiungibile in queste condizioni.
-- Preparare manifest di ambiente/modelli, runner finale e registro cieco per l’unico valutatore concordato. Le 25 annotazioni sono confermate dall’autore; soglie e rubrica sono approvate. Il protocollo completo resta da congelare e la campagna finale non è ancora autorizzata.
-- Eseguire le dieci ripetizioni indipendenti per caso/configurazione previste, dopo il congelamento. Misurare qualità e utilità del contributo LLM, privacy, robustezza, tempi, token e costi; distinguere dati osservati, stime e consumi non disponibili. Riportare media, varianza campionaria e conteggi/tassi, senza assumere superiorità del multi-agente.
+- Implementati manifest di sorgenti, PDF/fixture, dipendenze, immagini e pesi Ollama; piano bilanciato a blocchi, runner e registro cieco per l’unico valutatore. Le 25 annotazioni, soglie e rubrica restano quelle approvate. I dati del valutatore sono separati dal runtime. Nessuna approvazione finale registrata automaticamente.
+- Predisposte le dieci ripetizioni per caso/configurazione e tutte le varianti già registrate, con controlli adiacenti, conteggio degli ingressi e dei report consegnati. Riprese solo su blocchi mai avviati: nessun retry/overwrite implicito. Riepiloghi di tempi, token, byte/categorie e utilità; media/varianza campionaria, contrasti organizzazione/policy e interazione descrittiva. Voti importati dal solo valutatore; costi non misurati e osservazioni assenti rimangono null, senza successi o tariffe inventati.
 - Tenere separate demo Internet e confronto su fonti locali/simulate fissate. Verificare setup macOS/Windows; Windows non è ancora verificato direttamente.
 
-**Chiusura:** demo riproducibile e risultati collegati alle tre RQ, con limiti dichiarati. I piloti delle quattro celle già eseguiti (cinque casi, una ripetizione per cella) non sono la campagna finale.
+**Pilota confermato:** `runs/campaign_v1`, quattro celle positive, 260 sessioni create, 12 upload rifiutati e 240 report consegnati; venti sessioni Ollama reali, schede ancora senza voti. Manifest, evidenze e pubblicazione verificati. **Residuo:** approvare esplicitamente quel manifest, prima delle esecuzioni finali e dei voti umani. Piano atteso: 1.000 basi Ollama + 2.400 sessioni dei cicli controllati già concordati, 120 upload rifiutati e 3.200 report consegnabili da valutare, se tutti i percorsi hanno gli esiti previsti. I numeri osservati e le assenze vengono registrati: non sono risultati già ottenuti. Nessuna deduplicazione arbitraria dei controlli. I vecchi piloti non sostituiscono questa raccolta.
 
 ## Metodo e prossimo intervento
 
-Il pilota del blocco 2 è confermato. Verificare la demo/documento aggiornati (blocco 3), poi completare manifest, runner finale e registro cieco prima del congelamento (blocco 4). Conservare anche gli esiti negativi senza sovrascriverli. La verifica reale BCE/AdE del blocco 1 rimane distinta dal confronto sulle fixture.
+I piloti dei blocchi 2 e 4 sono confermati. Resta distinta la conferma manuale della demo/PDF (blocco 3). Il manifest concreto `runs/campaign_v1` è verificato e attende l’approvazione esplicita dell’autore per la campagna finale, senza ulteriori funzionalità da aggiungere al prototipo. Conservare anche gli esiti negativi senza sovrascriverli. La verifica reale BCE/AdE del blocco 1 rimane distinta dal confronto sulle fixture.
 
 Ogni blocco viene svolto in un unico lavoro, con codice, documenti e verifiche automatiche; alla fine fornire tutti i comandi manuali con terminale, servizi, esiti attesi e titolo del commit. Diario breve, numerato e senza date. Scalare il residuo soltanto dopo verifica. La campagna finale richiede autorizzazione distinta; S04 ha soltanto l’autorizzazione locale circoscritta registrata. Database dei profili, OCR, agenti remoti e nuove infrastrutture restano fuori dal perimetro implicito.

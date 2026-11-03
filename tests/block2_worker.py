@@ -83,13 +83,15 @@ def execute(client,case='C001',scenarios=('S-01','S-02'),kinds=('mutuo','interes
     return body,trace
 
 
-def finalization_checks(client):
+def finalization_checks(client, *, faults=('cancel','ttl','delivery_asgi'), before_each=False, on_variant=None):
     import gateway.app as module
     endpoint=next(r.endpoint for r in app.routes if getattr(r,'path',None)=='/internal/tools/authorize')
     broker=next(c.cell_contents for c in endpoint.__closure__ if hasattr(c.cell_contents,'_grants'))
     initial=(client.get('/health').json()['gateway_boot_id'])
     from concurrent.futures import ThreadPoolExecutor
-    for fault in ['cancel','ttl']:
+    for fault in [f for f in faults if f in {'cancel','ttl'}]:
+        if on_variant:on_variant(fault)
+        if before_each:execute(client)
         upload=client.post('/sessions/pdf',files=[('files',(k+'.pdf',Path(f'dataset/Documents/C001_{k}.pdf').read_bytes(),'application/pdf')) for k in ('mutuo','interessi')],data={'scenarios':['S-01','S-02']})
         sid=upload.json()['session_id'];held.update(enabled=True,entered=threading.Event(),stopped=threading.Event(),request=None)
         old_clock=module.monotonic
@@ -114,6 +116,9 @@ def finalization_checks(client):
         assert client.delete('/sessions/'+sid).status_code==404
         recovered,_=execute(client);assert recovered['status']=='completed'
         assert client.get('/health').json()['gateway_boot_id']==initial
+    if 'delivery_asgi' not in faults:return
+    if on_variant:on_variant('delivery_asgi')
+    if before_each:execute(client)
     # Guasto di consegna ASGI dopo la costruzione del report; nessuna ricevuta client.
     upload=client.post('/sessions/pdf',files=[('files',(k+'.pdf',Path(f'dataset/Documents/C001_{k}.pdf').read_bytes(),'application/pdf')) for k in ('mutuo','interessi')],data={'scenarios':['S-01','S-02']})
     sid=upload.json()['session_id'];generated=[]

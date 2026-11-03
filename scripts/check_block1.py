@@ -38,14 +38,14 @@ def expected_activities(case):
             'S-02':'blocked' if 11<=n<=15 else 'completed'}
 
 
-def verify_report(report, expected):
+def verify_report(report, expected, *, real_sources=True, minimization='active'):
     """Ricontrolla il JSON, il catalogo delle selezioni e i PDF locali originali."""
     checked,problems=provenance(report,ROOT/'dataset'/'Documents')
     checks={'documentary_provenance':checked>0 and not problems,
             'requested_scenarios':set(report['requested_scenarios'])==set(expected),
-            'no_simulated_fallback':not report.get('simulated_sources'),
+            ('no_simulated_fallback' if real_sources else 'no_external_sources'):not report.get('simulated_sources') if real_sources else not report.get('external_sources'),
             'report_version':report.get('report_version')=='0.16.0',
-            'source_inventory':sorted(x['scenario'] for x in report.get('external_sources',[]))==sorted(s for s,v in expected.items() if v=='completed')}
+            'source_inventory':sorted(x['scenario'] for x in report.get('external_sources' if real_sources else 'simulated_sources',[]))==sorted(s for s,v in expected.items() if v=='completed')}
     for prefix,verify in [('mortgage',mortgage),('tax_application',tax_application),('tax_review',tax_review)]:
         checks.update({prefix+'/'+key:value for key,value in verify(report).items()})
     facts={key:value for section in report['document_data'] for key,value in section['facts'].items()
@@ -56,7 +56,7 @@ def verify_report(report, expected):
     checks['model_inventory']=sorted(a['scenario'] for a in analyses)==sorted(s for s,v in expected.items() if v=='completed')
     for scenario,state in expected.items():
         if state!='completed':continue
-        source_checks=ecb(report) if scenario=='S-01' else ade(report)
+        source_checks=(ecb(report) if scenario=='S-01' else ade(report)) if real_sources else {}
         checks.update({scenario+'/'+key:value for key,value in source_checks.items()})
         entries=[a for a in analyses if a.get('scenario')==scenario]
         if len(entries)!=1:continue
@@ -64,13 +64,14 @@ def verify_report(report, expected):
         checks[scenario+'/selection_available']=item.get('status') in {'available','selection_only'}
         checks[scenario+'/not_semantically_certified']=item.get('semantic_verified') is False and item.get('selection_relevance_verified') is False
         checks[scenario+'/gateway_model_receipt']=item.get('gateway_model_output_receipt_verified') is True
-        source=next(s['evidence'] for s in report['external_sources'] if s['scenario']==scenario)
-        view=domain_view(p,Scenario(scenario))
+        source=next(s['evidence'] for s in report['external_sources' if real_sources else 'simulated_sources'] if s['scenario']==scenario)
+        from gateway.lab_profile import full_view,FullFinancialView
+        view=full_view(p) if minimization=='disabled' else domain_view(p,Scenario(scenario))
         fiscal=scenario=='S-02'
         regenerated=(tax_analysis if fiscal else market_analysis)(
             {'tax_analysis' if fiscal else 'market_analysis':item,'model':item.get('model'),
              'measurements':{'gateway_analysis_receipt_verified':1 if item.get('gateway_model_output_receipt_verified') is True else 0}},
-            (TaxView if fiscal else MarketView).model_validate(view),source)
+            (FullFinancialView if minimization=='disabled' else TaxView if fiscal else MarketView).model_validate(view),source)
         checks[scenario+'/catalog_and_references']=all(regenerated.get(k)==item.get(k)
             for k in ('status','selected_statements','references','source_sha256','content'))
         if fiscal:

@@ -206,10 +206,10 @@ La prova nativa automatica usa gli stessi agenti durante guasti e recupero; è i
 
 ## Prima del congelamento
 
-1. Completato: annotazioni dei 25 fascicoli riviste contro i PDF dall’utente; rubrica, soglie e trattamento descrittivo della latenza approvati. Nessun punteggio dei report o nuova SLA introdotti.
-2. Materializzare e verificare le istanze definite nel REGISTRO_PROVE.md: prima estensione V-09 concordata e fixture/driver benigni nelle quattro celle; ottenere consenso S04 prima delle relative prove.
-3. Preparare manifest immutabile di ambiente, runner finale e registro cieco del valutatore.
-4. Approvare una versione congelata con identificativo/digest. Solo allora eseguire la campagna finale e scrivere i risultati nei capitoli 5–6.
+1. Annotazioni dei 25 fascicoli, rubrica, soglie e latenza descrittiva sono approvate. Nessun voto umano sui report è implicito.
+2. Il pilota tecnico del blocco 2 è confermato; il blocco 4 aggiunge la raccolta tracciabile e richiede il proprio pilota strumentato.
+3. Preparare e controllare il manifest concreto, il piano fisico delle esecuzioni e l’esportazione cieca, con la procedura sotto.
+4. Approvare esplicitamente l’impronta del manifest. Solo dopo avviare la campagna finale e compilare i giudizi umani. I capitoli 5–6 restano lavoro dell’autore.
 
 ## Selezione degli specialisti e commento opzionale
 
@@ -349,3 +349,104 @@ Atteso C001: **Fatti verificati: 10; Problemi: 0**. Per C006: 9, zero problemi; 
 Infine ricaricare C001, avviare e premere **Annulla analisi e cancella sessione** mentre è in corso. Atteso: annullamento/chiusura dichiarati, nessun report tardivo mostrato, nuovo caricamento consentito. Ripetere C001 e verificare il recupero. Se il completamento precede il clic, la pagina dichiara la sessione già chiusa: non registrarlo come annullamento durante l’esecuzione.
 
 Il test di presentazione indisponibile resta automatico: mantiene report JSON e pulizia, disabilitando HTML/stampa senza documento inventato. I conflitti di valori hanno entrambe le provenienze e conclusioni sospese; il controllo UI di questa rappresentazione usa un conflitto sintetico esplicitamente dichiarato, distinto dalla prova agente–agente del blocco 2. Nessun nuovo endpoint di collaudo è incluso nella distribuzione.
+
+
+## Verifica del quarto blocco — valutazione riproducibile
+
+Questo blocco aggiunge strumenti del valutatore, non modifica agenti, policy, fonti o budget. La preparazione non congela né avvia la campagna. `evaluation/protocol.json` resta il documento di preparazione con soglie già approvate; l’eventuale `approval.json` congela separatamente l’intero snapshot identificato dal digest del manifest, incluso il protocollo copiato. Nessuna autorizzazione finale viene dedotta dall’ok ai blocchi di sviluppo.
+
+### Piano e conteggi
+
+Il runner usa 40 blocchi (10 ripetizioni × 4 celle), con ordine Williams delle celle e ordine dei 25 casi fissato per ripetizione e identico fra celle. Con dieci ripetizioni, non multiple di quattro, le posizioni differiscono al massimo di una presenza. Il seed del piano è registrato; non viene aggiunto un seed al modello che il payload attuale non imposta. Non si promette determinismo dell’inferenza.
+
+| Raccolta prevista | Campagna finale | Pilota strumentato |
+|---|---:|---:|
+| Sessioni di base con Ollama reale | 1.000 | 20 |
+| Sessioni create dai cicli controllati | 2.400 | 240 |
+| Totale sessioni create | 3.400 | 260 |
+| Upload negativi rifiutati prima della sessione | 120 | 12 |
+| Tentativi di upload complessivi | 3.520 | 272 |
+| Report effettivamente consegnabili attesi | 3.200 | 240 |
+
+Sono conseguenze dei cicli/controlli già registrati, non nuovi casi della tesi. Ogni blocco riusa la suite Docker del blocco 2 senza il vecchio pilota a cinque casi: 45 analisi più i tre driver fisici (annullamento, relay e crash), tre upload negativi. Sono 54 sessioni create e 51 report consegnabili. TTL con orologio controllato e guasto diretto ASGI usano il percorso nativo ADK/A2A/MCP: prima, guasto, recupero per variante, sei sessioni e quattro report consegnabili. Non sono prove di isolamento Docker o attese reali di 1.800 secondi. Il controllo standard immediatamente precedente alla sostituzione è riusato esplicitamente nella sequenza standard/equivalente/ripristino.
+
+I conteggi attesi non sostituiscono quelli osservati: un errore resta nel registro. Un report generato a monte ma perso nel relay non viene trattato come consegnato al valutatore. Input rifiutati, annullamento, TTL, guasto ASGI e crash non ricevono un voto zero inventato. Nessuna deduplicazione dei report o copia di voti. Le basi con Ollama sono separate dalle risposte controllate, anche nei riepiloghi di token e qualità.
+
+### Preparazione e pilota, macOS
+
+Fermare con Ctrl+C tutti i ponti già aperti, ordinari o sperimentali. Lasciare Docker Desktop e Ollama attivi. Controllare `ollama ps`: non devono esserci modelli caricati o altre inferenze in corso; se necessario `ollama stop NOME_MODELLO` scarica dalla memoria il solo modello indicato, senza eliminarlo. Il runner richiede questa condizione all’inizio di ogni blocco e mantiene `keep_alive=0`. Il runner gestisce i propri ponti: **non avviarne uno a mano durante il pilota**. Dalla repository:
+
+```bash
+.venv/bin/python -m pytest -q --ignore=tests/test_block2_pipeline.py
+.venv/bin/python -m pytest -q tests/test_block2_pipeline.py -k nominal
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+.venv/bin/python scripts/setup_isolation.py
+.venv/bin/python scripts/setup_baseline.py
+.venv/bin/python scripts/prepare_campaign.py prepare --directory runs/campaign_v1
+.venv/bin/python scripts/prepare_campaign.py check --directory runs/campaign_v1
+.venv/bin/python scripts/run_campaign.py --directory runs/campaign_v1 --pilot
+```
+
+La seconda immagine netguard è quella già usata nei blocchi precedenti; per una prima installazione seguire il README. Il preparatore controlla che i file runtime nell’immagine coincidano con i sorgenti. Registra immagini, versioni host/container, pesi del modello comune, configurazione, PDF/fixture, annotazioni e rubriche, senza nomi utente, percorsi personali, credenziali o prompt delle sessioni. Usa i parametri esistenti (4096 token di contesto, temperatura zero, 768/200 token di risposta, `keep_alive=0`, budget 120/90/30/5). L’ambiente viene controllato prima e dopo ogni blocco. L’analisi non riceve mai annotazioni o voti.
+
+Atteso: test passati; quattro prove nominali della pipeline passate; manifest preparato, `Campagna avviata: False`, poi `Problemi: 0`. Il pilota attraversa quattro celle, con cinque casi Ollama per cella e i cicli controllati, e richiede diversi minuti. Le righe nominali dopo ogni guasto sono i controlli di recupero previsti. Per blocco: `created: 65`, `rejected: 3`, `delivered: 60`, conteggi coerenti; alla fine **`Pilota completo: True`**. Il runner restituisce la demo base simulata e chiude i propri ponti.
+
+La cartella deve essere nuova. Manifest o file cambiati bloccano l’esecuzione; dopo una modifica al codice preparare un nuovo snapshot. Un blocco iniziato non viene ripetuto automaticamente. Per proseguire usare `--block ID` soltanto su blocchi mai avviati, mantenendo piano e ripetizione originali; non spostare o cancellare un fallimento per farlo sparire. Un upload senza risposta resta di esito ignoto e non viene presentato come sessione sicuramente assente/pulita. Se manca la conferma della pulizia, il runner si ferma.
+
+### Registro cieco e riepilogo del pilota
+
+Dopo il completamento:
+
+```bash
+.venv/bin/python scripts/review_campaign.py export --directory runs/campaign_v1 --pilot
+.venv/bin/python scripts/review_campaign.py summary --directory runs/campaign_v1 --pilot --output runs/campaign_v1/pilot/summary.json
+open runs/campaign_v1/pilot/public/index.html
+```
+
+Atteso: 240 report nel registro se tutti i percorsi hanno gli esiti previsti; **punteggi assegnati automaticamente: 0**. I campi di `public/ratings.csv` devono essere vuoti. Il riepilogo senza `--ratings` ha qualità non disponibile, nessuna media/voto simulato. Non serve assegnare 240 voti al pilota per provare il funzionamento del registro: controllare qualche documento, riferimenti e campi della scheda. I voti della campagna finale restano distinti.
+
+`private/` contiene i collegamenti alle configurazioni e gli originali, `public/` soltanto gli identificativi casuali e il materiale da valutare. Il valutatore deve lavorare sul pubblico senza consultare la mappa privata; il contenuto può comunque suggerire la condizione. Un solo valutatore non consente di stimare accordo indipendente. Le trasformazioni per nascondere le etichette non cambiano importi, citazioni, selezioni o calcoli. I report identici restano schede distinte. JSON e HTML sono legati alle impronte; casi, ID duplicati/sconosciuti, voti mancanti/fuori scala e documenti alterati vengono rifiutati.
+
+### Windows PowerShell
+
+Stessi comandi Docker. Procedura prevista, non ancora verificata direttamente:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q --ignore=tests/test_block2_pipeline.py
+.\.venv\Scripts\python.exe -m pytest -q tests/test_block2_pipeline.py -k nominal
+docker build -f deployment/Dockerfile -t tesi-s03-app:local .
+.\.venv\Scripts\python.exe scripts/setup_isolation.py
+.\.venv\Scripts\python.exe scripts/setup_baseline.py
+.\.venv\Scripts\python.exe scripts/prepare_campaign.py prepare --directory runs/campaign_v1
+.\.venv\Scripts\python.exe scripts/prepare_campaign.py check --directory runs/campaign_v1
+.\.venv\Scripts\python.exe scripts/run_campaign.py --directory runs/campaign_v1 --pilot
+.\.venv\Scripts\python.exe scripts/review_campaign.py export --directory runs/campaign_v1 --pilot
+.\.venv\Scripts\python.exe scripts/review_campaign.py summary --directory runs/campaign_v1 --pilot --output runs/campaign_v1/pilot/summary.json
+Start-Process "runs\campaign_v1\pilot\public\index.html"
+```
+
+Eseguire la build Docker prima di `prepare`, come su macOS. Usare sempre un nome nuovo per ripetere una prova; non sovrascrivere snapshot o giudizi.
+
+**Pilota manuale confermato:** log e file di `runs/campaign_v1` verificati. Quattro celle positive, 272 tentativi di upload, 260 sessioni create, 240 report pubblicati e nessuna pulizia non confermata. Venti sessioni con Ollama reale (28 inferenze), distinte dalle prove controllate. Manifest e impronte delle evidenze integri; 240 associazioni ID/caso/hash e HTML coerenti, schede senza punteggi, riepilogo ricalcolato identico. Provenienza documentale ricontrollata sui 244 JSON originali: 2.388 fatti e zero problemi. I quattro report generati a monte del relay guasto non entrano nelle schede. Nessun voto umano o approvazione finale attribuiti. Non occorre ripetere il pilota se sorgenti, ingressi e ambiente restano conformi al manifest.
+
+### Campagna finale — solo dopo revisione e autorizzazione esplicite
+
+I comandi seguenti sono la procedura futura, **non istruzioni per avviare subito la campagna**. Dopo pilota positivo e conferma dell’autore del manifest concreto:
+
+```bash
+.venv/bin/python scripts/prepare_campaign.py approve --directory runs/campaign_v1 --approve-final-campaign
+.venv/bin/python scripts/run_campaign.py --directory runs/campaign_v1
+.venv/bin/python scripts/review_campaign.py export --directory runs/campaign_v1
+```
+
+Senza approvazione del manifest il secondo comando si rifiuta prima di modificare i servizi. L’approvazione richiede anche l’integrità delle evidenze del pilota corrente; non viene scritta dal pilota stesso. Nella campagna ogni sessione parte da zero; i controlli di recupero richiamano intenzionalmente gli identificativi vecchi per verificarne il diniego.
+
+L’unico valutatore compila `final/public/ratings.csv` secondo la rubrica approvata: correttezza, copertura, provenienza e limiti, ciascuno 0–2; `critical_error` yes/no, note obbligatorie per errore critico. Poi:
+
+```bash
+.venv/bin/python scripts/review_campaign.py summary --directory runs/campaign_v1 --ratings runs/campaign_v1/final/public/ratings.csv --output runs/campaign_v1/final/summary_rated.json
+```
+
+Windows: sostituire solo l’eseguibile Python come sopra. I riepiloghi mantengono medie e varianze campionarie per caso/cella/replica e controlli distinti, conteggi di stato, disponibilità dei campioni e differenze appaiate +P/−P, singolo/multi e interazione descrittiva. Non sono test di significatività o prova di superiorità. Le fasi annidate sono inclusive: non vengono sommate per fabbricare un totale. Le due letture diagnostiche delle viste per misurare utilità sono uguali in tutte le celle e distinte dal tempo della sola analisi; l’unione dei tempi backend comprende queste richieste. Byte e categorie sono misure del JSON canonico, non catture del traffico.
+
+Consumi sconosciuti rimangono null; i costi di energia/hardware non misurati e tariffe API non sostenute non vengono inventati. I dinieghi non sono divulgazioni. Il riepilogo non converte l’assenza di osservazioni in zero violazioni e non dichiara automaticamente soddisfatta la privacy: per il vincolo assoluto occorre leggere le prove di isolamento e le sonde autorizzate, senza compensare un’eventuale violazione con le medie. Il contenuto del modello resta soggetto a valutazione umana anche quando schema e riferimenti passano.

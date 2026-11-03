@@ -42,7 +42,8 @@ async def cell_run(args):
     identity=json.loads((ROOT/('.local/baseline/bridge.json' if org=='single' else '.local/s03/bridge.json')).read_text())
     headers={'x-tesi-service-key':identity['keys']['bridge']}
     rows=[];args._rows=rows
-    async with httpx.AsyncClient(base_url='http://127.0.0.1:8080',timeout=150,trust_env=False) as client:
+    client_factory=getattr(args,'client_factory',httpx.AsyncClient)
+    async with client_factory(base_url='http://127.0.0.1:8080',timeout=150,trust_env=False) as client:
         async def configure(profile='nominal',implementation='standard',initial=False):
             args._phase=profile+'/'+implementation
             env={**os.environ,'TESI_VERIFICATION_PROFILE':profile}
@@ -75,7 +76,7 @@ async def cell_run(args):
                     'execution':{'kind':'controlled_fixture','dispatch_attempts':0,'responses_observed':0}})
                 if posted.status_code not in {200,204,409}:posted.raise_for_status()
         async def run_case(profile='nominal',case='C001',kinds=('mutuo','interessi'),scenarios=('S-01','S-02'),extra=None):
-            args._procedure={'case':case,'variant':profile}
+            args._procedure={'case':case,'variant':profile,'kinds':list(kinds),'scenarios':list(scenarios)}
             sid=None;identifier=None;worker=asyncio.create_task(controlled_bridge())
             try:
                 files=[('files',(k+'.pdf',(ROOT/f'dataset/Documents/{case}_{k}.pdf').read_bytes(),'application/pdf')) for k in kinds]
@@ -154,6 +155,7 @@ async def cell_run(args):
             for case in ['C024','C006','C011','C016']:await run_case(case=case)
             # V-03: il manifest ammette esattamente i tre artefatti, poi li rifiuta il parser.
             for kind in ['scan','encrypted','corrupt']:
+                args._procedure={'case':'C001','variant':kind}
                 raw=(ROOT/f'gateway/fixtures/verification_{kind}.pdf').read_bytes()
                 reply=await client.post('/sessions/pdf',files=[('files',('negative.pdf',raw,'application/pdf'))],data={'scenarios':['S-01','S-02']})
                 assert reply.status_code==400
@@ -162,12 +164,14 @@ async def cell_run(args):
                 rows.append({'variant':kind,'passed':True,'parser_reached':True})
             await run_case(kinds=('mutuo',),extra=(ROOT/'gateway/fixtures/verification_corrupt.pdf').read_bytes())
             await run_case(case='C006',scenarios=('S-01',))
+            last_standard_result=original
             for profile in PROFILES[1:]:
                 await configure(profile)
                 await run_case(profile)
                 await configure()
-                _,after=await run_case()
+                last_standard_result,after=await run_case()
                 assert after==boots
+            original=last_standard_result  # controllo standard adiacente, non storico
             for implementation in ['equivalent','standard']:
                 await configure(implementation=implementation)
                 result,after=await run_case();assert original==result and after==boots

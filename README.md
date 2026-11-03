@@ -376,3 +376,8 @@ La scheda affianca valori attesi ed estratti, con collegamenti ai PDF da leggere
 Il controllo guidato del primo blocco è descritto nel [protocollo](PROTOCOLLO_VALUTAZIONE.md#verifica-del-primo-blocco). Usa cinque fascicoli del dataset e verifica provenienza, fonti, selezioni e chiusura delle sessioni; non sostituisce la valutazione umana del report.
 
 Per verificare l’integrazione dei due agenti e i casi di errore è disponibile la [procedura del secondo blocco](PROTOCOLLO_VALUTAZIONE.md#verifica-del-secondo-blocco). Gestisce le quattro configurazioni e i ponti, richiede Docker Desktop e Ollama aperti e al termine ripristina la demo base. Le fonti di questa verifica sono fissate localmente; non sono aggiornamenti Internet o giudizi automatici sulla qualità del report.
+
+
+## Valutazione del prototipo
+
+La demo e gli esperimenti restano separati. Gli strumenti di valutazione preparano le versioni di riferimento, raccolgono prove e report e producono schede con i punteggi vuoti per il valutatore. Il pilota non autorizza automaticamente la campagna finale. Comandi e risultati attesi sono nel [blocco 4 del protocollo](PROTOCOLLO_VALUTAZIONE.md#verifica-del-quarto-blocco--valutazione-riproducibile).
