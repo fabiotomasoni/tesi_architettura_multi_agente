@@ -41,7 +41,10 @@ coverage.xml
 # Credenziali locali
 *.pem
 *.key
-# Evidenze locali del pilota, esportate solo dopo revisione
+# Evidenze e valutazioni locali, esportate solo dopo revisione
 /runs/
 # Identità locali della modalità isolata: mai nel repository o nelle immagini
 /.local/
+
+# Appunti di lavoro locali
+/DIARIO_PROGETTO.md

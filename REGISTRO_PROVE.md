@@ -1,12 +1,12 @@
 # Registro delle prove V-01–V-10
 
-Riferimenti: tesi §3.5, Tabella 3.3 e §§4.4–4.6. Le dieci famiglie sono requisiti della tesi; le varianti sono la loro applicazione al prototipo. Il registro controllabile è [evaluation/test_registry.json](evaluation/test_registry.json). Nessuna campagna finale è stata avviata.
+Riferimenti: tesi §3.5, Tabella 3.3 e §§4.4–4.6. Le dieci famiglie sono requisiti della tesi; le varianti sono la loro applicazione al prototipo. Il registro controllabile è [evaluation/test_registry.json](evaluation/test_registry.json). La campagna finale v7 `campaign_v2` è stata completata e verificata; i riferimenti alle evidenze sono in fondo.
 
 L’autore ha autorizzato **solo S04 locale con dati sintetici** per V02-PAYLOADS, V05-HOSTILE e V10-CARDS: due payload vietati, istruzione nel risultato, metadati tool alterati, tre Card falsificate. Nessuna destinazione Internet di esfiltrazione o estensione implicita del perimetro.
 
-| Famiglia | Procedura predisposta | Cosa deve dimostrare |
+| Famiglia | Procedura eseguita | Cosa deve dimostrare |
 |---|---|---|
-| V-01 Percorso completo | Corpus di 25 casi; pilota corrente su cinque; controllo PDF/report/traccia. | Dati e fonti distinguibili, risultati documentali fedeli e chiusura della sessione. |
+| V-01 Percorso completo | Corpus di 25 casi; finale su 25 e pilota su cinque; controllo PDF/report/traccia. | Dati e fonti distinguibili, risultati documentali fedeli e chiusura della sessione. |
 | V-02 Confine e pulizia | Viste +P/−P, due payload controllati, isolamento Docker, annullamento, TTL, guasto ASGI, consegna troncata e crash. | Diniego prima dell’invio vietato; revoca dei vecchi accessi e nuova elaborazione. |
 | V-03 Input incompleto/non supportato | Tre PDF sintetici fissati, caricamento misto e sola attività non pronta; casi mancanti/ambigui del corpus. | Parser raggiunto, input inutilizzabile escluso, attività valide conservate. |
 | V-04 Guasto fonte | Timeout S-01, fonte fiscale malformata, entrambe indisponibili, controlli prima/dopo. | Timeout della fonte distinto dal modello; nessuna fonte sostitutiva inventata. |
@@ -33,12 +33,20 @@ Il timeout fonte attende il budget comune di 30 secondi; restano 120/90/30/5 sec
 
 Il selettore chiuso `TESI_VERIFICATION_PROFILE` è configurazione fidata del laboratorio, mai una scelta di Card, modello o API pubblica. I profili negativi accettano solo C001. I tre PDF negativi sono ammessi per digest, poi sottoposti al parser; modifiche ai loro byte restano rifiutate dal corpus. Non si montano documenti o ground truth nei servizi.
 
-Il pilota confermato sotto riguarda il runtime `financial-profile-2x2-v6`: due consultazioni MCP e una inferenza per attività completata, uguali fra celle; strumenti 0.5.0 e report 0.16.0. I vecchi piloti non verificano questa versione. Il contatore MCP comprende anche il riferimento comune; le metriche del contenuto finanziario restano misure della vista canonica, non catture dei byte trasmessi.
+Il precedente pilota `runs/block2_manual*` riguarda il runtime `financial-profile-2x2-v6`: due consultazioni MCP e una inferenza per attività completata, uguali fra celle; strumenti 0.5.0 e report 0.16.0. Le prove v6 non sono attribuite alla v7. Il contatore MCP comprende anche il riferimento comune; le metriche del contenuto finanziario restano misure della vista canonica, non catture dei byte trasmessi.
 
-## Stato della campagna
+## Campagna finale v7 ed evidenze
 
-Restano previste 25 × 4 × 10 = 1.000 esecuzioni di base e dieci ripetizioni di ogni variante aggiuntiva per cella. I dieci cicli e le 29 varianti restano quelli concordati. I controlli prima/dopo non diventano ripetizioni indipendenti né vengono deduplicati arbitrariamente. Totali fisici, manifest e registro cieco saranno fissati prima del congelamento; qualità e utilità della selezione richiedono l’unico valutatore concordato.
+Lo snapshot `financial-profile-2x2-v7` è in `runs/campaign_v2`, con `manifest.json` e `approval.json` verificati. Il pilota v7 ha superato quattro blocchi. La finale ha superato **40 blocchi su 40**: 1.000 sessioni di base con Ollama, 2.400 sessioni di controllo, 120 rifiuti attesi e 3.200 report consegnati. La pulizia è confermata in tutti i tentativi. Il tentativo parziale del blocco 30 è archiviato fuori dalla raccolta conteggiata. Le impronte in `final/completion.json` corrispondono ai file conservati.
 
-La verifica statica `scripts/check_test_registry.py` controlla definizioni, file/digest e collegamenti. Non esegue procedure e non autorizza una campagna. **Pilota tecnico Docker corrente confermato dai file `runs/block2_manual*`: quattro celle positive, venti esecuzioni Ollama e 259 controlli di confronto senza problemi. Congelamento e campagna finale restano pendenti.** Comandi completi nel [protocollo](PROTOCOLLO_VALUTAZIONE.md#verifica-del-secondo-blocco).
+| Famiglie | Dove verificare, a partire da `campaign_v2/` |
+|---|---|
+| V-01, V-03 | `final/private/base/` per le basi Ollama; `final/private/controlled/` per gli ingressi negativi e gli esiti attesi. |
+| V-02 | `final/private/isolation/` per le sonde di rete; `final/private/controlled/` e `final/private/native/` per payload, revoca, pulizia e ripristino. |
+| V-04, V-05, V-08, V-09, V-10 | `final/private/controlled/`, con variante ed esito di ciascun controllo. |
+| V-06 | Voce `equivalent_mcp_substitution` nei riepiloghi di `final/private/controlled/`. |
+| V-07 | Utilità nominale in `final/private/base/`; variante `utility_loss` nei controlli, distinta dalle basi. |
 
-Il contesto facoltativo conto/paga richiesto successivamente è nel runtime v7 (policy 0.4.0, report 0.17.0). Le prove storiche v6 non vengono rinominate o attribuite alla nuova versione. Le verifiche specifiche sono in `tests/test_financial_context.py` e `scripts/check_financial_context.py`; nessuna famiglia V, agente o fonte aggiunta. Per la campagna corrente occorre un nuovo snapshot/pilota.
+I record di `final/private/blocks/` collegano esecuzioni, casi, tracce ed eventuali report. `human_review_60/summary_rated.json` riepiloga misure tecniche e 60 giudizi dell’unico valutatore, tutti 8/8 e senza errori critici segnalati. I 3.140 report fuori campione restano senza voto. L’esito tecnico positivo non costituisce una misura di qualità per quei report.
+
+Il controllo statico `scripts/check_test_registry.py` valida definizioni, digest e collegamenti; non esegue prove e non determina lo stato del manifest approvato. Per distinguere esiti, copertura e limiti per RQ1–RQ3, vedi il [protocollo](PROTOCOLLO_VALUTAZIONE.md#risultati-e-riferimenti-per-il-capitolo-6). Gli artefatti di `runs/` sono conservati nell’archivio separato dalla repository Git.
