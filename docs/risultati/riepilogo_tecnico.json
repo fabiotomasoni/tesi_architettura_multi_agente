@@ -1,0 +1,1110 @@
+{
+  "source_manifest_sha256": "0af68782fb5c4f2ce86c28babc1c720ad92e9478c4b0ff66d6b9523ad70b2727",
+  "scope": "nominal_comparison_excludes_pilot_cases; control_suites_reported_separately",
+  "pilot_cases_excluded": [
+    "C001",
+    "C006",
+    "C011",
+    "C016",
+    "C024"
+  ],
+  "nominal_sessions": 800,
+  "nominal_fascicles": 20,
+  "cells": {
+    "single-active": {
+      "sessions": 200,
+      "statuses": {
+        "completed": 80,
+        "partial": 120
+      },
+      "technical_passes": 200,
+      "cleanup_confirmed": 200,
+      "utility": {
+        "n": 280,
+        "missing": 120,
+        "mean": 1.0,
+        "sample_variance": 0.0
+      },
+      "utility_not_applicable": 120,
+      "per_scenario": {
+        "S-01": {
+          "utility": {
+            "n": 120,
+            "missing": 80,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 80,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 318.3333333333333,
+              "sample_variance": 2.57703081232493
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 4,
+              "sample_variance": 0
+            },
+            "mcp_arguments_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 120.33333333333333,
+              "sample_variance": 2.57703081232493
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 3,
+              "sample_variance": 0
+            },
+            "model_context_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 318.3333333333333,
+              "sample_variance": 2.57703081232493
+            },
+            "model_context_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 4,
+              "sample_variance": 0
+            }
+          }
+        },
+        "S-02": {
+          "utility": {
+            "n": 160,
+            "missing": 40,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 40,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 285.25,
+              "sample_variance": 22.830188679245282
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 4,
+              "sample_variance": 0
+            },
+            "mcp_arguments_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 87.25,
+              "sample_variance": 22.830188679245282
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 3,
+              "sample_variance": 0
+            },
+            "model_context_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 285.25,
+              "sample_variance": 22.830188679245282
+            },
+            "model_context_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 4,
+              "sample_variance": 0
+            }
+          }
+        }
+      },
+      "analysis_ms": {
+        "n": 200,
+        "missing": 0,
+        "mean": 6002.90513,
+        "sample_variance": 5987215.402067953
+      },
+      "trace_metrics": {
+        "a2a_message_dispatch_attempts": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1,
+          "sample_variance": 0
+        },
+        "mcp_tool_calls_agent_reported": {
+          "n": 200,
+          "missing": 0,
+          "mean": 2.8,
+          "sample_variance": 0.964824120603015
+        },
+        "model_proxy_calls": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1.4,
+          "sample_variance": 0.24120603015075376
+        },
+        "prompt_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1859.8,
+          "sample_variance": 468623.27638190956
+        },
+        "output_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 143.85,
+          "sample_variance": 4832.791457286432
+        },
+        "backend_request_union_ms": {
+          "n": 200,
+          "missing": 0,
+          "mean": 6087.90089,
+          "sample_variance": 6008855.796476832
+        }
+      }
+    },
+    "single-disabled": {
+      "sessions": 200,
+      "statuses": {
+        "completed": 80,
+        "partial": 120
+      },
+      "technical_passes": 200,
+      "cleanup_confirmed": 200,
+      "utility": {
+        "n": 280,
+        "missing": 120,
+        "mean": 1.0,
+        "sample_variance": 0.0
+      },
+      "utility_not_applicable": 120,
+      "per_scenario": {
+        "S-01": {
+          "utility": {
+            "n": 120,
+            "missing": 80,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 80,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1266.25,
+              "sample_variance": 1228.59243697479
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 5.666666666666667,
+              "sample_variance": 0.22408963585434175
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "mcp_arguments_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1266.25,
+              "sample_variance": 1228.59243697479
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 5.666666666666667,
+              "sample_variance": 0.22408963585434175
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "model_context_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1266.25,
+              "sample_variance": 1228.59243697479
+            },
+            "model_context_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 5.666666666666667,
+              "sample_variance": 0.22408963585434175
+            },
+            "model_context_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "model_context_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            }
+          }
+        },
+        "S-02": {
+          "utility": {
+            "n": 160,
+            "missing": 40,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 40,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1274.75,
+              "sample_variance": 1055.7861635220127
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 5.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "mcp_arguments_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1274.75,
+              "sample_variance": 1055.7861635220127
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 5.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "model_context_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1274.75,
+              "sample_variance": 1055.7861635220127
+            },
+            "model_context_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 5.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "model_context_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "model_context_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            }
+          }
+        }
+      },
+      "analysis_ms": {
+        "n": 200,
+        "missing": 0,
+        "mean": 7057.747045,
+        "sample_variance": 8139356.270460505
+      },
+      "trace_metrics": {
+        "a2a_message_dispatch_attempts": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1,
+          "sample_variance": 0
+        },
+        "mcp_tool_calls_agent_reported": {
+          "n": 200,
+          "missing": 0,
+          "mean": 2.8,
+          "sample_variance": 0.964824120603015
+        },
+        "model_proxy_calls": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1.4,
+          "sample_variance": 0.24120603015075376
+        },
+        "prompt_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 3030.5,
+          "sample_variance": 1248660.1507537689
+        },
+        "output_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 148.55,
+          "sample_variance": 5162.962311557789
+        },
+        "backend_request_union_ms": {
+          "n": 200,
+          "missing": 0,
+          "mean": 7142.770265,
+          "sample_variance": 8158873.193620638
+        }
+      }
+    },
+    "multi-active": {
+      "sessions": 200,
+      "statuses": {
+        "completed": 80,
+        "partial": 120
+      },
+      "technical_passes": 200,
+      "cleanup_confirmed": 200,
+      "utility": {
+        "n": 280,
+        "missing": 120,
+        "mean": 1.0,
+        "sample_variance": 0.0
+      },
+      "utility_not_applicable": 120,
+      "per_scenario": {
+        "S-01": {
+          "utility": {
+            "n": 120,
+            "missing": 80,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 80,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 318.3333333333333,
+              "sample_variance": 2.57703081232493
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 4,
+              "sample_variance": 0
+            },
+            "mcp_arguments_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 120.33333333333333,
+              "sample_variance": 2.57703081232493
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 3,
+              "sample_variance": 0
+            },
+            "model_context_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 318.3333333333333,
+              "sample_variance": 2.57703081232493
+            },
+            "model_context_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 4,
+              "sample_variance": 0
+            }
+          }
+        },
+        "S-02": {
+          "utility": {
+            "n": 160,
+            "missing": 40,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 40,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 285.25,
+              "sample_variance": 22.830188679245282
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 4,
+              "sample_variance": 0
+            },
+            "mcp_arguments_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 87.25,
+              "sample_variance": 22.830188679245282
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 3,
+              "sample_variance": 0
+            },
+            "model_context_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 285.25,
+              "sample_variance": 22.830188679245282
+            },
+            "model_context_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 0,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 4,
+              "sample_variance": 0
+            }
+          }
+        }
+      },
+      "analysis_ms": {
+        "n": 200,
+        "missing": 0,
+        "mean": 6021.534015,
+        "sample_variance": 6022523.735741884
+      },
+      "trace_metrics": {
+        "a2a_message_dispatch_attempts": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1.4,
+          "sample_variance": 0.24120603015075376
+        },
+        "mcp_tool_calls_agent_reported": {
+          "n": 200,
+          "missing": 0,
+          "mean": 2.8,
+          "sample_variance": 0.964824120603015
+        },
+        "model_proxy_calls": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1.4,
+          "sample_variance": 0.24120603015075376
+        },
+        "prompt_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1859.8,
+          "sample_variance": 468623.27638190956
+        },
+        "output_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 143.85,
+          "sample_variance": 4832.791457286432
+        },
+        "backend_request_union_ms": {
+          "n": 200,
+          "missing": 0,
+          "mean": 6106.22643,
+          "sample_variance": 6039543.440863151
+        }
+      }
+    },
+    "multi-disabled": {
+      "sessions": 200,
+      "statuses": {
+        "completed": 80,
+        "partial": 120
+      },
+      "technical_passes": 200,
+      "cleanup_confirmed": 200,
+      "utility": {
+        "n": 280,
+        "missing": 120,
+        "mean": 1.0,
+        "sample_variance": 0.0
+      },
+      "utility_not_applicable": 120,
+      "per_scenario": {
+        "S-01": {
+          "utility": {
+            "n": 120,
+            "missing": 80,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 80,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1266.25,
+              "sample_variance": 1228.59243697479
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 5.666666666666667,
+              "sample_variance": 0.22408963585434175
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "mcp_arguments_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1266.25,
+              "sample_variance": 1228.59243697479
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 5.666666666666667,
+              "sample_variance": 0.22408963585434175
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "model_context_bytes": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1266.25,
+              "sample_variance": 1228.59243697479
+            },
+            "model_context_exact_amount_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 5.666666666666667,
+              "sample_variance": 0.22408963585434175
+            },
+            "model_context_exact_date_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            },
+            "model_context_exact_duration_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 120,
+              "missing": 80,
+              "mean": 12.666666666666666,
+              "sample_variance": 0.22408963585434175
+            }
+          }
+        },
+        "S-02": {
+          "utility": {
+            "n": 160,
+            "missing": 40,
+            "mean": 1.0,
+            "sample_variance": 0.0
+          },
+          "utility_not_applicable": 40,
+          "disclosure": {
+            "a2a_view_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1274.75,
+              "sample_variance": 1055.7861635220127
+            },
+            "a2a_view_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 5.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "a2a_view_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "a2a_view_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "a2a_view_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "mcp_arguments_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1274.75,
+              "sample_variance": 1055.7861635220127
+            },
+            "mcp_arguments_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 5.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "mcp_arguments_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "mcp_arguments_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "mcp_arguments_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "model_context_bytes": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1274.75,
+              "sample_variance": 1055.7861635220127
+            },
+            "model_context_exact_amount_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 5.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "model_context_exact_date_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            },
+            "model_context_exact_duration_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 1,
+              "sample_variance": 0
+            },
+            "model_context_fields": {
+              "n": 160,
+              "missing": 40,
+              "mean": 12.75,
+              "sample_variance": 0.18867924528301888
+            }
+          }
+        }
+      },
+      "analysis_ms": {
+        "n": 200,
+        "missing": 0,
+        "mean": 7079.23453,
+        "sample_variance": 8189682.023304482
+      },
+      "trace_metrics": {
+        "a2a_message_dispatch_attempts": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1.4,
+          "sample_variance": 0.24120603015075376
+        },
+        "mcp_tool_calls_agent_reported": {
+          "n": 200,
+          "missing": 0,
+          "mean": 2.8,
+          "sample_variance": 0.964824120603015
+        },
+        "model_proxy_calls": {
+          "n": 200,
+          "missing": 0,
+          "mean": 1.4,
+          "sample_variance": 0.24120603015075376
+        },
+        "prompt_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 3030.5,
+          "sample_variance": 1248660.1507537689
+        },
+        "output_tokens": {
+          "n": 200,
+          "missing": 0,
+          "mean": 148.55,
+          "sample_variance": 5162.962311557789
+        },
+        "backend_request_union_ms": {
+          "n": 200,
+          "missing": 0,
+          "mean": 7164.20703,
+          "sample_variance": 8208510.257267717
+        }
+      }
+    }
+  },
+  "separate_technical_controls": {
+    "attempts": 2520,
+    "sessions_created": 2400,
+    "rejected_uploads": 120,
+    "reports_delivered": 2200,
+    "cleanup_confirmed": 2520,
+    "variants": {
+      "nominal": 1080,
+      "scan": 40,
+      "encrypted": 40,
+      "corrupt": 40,
+      "source_timeout": 40,
+      "source_malformed": 40,
+      "both_unavailable": 40,
+      "missing_market": 40,
+      "both_missing": 40,
+      "hostile_result": 40,
+      "metadata": 40,
+      "conflict_agents": 40,
+      "conflict_document": 40,
+      "equivalent_units": 40,
+      "different_period": 40,
+      "different_product": 40,
+      "utility_loss": 40,
+      "payload_identifier": 40,
+      "payload_financial": 40,
+      "card_identity": 40,
+      "card_endpoint": 40,
+      "card_capabilities": 40,
+      "cancel": 120,
+      "delivery_relay": 120,
+      "crash": 120,
+      "ttl": 120,
+      "delivery_asgi": 120
+    },
+    "includes_controlled_cases_also_used_in_pilot": true
+  },
+  "observed_unauthorized_transmissions": null,
+  "privacy_scope": "Use stored isolation and scoped probes; unknown is not an observed zero."
+}

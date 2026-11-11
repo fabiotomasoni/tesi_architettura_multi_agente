@@ -6,6 +6,8 @@ L’approvazione della campagna concreta è in `runs/campaign_v2/approval.json`,
 
 ## Risultati e riferimenti per il capitolo 6
 
+Per il confronto aggiornato del capitolo 6, usare i [risultati della rivalutazione](RISULTATI.md): 800 sessioni nominali e 60 nuovi giudizi. I conteggi e i voti riportati qui sotto documentano la raccolta e la valutazione originarie.
+
 | Dato osservato | Risultato |
 |---|---:|
 | Blocchi con verifiche positive | 40/40 |

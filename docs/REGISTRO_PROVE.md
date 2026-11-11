@@ -1,6 +1,6 @@
 # Registro delle prove V-01–V-10
 
-Riferimenti: tesi §3.5, Tabella 3.3 e §§4.4–4.6. Le dieci famiglie sono requisiti della tesi; le varianti sono la loro applicazione al prototipo. Il registro controllabile è [evaluation/test_registry.json](evaluation/test_registry.json). La campagna finale v7 `campaign_v2` è stata completata e verificata; i riferimenti alle evidenze sono in fondo.
+Riferimenti: tesi §3.5, Tabella 3.3 e §§4.4–4.6. Le dieci famiglie sono requisiti della tesi; le varianti sono la loro applicazione al prototipo. Il registro controllabile è [evaluation/test_registry.json](../evaluation/test_registry.json). La campagna finale v7 `campaign_v2` è stata completata e verificata; i riferimenti alle evidenze sono in fondo.
 
 L’autore ha autorizzato **solo S04 locale con dati sintetici** per V02-PAYLOADS, V05-HOSTILE e V10-CARDS: due payload vietati, istruzione nel risultato, metadati tool alterati, tre Card falsificate. Nessuna destinazione Internet di esfiltrazione o estensione implicita del perimetro.
 
@@ -47,6 +47,6 @@ Lo snapshot `financial-profile-2x2-v7` è in `runs/campaign_v2`, con `manifest.j
 | V-06 | Voce `equivalent_mcp_substitution` nei riepiloghi di `final/private/controlled/`. |
 | V-07 | Utilità nominale in `final/private/base/`; variante `utility_loss` nei controlli, distinta dalle basi. |
 
-I record di `final/private/blocks/` collegano esecuzioni, casi, tracce ed eventuali report. `human_review_60/summary_rated.json` riepiloga misure tecniche e 60 giudizi dell’unico valutatore, tutti 8/8 e senza errori critici segnalati. I 3.140 report fuori campione restano senza voto. L’esito tecnico positivo non costituisce una misura di qualità per quei report.
+I record di `final/private/blocks/` collegano esecuzioni, casi, tracce ed eventuali report. Per il confronto aggiornato e i nuovi giudizi umani, consultare i [risultati della rivalutazione](RISULTATI.md). Il riepilogo originario è conservato nell’archivio della campagna.
 
 Il controllo statico `scripts/check_test_registry.py` valida definizioni, digest e collegamenti; non esegue prove e non determina lo stato del manifest approvato. Per distinguere esiti, copertura e limiti per RQ1–RQ3, vedi il [protocollo](PROTOCOLLO_VALUTAZIONE.md#risultati-e-riferimenti-per-il-capitolo-6). Gli artefatti di `runs/` sono conservati nell’archivio separato dalla repository Git.

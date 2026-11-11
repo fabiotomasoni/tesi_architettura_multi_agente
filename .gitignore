@@ -13,6 +13,7 @@ htmlcov/
 # Segreti; conservare gli esempi privi di credenziali
 .env
 .env.*
+.envrc
 !.env.example
 # File locali di sistema/editor
 .DS_Store
@@ -41,6 +42,9 @@ coverage.xml
 # Credenziali locali
 *.pem
 *.key
+*.p12
+*.pfx
+.netrc
 # Evidenze e valutazioni locali, esportate solo dopo revisione
 /runs/
 # Identità locali della modalità isolata: mai nel repository o nelle immagini
@@ -48,3 +52,12 @@ coverage.xml
 
 # Appunti di lavoro locali
 /DIARIO_PROGETTO.md
+/docs/DIARIO_PROGETTO.md
+
+# Allegati e materiali di lavoro della tesi
+/Tesi_*.docx
+/consegna-tesi/
+/Rivalutazione-tesi-*/
+/Evidenze-campaign-*.zip*
+*.numbers
+~$*

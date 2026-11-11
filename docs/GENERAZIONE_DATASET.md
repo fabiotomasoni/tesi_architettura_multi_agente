@@ -3,9 +3,10 @@
 25 fascicoli indipendenti, 4 documenti ciascuno: esattamente 100 PDF nativi italiani. Cinque gruppi bilanciati di casi: completi, capitale mancante, interessi mancanti, tasso ambiguo, periodi differenti. Tutte le identità sono fittizie; CF e IBAN sono deliberatamente non operativi e non costituiscono un benchmark completo di validazione formale delle PII.
 
 ## Avvio
-Apri il terminale nella cartella Scripts, quindi:
+Dalla radice della repository, apri la cartella del generatore:
 
 ```sh
+cd dataset/Scripts
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -20,7 +21,7 @@ python genera_dataset.py
 Prima prova facoltativa senza API: `python genera_dataset.py --offline` (scrive Preview_offline, non Documents). `--cases 1` prova un fascicolo; rilancia senza opzioni per completare tutti i 25 riutilizzando le descrizioni API già salvate.
 
 ## Costi e ripresa
-Il limite è 8,50 USD, lasciando margine sui 9 USD disponibili. Non si cerca di spendere tutto il credito: 25 chiamate brevi dovrebbero costare molto meno. Tariffe di riferimento gpt-4.1-mini: 0,40 USD/milione input e 1,60 USD/milione output, verificate il 29 ottobre 2026 nella documentazione ufficiale: https://developers.openai.com/api/docs/models/gpt-4.1-mini . Ricontrollarle prima di esecuzioni future. Il modello può essere soggetto a dismissione: in caso di indisponibilità il programma si ferma senza sostituzioni automatiche.
+Il limite predefinito del generatore è 8,50 USD. Non si cerca di spendere tutto il credito: 25 chiamate brevi dovrebbero costare molto meno. Tariffe di riferimento gpt-4.1-mini: 0,40 USD/milione input e 1,60 USD/milione output, verificate il 29 ottobre 2026 nella documentazione ufficiale: https://developers.openai.com/api/docs/models/gpt-4.1-mini . Ricontrollarle prima di esecuzioni future. Il modello può essere soggetto a dismissione: in caso di indisponibilità il programma si ferma senza sostituzioni automatiche.
 
 Ogni chiamata prenota preventivamente un costo prudenziale; anche errori e timeout conservano la prenotazione. Nessun retry automatico. Le risposte valide vengono salvate, le esecuzioni successive le riusano. Non eliminare state/budget.json per aggirare il tetto. Il limite riguarda questo generatore e questo listino, non altri usi della chiave o il saldo totale dell'account. Il contatore non è una fattura: usage e modello effettivo sono conservati per riconciliazione. La chiave non viene stampata né salvata nei risultati.
 

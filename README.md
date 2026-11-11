@@ -2,7 +2,7 @@
 
 Prototipo di tesi triennale in Ingegneria Informatica, Università degli Studi di Bergamo. Il progetto studia come più agenti possano collaborare su documenti finanziari usando solo i dati necessari al loro compito. La demo elabora i PDF sintetici inclusi nella repository e produce un report leggibile, con dati documentali, fonti, calcoli e limiti.
 
-Per installare e avviare la demo, segui **[Configurazione per macOS e Windows](CONFIGURAZIONE.md)**.
+Per installare e avviare la demo, segui **[Configurazione per macOS e Windows](docs/CONFIGURAZIONE.md)**.
 
 ## Idea del progetto
 
@@ -64,11 +64,12 @@ Usa i PDF dello stesso fascicolo in `dataset/Documents`. **C001** è un esempio 
 | `gateway/` | API, estrazione dai PDF, controlli, orchestrazione LangGraph, interfaccia web e report. |
 | `services/` | Agenti Google ADK, interfacce A2A e server MCP. |
 | `deployment/` e `compose.*.yaml` | Immagini, isolamento dei servizi e profili di avvio per demo ed esperimenti. |
-| `dataset/Documents/` e `dataset/Scripts/` | Fascicoli sintetici inclusi e script per generarli. |
+| `dataset/Documents/` e `dataset/Scripts/` | Fascicoli sintetici e [guida al generatore](docs/GENERAZIONE_DATASET.md). |
 | `scripts/` | Configurazione locale, ponte Ollama, verifiche e procedure sperimentali. |
 | `tests/` | Test di unità e di integrazione. |
 | `evaluation/` | Protocollo strutturato, annotazioni di riferimento e modelli delle schede. |
 | `examples/` | Esempi di ingresso strutturato per lo sviluppo locale. |
+| `docs/` | Guida di configurazione, protocollo, registro delle prove e risultati. |
 
 Identità dei servizi, ambienti Python ed evidenze prodotte durante le prove restano locali e sono esclusi da Git. Il dataset sintetico necessario alla demo è incluso.
 
@@ -76,6 +77,6 @@ Identità dei servizi, ambienti Python ed evidenze prodotte durante le prove res
 
 Il confronto incrocia **agente singolo o specialisti multipli** con **minimizzazione finanziaria attiva o disattivata**. Le quattro configurazioni sperimentali usano lo stesso corpus sintetico, fonti fissate localmente e lo stesso modello. Anche con minimizzazione disattivata si condividono solo campi finanziari strutturati: PDF, testo grezzo e identificativi diretti restano esclusi.
 
-La campagna della tesi ha completato 40 blocchi e consegnato 3.200 report. Un solo valutatore ha assegnato un punteggio a un campione appaiato di 60 report. Tutti hanno ottenuto 8/8: la rubrica non ha distinto le configurazioni nel campione e il risultato non ne dimostra l’equivalenza. I report fuori campione non hanno ricevuto voti.
+Il confronto finale usa **800 sessioni nominali** su fascicoli estranei al pilota e **60 report** valutati da una sola persona. Sintesi, metodo e dati aggregati sono in [Risultati della rivalutazione](docs/RISULTATI.md).
 
-Per disegno sperimentale, criteri e limiti, consulta il [protocollo di valutazione](PROTOCOLLO_VALUTAZIONE.md) e il [registro delle prove](REGISTRO_PROVE.md).
+Per disegno sperimentale, criteri e limiti, consulta il [protocollo di valutazione](docs/PROTOCOLLO_VALUTAZIONE.md) e il [registro delle prove](docs/REGISTRO_PROVE.md).
